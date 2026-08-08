@@ -1,0 +1,107 @@
+name: Deploy staging preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Branch, tag, or commit SHA from the production source repository"
+        required: true
+        default: "main"
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: staging-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build selected source for staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout website source
+        uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: ${{ inputs.source_ref }}
+          path: site
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Run website checks
+        working-directory: site
+        run: npm run check
+
+      - name: Build staging site
+        working-directory: site
+        env:
+          SITE_URL: https://ryanredrivergorgehiker.github.io/red-river-gorge-hiker-staging
+          BASE_PATH: /red-river-gorge-hiker-staging/
+        run: npm run build
+
+      - name: Mark staging output noindex
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          dist = Path('dist')
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+          changed = 0
+
+          for page in dist.rglob('*.html'):
+              text = page.read_text(encoding='utf-8')
+              if robots_meta not in text:
+                  if '<head>' not in text:
+                      raise RuntimeError(f'Missing <head> in {page}')
+                  text = text.replace('<head>', f'<head>{robots_meta}', 1)
+                  page.write_text(text, encoding='utf-8')
+                  changed += 1
+
+          (dist / 'robots.txt').write_text('User-agent: *\nDisallow: /\n', encoding='utf-8')
+
+          if changed == 0:
+              raise RuntimeError('No HTML files received the staging noindex directive')
+
+          print(f'Injected noindex into {changed} HTML files and wrote robots.txt')
+          PY
+
+      - name: Verify staging safeguards
+        working-directory: site
+        run: |
+          grep -R -L 'noindex,nofollow,noarchive' dist --include='*.html' && exit 1 || true
+          test "$(cat dist/robots.txt)" = $'User-agent: *\nDisallow: /'
+          grep -R 'redrivergorgehiker.github.io/red-river-gorge-hiker-staging' dist --include='*.html' >/dev/null
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload staging artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+
+  deploy:
+    name: Deploy staging Pages site
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy staging site
+        id: deployment
+        uses: actions/deploy-pages@v5
