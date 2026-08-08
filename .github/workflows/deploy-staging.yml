@@ -48,7 +48,7 @@ jobs:
       - name: Build staging site
         working-directory: site
         env:
-          SITE_URL: https://ryanredrivergorgehiker.github.io/red-river-gorge-hiker-staging
+          SITE_URL: https://ryanredrivergorgehiker.github.io
           BASE_PATH: /red-river-gorge-hiker-staging/
         run: npm run build
 
@@ -84,7 +84,8 @@ jobs:
         run: |
           grep -R -L 'noindex,nofollow,noarchive' dist --include='*.html' && exit 1 || true
           test "$(cat dist/robots.txt)" = $'User-agent: *\nDisallow: /'
-          grep -R 'redrivergorgehiker.github.io/red-river-gorge-hiker-staging' dist --include='*.html' >/dev/null
+          grep -F 'href="/red-river-gorge-hiker-staging/' dist/index.html >/dev/null
+          grep -R -F 'https://ryanredrivergorgehiker.github.io/red-river-gorge-hiker-staging/' dist/sitemap*.xml >/dev/null
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
