@@ -82,10 +82,68 @@ jobs:
       - name: Verify staging safeguards
         working-directory: site
         run: |
-          grep -R -L 'noindex,nofollow,noarchive' dist --include='*.html' && exit 1 || true
-          test "$(cat dist/robots.txt)" = $'User-agent: *\nDisallow: /'
-          grep -F 'href="/red-river-gorge-hiker-staging/' dist/index.html >/dev/null
-          grep -R -F 'https://ryanredrivergorgehiker.github.io/red-river-gorge-hiker-staging/' dist/sitemap*.xml >/dev/null
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          dist = Path('dist')
+          base = '/red-river-gorge-hiker-staging/'
+          expected_prefix = 'https://ryanredrivergorgehiker.github.io' + base
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+
+          html_files = list(dist.rglob('*.html'))
+          if not html_files:
+              raise RuntimeError('No generated HTML files found')
+
+          class URLParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.urls = []
+
+              def handle_starttag(self, tag, attrs):
+                  for key, value in attrs:
+                      if key in {'href', 'src'} and value:
+                          self.urls.append((tag, key, value))
+
+          bad_urls = []
+          for page in html_files:
+              text = page.read_text(encoding='utf-8')
+              if robots_meta not in text:
+                  raise RuntimeError(f'Missing noindex directive in {page}')
+              parser = URLParser()
+              parser.feed(text)
+              for tag, key, value in parser.urls:
+                  if value.startswith('/') and not value.startswith('//') and not value.startswith(base):
+                      bad_urls.append(f'{page}: <{tag}> {key}={value}')
+
+          if bad_urls:
+              raise RuntimeError('Root-relative URLs escaped the staging base:\n' + '\n'.join(bad_urls[:20]))
+
+          robots_lines = (dist / 'robots.txt').read_text(encoding='utf-8').splitlines()
+          if robots_lines != ['User-agent: *', 'Disallow: /']:
+              raise RuntimeError(f'Unexpected robots.txt content: {robots_lines!r}')
+
+          sitemap_files = list(dist.glob('sitemap*.xml'))
+          if not sitemap_files:
+              raise RuntimeError('No sitemap files found')
+
+          locs = []
+          for sitemap in sitemap_files:
+              root = ET.parse(sitemap).getroot()
+              for elem in root.iter():
+                  if elem.tag.endswith('loc') and elem.text:
+                      locs.append((sitemap, elem.text.strip()))
+
+          if not locs:
+              raise RuntimeError('No sitemap <loc> entries found')
+
+          bad_locs = [f'{path}: {loc}' for path, loc in locs if not loc.startswith(expected_prefix)]
+          if bad_locs:
+              raise RuntimeError('Sitemap URLs do not use the staging URL/base:\n' + '\n'.join(bad_locs[:20]))
+
+          print(f'Verified {len(html_files)} HTML files, robots.txt, internal base URLs, and {len(locs)} sitemap locations')
+          PY
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
