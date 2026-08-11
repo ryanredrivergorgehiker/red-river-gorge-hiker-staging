@@ -1,0 +1,120 @@
+name: Deploy DBNF guide refresh once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/deploy-dbnf-refresh-once.yml
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: staging-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build refreshed source for staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout website source
+        uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: 43198ab94dacd4d9f8fe6ae8bedc6670499a7a44
+          path: site
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Run website checks
+        working-directory: site
+        run: npm run check
+
+      - name: Build staging site
+        working-directory: site
+        env:
+          SITE_URL: https://ryanredrivergorgehiker.github.io
+          BASE_PATH: /red-river-gorge-hiker-staging/
+        run: npm run build
+
+      - name: Verify refreshed guide
+        working-directory: site
+        shell: bash
+        run: |
+          set -euo pipefail
+          guide="dist/downloads/red-river-gorge-hiker-2026-dbnf-dispersed-camping-guide.pdf"
+          test "$(stat -c%s "$guide")" = "11285602"
+          echo "fcac416e6a818386393398f5efd8db8439aba2a8df48673f30ff1d491e28a1ab  $guide" | sha256sum -c -
+
+      - name: Mark staging output noindex
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          dist = Path('dist')
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+          changed = 0
+          for page in dist.rglob('*.html'):
+              text = page.read_text(encoding='utf-8')
+              if robots_meta not in text:
+                  if '<head>' in text:
+                      text = text.replace('<head>', f'<head>{robots_meta}', 1)
+                  else:
+                      text = robots_meta + text
+                  page.write_text(text, encoding='utf-8')
+                  changed += 1
+          (dist / 'robots.txt').write_text('User-agent: *\nDisallow: /\n', encoding='utf-8')
+          if changed == 0:
+              raise RuntimeError('No HTML files received the staging noindex directive')
+          print(f'Injected noindex into {changed} HTML files and wrote robots.txt')
+          PY
+
+      - name: Verify staging safeguards
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          dist = Path('dist')
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+          html_files = list(dist.rglob('*.html'))
+          if not html_files:
+              raise RuntimeError('No generated HTML files found')
+          for page in html_files:
+              if robots_meta not in page.read_text(encoding='utf-8'):
+                  raise RuntimeError(f'Missing noindex directive in {page}')
+          if (dist / 'robots.txt').read_text(encoding='utf-8').splitlines() != ['User-agent: *', 'Disallow: /']:
+              raise RuntimeError('Unexpected robots.txt content')
+          print(f'Verified staging safeguards in {len(html_files)} HTML files')
+          PY
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload staging artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+
+  deploy:
+    name: Deploy staging Pages site
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy staging site
+        id: deployment
+        uses: actions/deploy-pages@v5
