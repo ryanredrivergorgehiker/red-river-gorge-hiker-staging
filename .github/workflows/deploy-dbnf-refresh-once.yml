@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: ryanredrivergorgehiker/red-river-gorge-hiker
-          ref: 43198ab94dacd4d9f8fe6ae8bedc6670499a7a44
+          ref: 005ccea0a107e28a901133d1a79a328f205b925e
           path: site
 
       - name: Set up Node
