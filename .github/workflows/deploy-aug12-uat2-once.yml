@@ -1,0 +1,118 @@
+name: Deploy Aug 12 UAT refinement preview once
+
+on:
+  push:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: staging-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event.head_commit.message == 'Deploy Aug 12 UAT refinement preview'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout website source
+        uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: 0fa457ea9f140f4547a878cecf64a0070c352566
+          path: site
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+      - name: Run website checks
+        working-directory: site
+        run: npm run check
+      - name: Build staging site
+        working-directory: site
+        env:
+          SITE_URL: https://ryanredrivergorgehiker.github.io
+          BASE_PATH: /red-river-gorge-hiker-staging/
+        run: npm run build
+      - name: Mark staging output noindex
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          dist = Path('dist')
+          meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+          changed = 0
+          for page in dist.rglob('*.html'):
+              text = page.read_text(encoding='utf-8')
+              if meta not in text:
+                  text = text.replace('<head>', f'<head>{meta}', 1) if '<head>' in text else meta + text
+                  page.write_text(text, encoding='utf-8')
+                  changed += 1
+          (dist / 'robots.txt').write_text('User-agent: *\nDisallow: /\n', encoding='utf-8')
+          if changed == 0:
+              raise RuntimeError('No HTML files received noindex')
+          PY
+      - name: Verify UAT refinement contract
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          dist = Path('dist')
+          html_files = list(dist.rglob('*.html'))
+          all_html = '\n'.join(p.read_text(encoding='utf-8') for p in html_files)
+          for token in [
+              'G-HM48NST64P',
+              'Analytics choices',
+              'Email Red River Gorge Hiker',
+              'View on Fine Art America',
+              'View puzzle',
+              'Print options',
+              'puzzle-action-row',
+              'print-action-row',
+              'merch-card-actions',
+          ]:
+              if token not in all_html:
+                  raise RuntimeError(f'Missing UAT token: {token}')
+          for slug, filename in [
+              ('winter-at-red-byrd-arch', 'winter-at-red-byrd-arch-puzzle.avif'),
+              ('sunrise-at-eagles-nest', 'sunrise-at-eagles-nest-puzzle.avif'),
+              ('ice-at-west-of-copperas-pillar', 'ice-at-west-of-copperas-pillar-puzzle.avif'),
+          ]:
+              page = dist / 'puzzles' / slug / 'index.html'
+              if not page.exists():
+                  raise RuntimeError(f'Missing puzzle detail page: {slug}')
+              text = page.read_text(encoding='utf-8')
+              if filename not in text or 'View this puzzle' not in text:
+                  raise RuntimeError(f'Puzzle detail page incomplete: {slug}')
+          if 'noindex,nofollow,noarchive' not in all_html:
+              raise RuntimeError('Staging noindex missing')
+          guide = dist / 'downloads/red-river-gorge-hiker-2026-dbnf-dispersed-camping-guide.pdf'
+          if hashlib.sha256(guide.read_bytes()).hexdigest() != '7e209485be3081e2630029b3b4f970c349d22179c10d530f648e60f64781111e':
+              raise RuntimeError('DBNF guide hash mismatch')
+          print(f'UAT refinement contract verified across {len(html_files)} HTML files')
+          PY
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload staging artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+  deploy:
+    if: github.event.head_commit.message == 'Deploy Aug 12 UAT refinement preview'
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy staging site
+        id: deployment
+        uses: actions/deploy-pages@v5
