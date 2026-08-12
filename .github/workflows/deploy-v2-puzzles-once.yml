@@ -1,0 +1,149 @@
+name: Deploy V2 puzzle imagery UAT once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/deploy-v2-puzzles-once.yml
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: staging-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact V2 website source
+        uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: d07a999ec36c64ca8943e41bcb0ef154a5b70593
+          path: site
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Run website checks
+        working-directory: site
+        run: npm run check
+
+      - name: Verify exact V2 puzzle assets and single-source implementation
+        working-directory: site
+        run: |
+          set -euo pipefail
+          echo '159260924b088e95fde244249c3eebaf2887d93631814c2896a2366264afa209  public/assets/puzzles/winter-at-red-byrd-arch-puzzle.avif' | sha256sum -c -
+          echo '0b91a3cf3c35be91e7727589ea3a10692f5c944bb7607d6b093003f3b6334db8  public/assets/puzzles/sunrise-at-eagles-nest-puzzle.avif' | sha256sum -c -
+          echo 'f8ce23ac9fd7a4fafc21e8683192dd68d640896fb3c7efd9bd08e608b300d074  public/assets/puzzles/ice-at-west-of-copperas-pillar-puzzle.avif' | sha256sum -c -
+          python - <<'PY'
+          from pathlib import Path
+          overview = Path('src/pages/puzzles.astro').read_text()
+          detail = Path('src/pages/puzzles/[slug].astro').read_text()
+          names = (
+              'winter-at-red-byrd-arch-puzzle.avif',
+              'sunrise-at-eagles-nest-puzzle.avif',
+              'ice-at-west-of-copperas-pillar-puzzle.avif',
+          )
+          for name in names:
+              if name not in overview or name not in detail:
+                  raise RuntimeError(f'{name} is not the single source on overview and detail pages')
+          if '-puzzle-overview.webp' in overview:
+              raise RuntimeError('Obsolete overview derivatives still referenced')
+          if Path('public/assets/puzzles/overview').exists():
+              raise RuntimeError('Obsolete overview directory still present')
+          if overview.count('width: 1448,') != 3 or overview.count('height: 1086,') != 3:
+              raise RuntimeError('Overview V2 geometry mismatch')
+          if detail.count('width: 1448,') != 3 or detail.count('height: 1086,') != 3:
+              raise RuntimeError('Detail V2 geometry mismatch')
+          if detail.count('aspect-ratio: 4 / 3;') != 2:
+              raise RuntimeError('Detail/lightbox 4:3 V2 ratio mismatch')
+          print('V2 puzzle single-source implementation verified')
+          PY
+
+      - name: Build staging site
+        working-directory: site
+        env:
+          SITE_URL: https://ryanredrivergorgehiker.github.io
+          BASE_PATH: /red-river-gorge-hiker-staging/
+        run: npm run build
+
+      - name: Mark staging output noindex
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          dist = Path('dist')
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+          changed = 0
+          for page in dist.rglob('*.html'):
+              text = page.read_text(encoding='utf-8')
+              if robots_meta not in text:
+                  text = text.replace('<head>', f'<head>{robots_meta}', 1) if '<head>' in text else robots_meta + text
+                  page.write_text(text, encoding='utf-8')
+                  changed += 1
+          (dist / 'robots.txt').write_text('User-agent: *\nDisallow: /\n', encoding='utf-8')
+          if changed == 0:
+              raise RuntimeError('No HTML files received staging noindex')
+          PY
+
+      - name: Verify built V2 puzzle pages and staging safeguards
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          dist = Path('dist')
+          names = (
+              'winter-at-red-byrd-arch-puzzle.avif',
+              'sunrise-at-eagles-nest-puzzle.avif',
+              'ice-at-west-of-copperas-pillar-puzzle.avif',
+          )
+          overview = (dist / 'puzzles' / 'index.html').read_text(encoding='utf-8')
+          for name in names:
+              if name not in overview:
+                  raise RuntimeError(f'Built overview missing {name}')
+              if not (dist / 'assets' / 'puzzles' / name).exists():
+                  raise RuntimeError(f'Built asset missing {name}')
+          for slug in ('winter-at-red-byrd-arch','sunrise-at-eagles-nest','ice-at-west-of-copperas-pillar'):
+              page = dist / 'puzzles' / slug / 'index.html'
+              if not page.exists():
+                  raise RuntimeError(f'Missing puzzle detail route {slug}')
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+          for page in dist.rglob('*.html'):
+              if robots_meta not in page.read_text(encoding='utf-8'):
+                  raise RuntimeError(f'Missing noindex in {page}')
+          if (dist / 'robots.txt').read_text().splitlines() != ['User-agent: *', 'Disallow: /']:
+              raise RuntimeError('Unexpected robots.txt')
+          print('Built V2 puzzle pages and staging safeguards verified')
+          PY
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload staging artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy staging site
+        id: deployment
+        uses: actions/deploy-pages@v5
