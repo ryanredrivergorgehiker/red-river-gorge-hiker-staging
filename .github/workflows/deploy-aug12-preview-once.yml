@@ -1,0 +1,124 @@
+name: Deploy Aug 12 preview once
+
+on:
+  push:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: staging-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event.head_commit.message == 'Deploy Aug 12 staging preview'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout website source
+        uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: feature/aug12-analytics-pricing-puzzles-sharing
+          path: site
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Run website checks
+        working-directory: site
+        run: npm run check
+
+      - name: Build staging site
+        working-directory: site
+        env:
+          SITE_URL: https://ryanredrivergorgehiker.github.io
+          BASE_PATH: /red-river-gorge-hiker-staging/
+        run: npm run build
+
+      - name: Mark staging output noindex
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          dist = Path('dist')
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+          changed = 0
+          for page in dist.rglob('*.html'):
+              text = page.read_text(encoding='utf-8')
+              if robots_meta not in text:
+                  text = text.replace('<head>', f'<head>{robots_meta}', 1) if '<head>' in text else robots_meta + text
+                  page.write_text(text, encoding='utf-8')
+                  changed += 1
+          (dist / 'robots.txt').write_text('User-agent: *\nDisallow: /\n', encoding='utf-8')
+          if changed == 0:
+              raise RuntimeError('No HTML files received noindex')
+          PY
+
+      - name: Verify Aug 12 staging contract
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          dist = Path('dist')
+          all_html = '\n'.join(p.read_text(encoding='utf-8') for p in dist.rglob('*.html'))
+          required = [
+              'G-HM48NST64P',
+              'Optional website analytics',
+              'Allow analytics',
+              'Decline',
+              'Pricing Notice:',
+              'Merchandise Pricing',
+              'Analytics choices',
+              'assets/puzzles/winter-at-red-byrd-arch-puzzle.avif',
+              'assets/puzzles/sunrise-at-eagles-nest-puzzle.avif',
+              'assets/puzzles/ice-at-west-of-copperas-pillar-puzzle.avif',
+          ]
+          for token in required:
+              if token not in all_html:
+                  raise RuntimeError(f'Missing staging token: {token}')
+          prohibited = ['facebook.com/sharer/sharer.php', 'Copy Link', 'connect.facebook.net', 'googletagmanager.com/gtm.js']
+          for token in prohibited:
+              if token in all_html:
+                  raise RuntimeError(f'Prohibited staging token present: {token}')
+          if all_html.count('G-HM48NST64P') < 1:
+              raise RuntimeError('GA4 measurement ID missing')
+          if 'noindex,nofollow,noarchive' not in all_html:
+              raise RuntimeError('Staging noindex missing')
+          guide = dist / 'downloads/red-river-gorge-hiker-2026-dbnf-dispersed-camping-guide.pdf'
+          expected = '7e209485be3081e2630029b3b4f970c349d22179c10d530f648e60f64781111e'
+          if hashlib.sha256(guide.read_bytes()).hexdigest() != expected:
+              raise RuntimeError('DBNF guide hash mismatch')
+          print('Aug 12 staging contract verified')
+          PY
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload staging artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+
+  deploy:
+    if: github.event.head_commit.message == 'Deploy Aug 12 staging preview'
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy staging site
+        id: deployment
+        uses: actions/deploy-pages@v5
