@@ -1,0 +1,161 @@
+name: Deploy Aug 12 puzzle UAT cleanup preview once
+
+on:
+  push:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: staging-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event.head_commit.message == 'Deploy Aug 12 puzzle UAT cleanup preview'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout website source
+        uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: feature/aug12-analytics-pricing-puzzles-sharing
+          path: site
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Run website checks
+        working-directory: site
+        run: npm run check
+
+      - name: Verify UAT cleanup source contract
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          prints = Path('src/pages/prints.astro').read_text()
+          puzzles = Path('src/pages/puzzles.astro').read_text()
+          detail = Path('src/pages/puzzles/[slug].astro').read_text()
+
+          required_prints = [
+              '.print-product-card:first-child .card h3',
+              'text-align: center;',
+              'margin-inline: auto;',
+              'width: min(100%, 40rem);',
+          ]
+          for token in required_prints:
+              if token not in prints:
+                  raise RuntimeError(f'Missing Prints cleanup token: {token}')
+
+          for token in [
+              '.puzzle-product-image img {',
+              'aspect-ratio: 3 / 2;',
+              'object-fit: cover;',
+          ]:
+              if token not in puzzles:
+                  raise RuntimeError(f'Missing puzzle overview cleanup token: {token}')
+          if 'background: rgba(255,255,255,.3);' in puzzles or 'border: 1px solid var(--line);' in puzzles:
+              raise RuntimeError('Old puzzle overview framing is still present')
+
+          for token in [
+              "'ice-at-west-of-copperas-pillar': {",
+              'height: 800,',
+              '.puzzle-detail-image-stage {',
+              'background: transparent;',
+              'box-shadow: none;',
+          ]:
+              if token not in detail:
+                  raise RuntimeError(f'Missing puzzle detail cleanup token: {token}')
+          if 'radial-gradient' in detail:
+              raise RuntimeError('Old lightbox framing gradient is still present')
+
+          print('Verified Prints centering, unframed puzzle imagery, normalized West of Copperas geometry, and simplified lightbox presentation')
+          PY
+
+      - name: Build staging site
+        working-directory: site
+        env:
+          SITE_URL: https://ryanredrivergorgehiker.github.io
+          BASE_PATH: /red-river-gorge-hiker-staging/
+        run: npm run build
+
+      - name: Mark staging output noindex
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          dist = Path('dist')
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+          changed = 0
+          for page in dist.rglob('*.html'):
+              text = page.read_text(encoding='utf-8')
+              if robots_meta not in text:
+                  if '<head>' in text:
+                      text = text.replace('<head>', f'<head>{robots_meta}', 1)
+                  else:
+                      text = robots_meta + text
+                  page.write_text(text, encoding='utf-8')
+                  changed += 1
+          (dist / 'robots.txt').write_text('User-agent: *\nDisallow: /\n', encoding='utf-8')
+          if changed == 0:
+              raise RuntimeError('No HTML files received staging noindex')
+          print(f'Injected noindex into {changed} HTML files')
+          PY
+
+      - name: Verify staging safeguards
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          dist = Path('dist')
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+          pages = list(dist.rglob('*.html'))
+          if not pages:
+              raise RuntimeError('No generated HTML')
+          for page in pages:
+              if robots_meta not in page.read_text(encoding='utf-8'):
+                  raise RuntimeError(f'Missing noindex in {page}')
+          if (dist / 'robots.txt').read_text().splitlines() != ['User-agent: *', 'Disallow: /']:
+              raise RuntimeError('Unexpected staging robots.txt')
+          for expected in [
+              dist / 'prints/index.html',
+              dist / 'puzzles/index.html',
+              dist / 'puzzles/winter-at-red-byrd-arch/index.html',
+              dist / 'puzzles/sunrise-at-eagles-nest/index.html',
+              dist / 'puzzles/ice-at-west-of-copperas-pillar/index.html',
+          ]:
+              if not expected.exists():
+                  raise RuntimeError(f'Missing expected staging page {expected}')
+          print(f'Verified {len(pages)} noindexed HTML files and requested UAT routes')
+          PY
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload staging artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy staging site
+        id: deployment
+        uses: actions/deploy-pages@v5
