@@ -68,6 +68,8 @@ jobs:
                   if '<head>' in text:
                       text = text.replace('<head>', f'<head>{robots_meta}', 1)
                   else:
+                      # Astro static redirects can be emitted as headless HTML fragments.
+                      # Prefix the staging-only robots directive without altering redirect behavior.
                       text = robots_meta + text
                   page.write_text(text, encoding='utf-8')
                   changed += 1
