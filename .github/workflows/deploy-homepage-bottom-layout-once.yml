@@ -1,0 +1,85 @@
+name: Deploy homepage bottom-layout UAT once
+
+on:
+  push:
+    paths:
+      - '.github/workflows/deploy-homepage-bottom-layout-once.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: staging-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout website source
+        uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: cbdae363da659bc57bad98b5d0a251c3b8f10044
+          path: site
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+      - name: Run website checks
+        working-directory: site
+        run: npm run check
+      - name: Build staging target
+        working-directory: site
+        env:
+          SITE_URL: https://ryanredrivergorgehiker.github.io
+          BASE_PATH: /red-river-gorge-hiker-staging/
+        run: npm run build
+      - name: Apply and verify staging safeguards and homepage layout
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          dist=Path('dist')
+          meta='<meta name="robots" content="noindex,nofollow,noarchive">'
+          pages=list(dist.rglob('*.html'))
+          for page in pages:
+              text=page.read_text(errors='ignore')
+              if meta not in text:
+                  text=text.replace('<head>','<head>'+meta,1) if '<head>' in text else meta+text
+                  page.write_text(text)
+          (dist/'robots.txt').write_text('User-agent: *\nDisallow: /\n')
+          home=(dist/'index.html').read_text(errors='ignore')
+          required=['Stories from the Gorge','Prints','Puzzles','Proudly supporting Wolfe County SAR','How We Support SAR','G-HM48NST64P','home-panorama-hero']
+          for token in required:
+              if token not in home: raise RuntimeError(f'Missing homepage token: {token}')
+          if 'button secondary' in home.split('Proudly supporting Wolfe County SAR',1)[1].split('</article>',1)[0]:
+              raise RuntimeError('SAR discovery link is still rendered as a button')
+          if meta not in home: raise RuntimeError('Staging noindex missing')
+          if (dist/'robots.txt').read_text().splitlines()!=['User-agent: *','Disallow: /']:
+              raise RuntimeError('Unexpected staging robots.txt')
+          print(f'Verified {len(pages)} staging pages and homepage lower-grid SAR placement')
+          PY
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload staging artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy staging site
+        id: deployment
+        uses: actions/deploy-pages@v5
