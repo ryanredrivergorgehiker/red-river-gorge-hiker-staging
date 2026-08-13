@@ -1,0 +1,56 @@
+name: Homepage UAT2
+on: push
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: staging-pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: 2f5635fe3a8e01888556e5c461883a60e0578d96
+          path: site
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+        working-directory: site
+      - run: npm run check
+        working-directory: site
+      - run: npm run build
+        working-directory: site
+        env:
+          SITE_URL: https://ryanredrivergorgehiker.github.io
+          BASE_PATH: /red-river-gorge-hiker-staging/
+      - name: Protect staging
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          d=Path('dist'); m='<meta name="robots" content="noindex,nofollow,noarchive">'
+          for p in d.rglob('*.html'):
+              s=p.read_text(); p.write_text(s.replace('<head>','<head>'+m,1) if '<head>' in s else m+s)
+          (d/'robots.txt').write_text('User-agent: *\nDisallow: /\n')
+          h=(d/'index.html').read_text(); assert m in h and 'For the people who hike it, love it, and keep coming back.' in h
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
