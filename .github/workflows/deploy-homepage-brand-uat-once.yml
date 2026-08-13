@@ -51,7 +51,7 @@ jobs:
           expected = ['User-agent: *', 'Allow: /', 'Sitemap: https://redrivergorgehiker.com/sitemap-index.xml']
           if robots != expected: raise RuntimeError(f'Unexpected production robots.txt: {robots!r}')
           home = (dist / 'index.html').read_text(errors='ignore')
-          title = 'Red River Gorge Hiker | Photography, Gear & Stories from Kentucky’s Red River Gorge'
+          title = 'Red River Gorge Hiker | Photography, Gear &amp; Stories from Kentucky’s Red River Gorge'
           for token in (title, '<h1>Red River Gorge Hiker</h1>', 'Shop Gear', 'Explore Photography', 'How We Support SAR', 'Red River Gorge Hiker Sticker', 'G-HM48NST64P'):
               if token not in home: raise RuntimeError(f'Missing homepage token: {token}')
           if 'fineartamerica.com' in home.lower(): raise RuntimeError('Homepage bypasses internal Gear path')
