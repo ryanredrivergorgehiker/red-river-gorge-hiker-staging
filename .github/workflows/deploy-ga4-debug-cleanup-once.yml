@@ -1,0 +1,206 @@
+name: Deploy GA4 debug cleanup once
+
+on:
+  push:
+    paths:
+      - '.github/workflows/deploy-ga4-debug-cleanup-once.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: staging-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Verify GA4 production/staging contract and build staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout approved cleanup source
+        uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: 2a5b2ff0d6ae5b5a151d01d5c77f2779406efffc
+          path: site
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Run full website checks
+        working-directory: site
+        run: npm run check
+
+      - name: Verify source GA4 and privacy contract
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          src = Path('src')
+          analytics = (src / 'components/AnalyticsConsent.astro').read_text()
+          privacy = (src / 'pages/privacy.astro').read_text()
+          all_source = '\n'.join(p.read_text(errors='ignore') for p in src.rglob('*') if p.is_file())
+
+          required = [
+              "G-HM48NST64P",
+              "analytics_storage: 'denied'",
+              "analytics_storage: 'granted'",
+              "send_page_view: true",
+              "allow_google_signals: false",
+              "allow_ad_personalization_signals: false",
+              "siteHostname.endsWith('github.io') ? { debug_mode: true } : {}",
+              "window.gtag('config', measurementId, gaConfig);",
+              "data-analytics-privacy-settings",
+          ]
+          for token in required:
+              if token not in all_source:
+                  raise RuntimeError(f'Missing GA4/consent contract token: {token}')
+
+          if analytics.count('G-HM48NST64P') != 1:
+              raise RuntimeError('AnalyticsConsent must contain exactly one measurement ID implementation')
+          if analytics.count("window.gtag('config', measurementId, gaConfig);") != 1:
+              raise RuntimeError('AnalyticsConsent must contain exactly one GA4 config call')
+          if 'debug_mode: false' in analytics:
+              raise RuntimeError('debug_mode: false is forbidden')
+
+          for forbidden in ('connect.facebook.net', 'googletagmanager.com/gtm.js', 'googleads.g.doubleclick.net'):
+              if forbidden in all_source.lower():
+                  raise RuntimeError(f'Forbidden tracking implementation found: {forbidden}')
+
+          for privacy_token in ('Google Analytics 4 (GA4)', 'Meta Pixel', 'Roku tracking pixels', 'Google Ads remarketing', 'Google Tag Manager'):
+              if privacy_token not in privacy:
+                  raise RuntimeError(f'Privacy language unexpectedly changed: {privacy_token}')
+
+          print('Verified single GA4 implementation, consent/privacy contract, and absence of forbidden trackers')
+          PY
+
+      - name: Build staging target
+        working-directory: site
+        env:
+          SITE_URL: https://ryanredrivergorgehiker.github.io
+          BASE_PATH: /red-river-gorge-hiker-staging/
+        run: npm run build
+
+      - name: Verify staging emits debug mode true
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          html = '\n'.join(p.read_text(errors='ignore') for p in Path('dist').rglob('*.html'))
+          if 'G-HM48NST64P' not in html:
+              raise RuntimeError('Measurement ID missing from staging output')
+          if 'debug_mode' not in html:
+              raise RuntimeError('Staging output does not contain debug_mode')
+          if not re.search(r'debug_mode.{0,30}true', html):
+              raise RuntimeError('Staging output does not emit debug_mode true')
+          if 'debug_mode:false' in html or '"debug_mode":false' in html:
+              raise RuntimeError('Staging output emits forbidden debug_mode false')
+          for token in ('rrgh-analytics-consent-v1', 'analytics_storage', 'allow_google_signals', 'allow_ad_personalization_signals'):
+              if token not in html:
+                  raise RuntimeError(f'Missing staging consent/config token: {token}')
+          print('Verified staging output emits debug_mode true and retains GA4 consent configuration')
+          PY
+          cp -a dist dist-staging
+
+      - name: Build production target from same commit
+        working-directory: site
+        run: |
+          rm -rf dist
+          npm run build
+
+      - name: Verify production target omits debug mode entirely
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          html = '\n'.join(p.read_text(errors='ignore') for p in Path('dist').rglob('*.html'))
+          if 'debug_mode' in html:
+              raise RuntimeError('Production-target output contains debug_mode; it must be omitted entirely')
+          if 'G-HM48NST64P' not in html:
+              raise RuntimeError('Measurement ID missing from production-target output')
+          for token in ('rrgh-analytics-consent-v1', 'analytics_storage', 'allow_google_signals', 'allow_ad_personalization_signals'):
+              if token not in html:
+                  raise RuntimeError(f'Missing production consent/config token: {token}')
+          print('Verified production-target output completely omits debug_mode and retains GA4 configuration')
+          PY
+          rm -rf dist
+          mv dist-staging dist
+
+      - name: Mark staging output noindex
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          dist = Path('dist')
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+          changed = 0
+          for page in dist.rglob('*.html'):
+              text = page.read_text(encoding='utf-8')
+              if robots_meta not in text:
+                  if '<head>' in text:
+                      text = text.replace('<head>', f'<head>{robots_meta}', 1)
+                  else:
+                      text = robots_meta + text
+                  page.write_text(text, encoding='utf-8')
+                  changed += 1
+          (dist / 'robots.txt').write_text('User-agent: *\nDisallow: /\n', encoding='utf-8')
+          if changed == 0:
+              raise RuntimeError('No HTML files received staging noindex')
+          print(f'Injected noindex into {changed} staging HTML files')
+          PY
+
+      - name: Verify staging safeguards and final GA4 contract
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          dist = Path('dist')
+          html_files = list(dist.rglob('*.html'))
+          if not html_files:
+              raise RuntimeError('No staging HTML files found')
+          joined = '\n'.join(p.read_text(errors='ignore') for p in html_files)
+          if 'debug_mode' not in joined or not re.search(r'debug_mode.{0,30}true', joined):
+              raise RuntimeError('Final staging artifact lost debug_mode true')
+          if '<meta name="robots" content="noindex,nofollow,noarchive">' not in joined:
+              raise RuntimeError('Missing staging noindex safeguard')
+          if (dist / 'robots.txt').read_text().splitlines() != ['User-agent: *', 'Disallow: /']:
+              raise RuntimeError('Unexpected staging robots.txt')
+          print(f'Final staging artifact verified across {len(html_files)} HTML files')
+          PY
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload staging artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+
+  deploy:
+    name: Deploy staging Pages site
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy staging site
+        id: deployment
+        uses: actions/deploy-pages@v5
