@@ -1,0 +1,117 @@
+name: Deploy homepage brand UAT once
+
+on:
+  push:
+    paths:
+      - '.github/workflows/deploy-homepage-brand-uat-once.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: staging-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout homepage source
+        uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: bbe9a2d444437530c5a67647960770695dbb1863
+          path: site
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+      - name: Run website checks
+        working-directory: site
+        run: npm run check
+      - name: Build production target for search verification
+        working-directory: site
+        run: npm run build
+      - name: Verify production-target discovery and measurement contract
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          import xml.etree.ElementTree as ET
+          dist = Path('dist')
+          robots = (dist / 'robots.txt').read_text().splitlines()
+          expected = ['User-agent: *', 'Allow: /', 'Sitemap: https://redrivergorgehiker.com/sitemap-index.xml']
+          if robots != expected: raise RuntimeError(f'Unexpected production robots.txt: {robots!r}')
+          home = (dist / 'index.html').read_text(errors='ignore')
+          title = 'Red River Gorge Hiker | Photography, Gear & Stories from Kentucky’s Red River Gorge'
+          for token in (title, '<h1>Red River Gorge Hiker</h1>', 'Shop Gear', 'Explore Photography', 'How We Support SAR', 'Red River Gorge Hiker Sticker', 'G-HM48NST64P'):
+              if token not in home: raise RuntimeError(f'Missing homepage token: {token}')
+          if 'fineartamerica.com' in home.lower(): raise RuntimeError('Homepage bypasses internal Gear path')
+          if 'noindex' in '\n'.join(p.read_text(errors='ignore') for p in dist.rglob('*.html')).lower(): raise RuntimeError('Production target contains noindex')
+          if 'debug_mode' in home: raise RuntimeError('Production target unexpectedly contains GA4 debug_mode')
+          if not re.search(r'<link rel="canonical" href="https://redrivergorgehiker\.com/"', home): raise RuntimeError('Homepage canonical is not primary domain')
+          if '"@type":"WebSite"' not in home or '"name":"Red River Gorge Hiker"' not in home: raise RuntimeError('WebSite structured data missing')
+          sitemap_index = dist / 'sitemap-index.xml'
+          if not sitemap_index.exists(): raise RuntimeError('sitemap-index.xml missing')
+          xmls = list(dist.glob('sitemap*.xml'))
+          locs=[]
+          for path in xmls:
+              root=ET.parse(path).getroot()
+              locs += [e.text.strip() for e in root.iter() if e.tag.endswith('loc') and e.text]
+          if not locs or any(not loc.startswith('https://redrivergorgehiker.com') for loc in locs): raise RuntimeError('Sitemap URLs are not canonical production URLs')
+          for forbidden in ('googletagmanager.com/gtm.js','connect.facebook.net','googleads.g.doubleclick.net'):
+              if forbidden in home.lower(): raise RuntimeError(f'Forbidden tracker found: {forbidden}')
+          print(f'Production target verified with {len(locs)} sitemap locations')
+          PY
+      - name: Build staging target
+        working-directory: site
+        env:
+          SITE_URL: https://ryanredrivergorgehiker.github.io
+          BASE_PATH: /red-river-gorge-hiker-staging/
+        run: |
+          rm -rf dist
+          npm run build
+      - name: Apply and verify staging safeguards
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          dist=Path('dist')
+          meta='<meta name="robots" content="noindex,nofollow,noarchive">'
+          pages=list(dist.rglob('*.html'))
+          for page in pages:
+              text=page.read_text(errors='ignore')
+              if '<head>' in text: text=text.replace('<head>', '<head>'+meta, 1)
+              else: text=meta+text
+              page.write_text(text)
+          (dist/'robots.txt').write_text('User-agent: *\nDisallow: /\n')
+          home=(dist/'index.html').read_text(errors='ignore')
+          for token in ('Red River Gorge Hiker', 'Shop Gear', 'Red River Gorge Hiker Sticker', 'debug_mode'):
+              if token not in home: raise RuntimeError(f'Missing staging token: {token}')
+          if meta not in home: raise RuntimeError('Staging noindex missing')
+          print(f'Verified {len(pages)} staging pages and homepage brand content')
+          PY
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload staging artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy staging site
+        id: deployment
+        uses: actions/deploy-pages@v5
