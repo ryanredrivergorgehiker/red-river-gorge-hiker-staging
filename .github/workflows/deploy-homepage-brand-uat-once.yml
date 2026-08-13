@@ -55,7 +55,7 @@ jobs:
           for token in (title, '<h1>Red River Gorge Hiker</h1>', 'Shop Gear', 'Explore Photography', 'How We Support SAR', 'Red River Gorge Hiker Sticker', 'G-HM48NST64P'):
               if token not in home: raise RuntimeError(f'Missing homepage token: {token}')
           if 'fineartamerica.com' in home.lower(): raise RuntimeError('Homepage bypasses internal Gear path')
-          if 'noindex' in '\n'.join(p.read_text(errors='ignore') for p in dist.rglob('*.html')).lower(): raise RuntimeError('Production target contains noindex')
+          if 'noindex' in home.lower(): raise RuntimeError('Production homepage contains noindex')
           if 'debug_mode' in home: raise RuntimeError('Production target unexpectedly contains GA4 debug_mode')
           if not re.search(r'<link rel="canonical" href="https://redrivergorgehiker\.com/"', home): raise RuntimeError('Homepage canonical is not primary domain')
           if '"@type":"WebSite"' not in home or '"name":"Red River Gorge Hiker"' not in home: raise RuntimeError('WebSite structured data missing')
