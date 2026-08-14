@@ -1,0 +1,209 @@
+name: Deploy Aug 14 UAT bug-fix pass
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/deploy-aug14-uat-fix2.yml
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: staging-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Aug 14 UAT bug-fix source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout website source
+        uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: 0c84c1e36912b1eba2dfb6ddc3d0be046ae03ba7
+          path: site
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Run website checks
+        working-directory: site
+        run: npm run check
+
+      - name: Build staging site
+        working-directory: site
+        env:
+          SITE_URL: https://ryanredrivergorgehiker.github.io
+          BASE_PATH: /red-river-gorge-hiker-staging/
+        run: npm run build
+
+      - name: Verify UAT bug fixes
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          home = (Path('dist') / 'index.html').read_text(encoding='utf-8')
+          nav_css = Path('src/styles/responsive-nav.css').read_text(encoding='utf-8')
+          home_css = Path('src/styles/home-brand.css').read_text(encoding='utf-8')
+
+          desktop_marker = 'home-mosaic home-mosaic-desktop'
+          mobile_marker = 'home-mosaic home-mosaic-mobile'
+          if desktop_marker not in home or mobile_marker not in home:
+              raise RuntimeError('Desktop/mobile homepage mosaic separation is missing')
+
+          desktop = home.split(desktop_marker, 1)[1].split(mobile_marker, 1)[0]
+          mobile = home.split(mobile_marker, 1)[1]
+
+          desktop_titles = [
+              'Winter at Red-byrd Arch',
+              'Sunrise at Eagle’s Nest',
+              'Dog Fork Falls in Winter',
+              'Ice at West of Copperas Pillar',
+              'Splatter Falls',
+          ]
+          if 'Double Rainbow at Eagle’s Point Buttress' in desktop:
+              raise RuntimeError('Double Rainbow leaked into the desktop production mosaic')
+          positions = [desktop.find(title) for title in desktop_titles]
+          if any(pos < 0 for pos in positions) or positions != sorted(positions):
+              raise RuntimeError(f'Desktop mosaic order is wrong: {positions}')
+
+          first_mobile_title = mobile.find('Double Rainbow at Eagle’s Point Buttress')
+          next_mobile_title = mobile.find('Winter at Red-byrd Arch')
+          if first_mobile_title < 0 or next_mobile_title < 0 or first_mobile_title > next_mobile_title:
+              raise RuntimeError('Double Rainbow is not the first mobile photography card')
+
+          required_nav_tokens = [
+              '@media (max-width: 540px)',
+              'grid-template-columns: repeat(6, minmax(0, 1fr));',
+              '.mobile-primary-nav li:nth-child(4)',
+              'grid-column: 2 / span 2;',
+              '.mobile-primary-nav li:nth-child(5)',
+              'grid-column: 4 / span 2;',
+              '.mobile-primary-nav li:nth-child(3)::after',
+          ]
+          missing = [token for token in required_nav_tokens if token not in nav_css]
+          if missing:
+              raise RuntimeError('Portrait navigation centering contract missing: ' + ', '.join(missing))
+
+          if '.home-mosaic-mobile' not in home_css or '.home-mosaic-desktop' not in home_css:
+              raise RuntimeError('Responsive homepage mosaic CSS missing')
+
+          print('Desktop mosaic restoration and portrait navigation centering checks passed')
+          PY
+
+      - name: Mark staging output noindex
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          dist = Path('dist')
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+          changed = 0
+          for page in dist.rglob('*.html'):
+              text = page.read_text(encoding='utf-8')
+              if robots_meta not in text:
+                  if '<head>' in text:
+                      text = text.replace('<head>', f'<head>{robots_meta}', 1)
+                  else:
+                      text = robots_meta + text
+                  page.write_text(text, encoding='utf-8')
+                  changed += 1
+          (dist / 'robots.txt').write_text('User-agent: *\nDisallow: /\n', encoding='utf-8')
+          if changed == 0:
+              raise RuntimeError('No HTML files received the staging noindex directive')
+          print(f'Injected noindex into {changed} HTML files and wrote robots.txt')
+          PY
+
+      - name: Verify staging safeguards
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          dist = Path('dist')
+          base = '/red-river-gorge-hiker-staging/'
+          expected_prefix = 'https://ryanredrivergorgehiker.github.io' + base
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+
+          html_files = list(dist.rglob('*.html'))
+          if not html_files:
+              raise RuntimeError('No generated HTML files found')
+
+          class URLParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.urls = []
+              def handle_starttag(self, tag, attrs):
+                  for key, value in attrs:
+                      if key in {'href', 'src'} and value:
+                          self.urls.append((tag, key, value))
+
+          bad_urls = []
+          for page in html_files:
+              text = page.read_text(encoding='utf-8')
+              if robots_meta not in text:
+                  raise RuntimeError(f'Missing noindex directive in {page}')
+              parser = URLParser()
+              parser.feed(text)
+              for tag, key, value in parser.urls:
+                  if value.startswith('/') and not value.startswith('//') and not value.startswith(base):
+                      bad_urls.append(f'{page}: <{tag}> {key}={value}')
+          if bad_urls:
+              raise RuntimeError('Root-relative URLs escaped the staging base:\n' + '\n'.join(bad_urls[:20]))
+
+          robots_lines = (dist / 'robots.txt').read_text(encoding='utf-8').splitlines()
+          if robots_lines != ['User-agent: *', 'Disallow: /']:
+              raise RuntimeError(f'Unexpected robots.txt content: {robots_lines!r}')
+
+          sitemap_files = list(dist.glob('sitemap*.xml'))
+          locs = []
+          for sitemap in sitemap_files:
+              root = ET.parse(sitemap).getroot()
+              for elem in root.iter():
+                  if elem.tag.endswith('loc') and elem.text:
+                      locs.append(elem.text.strip())
+          if not locs:
+              raise RuntimeError('No sitemap <loc> entries found')
+          bad_locs = [loc for loc in locs if not loc.startswith(expected_prefix)]
+          if bad_locs:
+              raise RuntimeError('Sitemap URLs do not use the staging URL/base: ' + ', '.join(bad_locs[:10]))
+
+          print(f'Verified {len(html_files)} HTML files and staging safeguards')
+          PY
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload staging artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+
+  deploy:
+    name: Deploy staging Pages site
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy staging site
+        id: deployment
+        uses: actions/deploy-pages@v5
