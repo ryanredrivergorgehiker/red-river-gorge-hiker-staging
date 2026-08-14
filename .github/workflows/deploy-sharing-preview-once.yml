@@ -1,0 +1,187 @@
+name: Deploy approved sharing preview once
+
+on:
+  push:
+    paths:
+      - '.github/workflows/deploy-sharing-preview-once.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: staging-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build exact approved sharing candidate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact website candidate
+        uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: 634189165f0c20b36371c4a19138ec4f679d8852
+          path: site
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Run full website checks
+        working-directory: site
+        run: npm run check
+
+      - name: Build staging site
+        working-directory: site
+        env:
+          SITE_URL: https://ryanredrivergorgehiker.github.io
+          BASE_PATH: /red-river-gorge-hiker-staging/
+        run: npm run build
+
+      - name: Verify sharing candidate in built output
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          dist = Path('dist')
+          pages = list(dist.rglob('*.html'))
+          if not pages:
+              raise RuntimeError('No generated HTML found')
+
+          share_pages = []
+          jpg_og_pages = []
+          dimensioned_og_pages = []
+          for page in pages:
+              text = page.read_text(encoding='utf-8')
+              if 'Share' in text and ('navigator.share' in text or 'data-share' in text or 'share-control' in text):
+                  share_pages.append(page)
+              if re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\'][^"\']+\.jpg', text, re.I):
+                  jpg_og_pages.append(page)
+              if 'og:image:width' in text and 'og:image:height' in text:
+                  dimensioned_og_pages.append(page)
+
+          # Repository contract is the authoritative exhaustive coverage. These output checks
+          # make sure the built staging artifact still contains JPEG social previews and dimensions.
+          if not jpg_og_pages:
+              raise RuntimeError('No JPEG Open Graph image metadata found in built output')
+          if not dimensioned_og_pages:
+              raise RuntimeError('No explicit Open Graph image dimensions found in built output')
+
+          gear_jpgs = list((Path('public') / 'assets' / 'gear').rglob('*.jpg')) if (Path('public') / 'assets' / 'gear').exists() else []
+          if len(gear_jpgs) < 20:
+              # Candidate may store social derivatives in a dedicated subfolder; search all public assets.
+              gear_jpgs = [p for p in (Path('public') / 'assets').rglob('*.jpg') if 'gear' in str(p).lower()]
+          if len(gear_jpgs) < 20:
+              raise RuntimeError(f'Expected at least 20 Gear JPEG social derivatives, found {len(gear_jpgs)}')
+
+          print(f'Built {len(pages)} HTML files; JPEG OG pages={len(jpg_og_pages)}; dimensioned OG pages={len(dimensioned_og_pages)}; Gear JPEGs={len(gear_jpgs)}')
+          PY
+
+      - name: Mark staging output noindex
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          dist = Path('dist')
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+          changed = 0
+          for page in dist.rglob('*.html'):
+              text = page.read_text(encoding='utf-8')
+              if robots_meta not in text:
+                  if '<head>' in text:
+                      text = text.replace('<head>', f'<head>{robots_meta}', 1)
+                  else:
+                      text = robots_meta + text
+                  page.write_text(text, encoding='utf-8')
+                  changed += 1
+          (dist / 'robots.txt').write_text('User-agent: *\nDisallow: /\n', encoding='utf-8')
+          if changed == 0:
+              raise RuntimeError('No HTML files received staging noindex')
+          print(f'Injected noindex into {changed} HTML files')
+          PY
+
+      - name: Verify staging safeguards
+        working-directory: site
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          dist = Path('dist')
+          base = '/red-river-gorge-hiker-staging/'
+          expected_prefix = 'https://ryanredrivergorgehiker.github.io' + base
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+          html_files = list(dist.rglob('*.html'))
+          if not html_files:
+              raise RuntimeError('No generated HTML files found')
+
+          class URLParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.urls = []
+              def handle_starttag(self, tag, attrs):
+                  for key, value in attrs:
+                      if key in {'href', 'src'} and value:
+                          self.urls.append((tag, key, value))
+
+          bad_urls = []
+          for page in html_files:
+              text = page.read_text(encoding='utf-8')
+              if robots_meta not in text:
+                  raise RuntimeError(f'Missing noindex directive in {page}')
+              parser = URLParser(); parser.feed(text)
+              for tag, key, value in parser.urls:
+                  if value.startswith('/') and not value.startswith('//') and not value.startswith(base):
+                      bad_urls.append(f'{page}: <{tag}> {key}={value}')
+          if bad_urls:
+              raise RuntimeError('Root-relative URLs escaped staging base:\n' + '\n'.join(bad_urls[:20]))
+
+          if (dist / 'robots.txt').read_text(encoding='utf-8').splitlines() != ['User-agent: *', 'Disallow: /']:
+              raise RuntimeError('Unexpected staging robots.txt')
+
+          sitemap_files = list(dist.glob('sitemap*.xml'))
+          if not sitemap_files:
+              raise RuntimeError('No sitemap files found')
+          locs = []
+          for sitemap in sitemap_files:
+              root = ET.parse(sitemap).getroot()
+              for elem in root.iter():
+                  if elem.tag.endswith('loc') and elem.text:
+                      locs.append(elem.text.strip())
+          if not locs or any(not loc.startswith(expected_prefix) for loc in locs):
+              raise RuntimeError('Staging sitemap URL/base verification failed')
+          print(f'Verified staging safeguards across {len(html_files)} HTML files and {len(locs)} sitemap locations')
+          PY
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload staging artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+
+  deploy:
+    name: Deploy staging Pages site
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy staging site
+        id: deployment
+        uses: actions/deploy-pages@v5
