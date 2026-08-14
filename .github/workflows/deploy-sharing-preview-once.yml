@@ -60,31 +60,23 @@ jobs:
           if not pages:
               raise RuntimeError('No generated HTML found')
 
-          share_pages = []
           jpg_og_pages = []
           dimensioned_og_pages = []
           for page in pages:
               text = page.read_text(encoding='utf-8')
-              if 'Share' in text and ('navigator.share' in text or 'data-share' in text or 'share-control' in text):
-                  share_pages.append(page)
               if re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\'][^"\']+\.jpg', text, re.I):
                   jpg_og_pages.append(page)
               if 'og:image:width' in text and 'og:image:height' in text:
                   dimensioned_og_pages.append(page)
 
-          # Repository contract is the authoritative exhaustive coverage. These output checks
-          # make sure the built staging artifact still contains JPEG social previews and dimensions.
           if not jpg_og_pages:
               raise RuntimeError('No JPEG Open Graph image metadata found in built output')
           if not dimensioned_og_pages:
               raise RuntimeError('No explicit Open Graph image dimensions found in built output')
 
-          gear_jpgs = list((Path('public') / 'assets' / 'gear').rglob('*.jpg')) if (Path('public') / 'assets' / 'gear').exists() else []
-          if len(gear_jpgs) < 20:
-              # Candidate may store social derivatives in a dedicated subfolder; search all public assets.
-              gear_jpgs = [p for p in (Path('public') / 'assets').rglob('*.jpg') if 'gear' in str(p).lower()]
-          if len(gear_jpgs) < 20:
-              raise RuntimeError(f'Expected at least 20 Gear JPEG social derivatives, found {len(gear_jpgs)}')
+          gear_jpgs = list((Path('public') / 'assets' / 'merchandise').glob('rrgh-merch-*-share.jpg'))
+          if len(gear_jpgs) != 20:
+              raise RuntimeError(f'Expected exactly 20 Gear JPEG social derivatives, found {len(gear_jpgs)}')
 
           print(f'Built {len(pages)} HTML files; JPEG OG pages={len(jpg_og_pages)}; dimensioned OG pages={len(dimensioned_og_pages)}; Gear JPEGs={len(gear_jpgs)}')
           PY
