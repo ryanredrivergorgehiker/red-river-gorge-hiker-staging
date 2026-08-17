@@ -1,0 +1,195 @@
+name: Deploy Beach Towel V2 candidate to staging
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/deploy-beach-towel-v2-uat.yml
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: staging-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Beach Towel V2 UAT candidate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact production-source candidate
+        uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: b0b56100f9baae6d80da9b45a0d1e50bd39bd89c
+          path: site
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Run full website checks
+        working-directory: site
+        run: npm run check
+
+      - name: Build staging site
+        working-directory: site
+        env:
+          SITE_URL: https://ryanredrivergorgehiker.github.io
+          BASE_PATH: /red-river-gorge-hiker-staging/
+        run: npm run build
+
+      - name: Verify Beach Towel V2 candidate in generated site
+        working-directory: site
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          dist = Path('dist')
+          new_avif = 'rrgh-merch-towel-beach-1348ef08.avif'
+          new_jpg = 'rrgh-merch-towel-beach-1348ef08-share.jpg'
+          old_avif = 'rrgh-merch-towel-beach-35a77bd5.avif'
+
+          for asset in [new_avif, new_jpg, old_avif, 'rrgh-merch-towel-beach-35a77bd5-share.jpg']:
+              path = dist / 'assets' / 'merchandise' / asset
+              if not path.is_file() or path.stat().st_size == 0:
+                  raise RuntimeError(f'Missing expected Beach Towel asset: {path}')
+
+          index = (dist / 'gear' / 'index.html').read_text(encoding='utf-8')
+          detail = (dist / 'gear' / 'beach-towel' / 'index.html').read_text(encoding='utf-8')
+
+          if new_avif not in index or new_avif not in detail:
+              raise RuntimeError('New Beach Towel V2 AVIF is not active on both Gear index and detail pages')
+          if old_avif in index or old_avif in detail:
+              raise RuntimeError('Superseded Beach Towel AVIF is still referenced by a consumer-facing page')
+          if new_jpg not in detail:
+              raise RuntimeError('Beach Towel detail social metadata does not use the new JPEG preview')
+
+          for required in ['Beach Towel', '$32.50', '32 × 64 inches', 'https://fineartamerica.com/featured/red-river-gorge-hiker-ryan-d-lewis.html?product=beach-towel']:
+              if required not in detail:
+                  raise RuntimeError(f'Beach Towel immutable product value missing from detail page: {required}')
+
+          if 'width="657"' not in index or 'height="1000"' not in index:
+              raise RuntimeError('Gear index does not carry expected V2 rendered dimensions')
+          if 'width="657"' not in detail or 'height="1000"' not in detail:
+              raise RuntimeError('Beach Towel detail does not carry expected V2 rendered dimensions')
+
+          print('Beach Towel V2 is active on Gear index/detail; old image is preserved as an asset but not referenced; product data is unchanged.')
+          PY
+
+      - name: Mark staging output noindex
+        working-directory: site
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          dist = Path('dist')
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+          changed = 0
+          for page in dist.rglob('*.html'):
+              text = page.read_text(encoding='utf-8')
+              if robots_meta not in text:
+                  if '<head>' in text:
+                      text = text.replace('<head>', f'<head>{robots_meta}', 1)
+                  else:
+                      text = robots_meta + text
+                  page.write_text(text, encoding='utf-8')
+                  changed += 1
+          (dist / 'robots.txt').write_text('User-agent: *\nDisallow: /\n', encoding='utf-8')
+          if changed == 0:
+              raise RuntimeError('No HTML files received the staging noindex directive')
+          print(f'Injected noindex into {changed} HTML files and wrote robots.txt')
+          PY
+
+      - name: Verify staging safeguards
+        working-directory: site
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          dist = Path('dist')
+          base = '/red-river-gorge-hiker-staging/'
+          expected_prefix = 'https://ryanredrivergorgehiker.github.io' + base
+          robots_meta = '<meta name="robots" content="noindex,nofollow,noarchive">'
+
+          html_files = list(dist.rglob('*.html'))
+          if not html_files:
+              raise RuntimeError('No generated HTML files found')
+
+          class URLParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.urls = []
+              def handle_starttag(self, tag, attrs):
+                  for key, value in attrs:
+                      if key in {'href', 'src'} and value:
+                          self.urls.append((tag, key, value))
+
+          bad_urls = []
+          for page in html_files:
+              text = page.read_text(encoding='utf-8')
+              if robots_meta not in text:
+                  raise RuntimeError(f'Missing noindex directive in {page}')
+              parser = URLParser()
+              parser.feed(text)
+              for tag, key, value in parser.urls:
+                  if value.startswith('/') and not value.startswith('//') and not value.startswith(base):
+                      bad_urls.append(f'{page}: <{tag}> {key}={value}')
+          if bad_urls:
+              raise RuntimeError('Root-relative URLs escaped the staging base:\n' + '\n'.join(bad_urls[:20]))
+
+          robots_lines = (dist / 'robots.txt').read_text(encoding='utf-8').splitlines()
+          if robots_lines != ['User-agent: *', 'Disallow: /']:
+              raise RuntimeError(f'Unexpected robots.txt content: {robots_lines!r}')
+
+          sitemap_files = list(dist.glob('sitemap*.xml'))
+          if not sitemap_files:
+              raise RuntimeError('No sitemap files found')
+          locs = []
+          for sitemap in sitemap_files:
+              root = ET.parse(sitemap).getroot()
+              for elem in root.iter():
+                  if elem.tag.endswith('loc') and elem.text:
+                      locs.append((sitemap, elem.text.strip()))
+          if not locs:
+              raise RuntimeError('No sitemap <loc> entries found')
+          bad_locs = [f'{path}: {loc}' for path, loc in locs if not loc.startswith(expected_prefix)]
+          if bad_locs:
+              raise RuntimeError('Sitemap URLs do not use the staging URL/base:\n' + '\n'.join(bad_locs[:20]))
+
+          print(f'Verified {len(html_files)} HTML files, robots.txt, internal base URLs, and {len(locs)} sitemap locations')
+          PY
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload staging artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+
+  deploy:
+    name: Deploy Beach Towel V2 staging site
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy staging site
+        id: deployment
+        uses: actions/deploy-pages@v5
