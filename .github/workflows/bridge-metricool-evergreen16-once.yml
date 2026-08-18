@@ -20,11 +20,24 @@ jobs:
           ref: metricool-verified-media-20260818
           fetch-depth: 0
 
-      - name: Download and verify exact approved Drive image
+      - name: Mark workflow execution
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p metricool-media
+          git config user.name 'red-river-gorge-hiker-automation'
+          git config user.email 'ryan@redrivergorgehiker.com'
+          printf '%s\n' 'Evergreen16 bridge workflow executed from staging main.' > metricool-media/bridge-run-marker.txt
+          git add metricool-media/bridge-run-marker.txt
+          if ! git diff --cached --quiet; then
+            git commit -m 'Mark Evergreen 16 bridge workflow execution'
+            git push origin HEAD:metricool-verified-media-20260818
+          fi
+
+      - name: Download and verify exact approved Drive image
+        shell: bash
+        run: |
+          set -euo pipefail
           curl --fail --location --retry 2 \
             'https://drive.usercontent.google.com/download?id=1Z7Y_OJxZVm9JrT2NwvcpENWRLVekCuj4&export=download&confirm=t' \
             --output metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png
@@ -35,8 +48,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name 'red-river-gorge-hiker-automation'
-          git config user.email 'ryan@redrivergorgehiker.com'
           git add metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png
           if git diff --cached --quiet; then
             echo 'Exact verified image already present.'
