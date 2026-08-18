@@ -1,0 +1,46 @@
+name: Bridge exact Evergreen 16 media once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/bridge-evergreen16-exact-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout media bridge branch
+        uses: actions/checkout@v6
+        with:
+          ref: metricool-verified-media-20260818
+          fetch-depth: 0
+
+      - name: Retrieve exact bridged Accepted image
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p metricool-media
+          curl --fail --location --retry 2 \
+            'https://oaisdmntprsoutheastus3.blob.core.windows.net/files/00000000-5fbc-820c-bd43-3d2f95e8ebf6/raw?se=2026-08-18T18%3A57%3A15Z&sp=r&sv=2026-02-06&sr=b&scid=01a01635-40e4-79a0-9ba6-a459f3875bfa&skoid=78501c7f-f65d-4e8d-9110-bed29e1beb41&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-18T14%3A20%3A38Z&ske=2026-08-19T14%3A20%3A38Z&sks=b&skv=2026-02-06&sig=LOefyE4eR%2BFeOi1lSoz0ACiB%2BCbkAeSiqqSRb6CjsEo%3D' \
+            --output metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png
+          echo 'c62944573cf8ec4685fb927b43200dd3ddf3bda114d77258c309aae93910f9cc  metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png)" = '1972602'
+
+      - name: Commit exact media to bridge branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'red-river-gorge-hiker-automation'
+          git config user.email 'ryan@redrivergorgehiker.com'
+          git add metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png
+          if git diff --cached --quiet; then
+            echo 'Exact Evergreen 16 media already present.'
+            exit 0
+          fi
+          git commit -m 'Add exact Evergreen 16 Metricool media'
+          git push origin HEAD:metricool-verified-media-20260818
