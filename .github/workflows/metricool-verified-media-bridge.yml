@@ -1,0 +1,43 @@
+name: Build verified Metricool media bridge
+
+on:
+  push:
+    branches:
+      - metricool-verified-media-20260818
+    paths:
+      - .github/workflows/metricool-verified-media-bridge.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: metricool-verified-media-20260818
+      - name: Download exact approved September creative from Drive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p metricool-media
+          curl --fail --location --retry 2 \
+            'https://drive.usercontent.google.com/download?id=1Z7Y_OJxZVm9JrT2NwvcpENWRLVekCuj4&export=download&confirm=t' \
+            --output metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png
+          echo 'c62944573cf8ec4685fb927b43200dd3ddf3bda114d77258c309aae93910f9cc  metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png)" = '1972602'
+      - name: Commit verified media bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'red-river-gorge-hiker-automation'
+          git config user.email 'ryan@redrivergorgehiker.com'
+          git add metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png
+          if git diff --cached --quiet; then
+            echo 'Verified media already present.'
+            exit 0
+          fi
+          git commit -m 'Add verified Evergreen 16 Metricool media bridge'
+          git push origin HEAD:metricool-verified-media-20260818
