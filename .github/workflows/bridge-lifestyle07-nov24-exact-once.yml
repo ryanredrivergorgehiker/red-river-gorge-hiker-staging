@@ -1,0 +1,46 @@
+name: Bridge exact Lifestyle 07 media once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/bridge-lifestyle07-nov24-exact-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dedicated media bridge branch
+        uses: actions/checkout@v6
+        with:
+          ref: metricool-verified-media-20260818
+          fetch-depth: 0
+
+      - name: Retrieve exact bridged Accepted image
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p metricool-media
+          curl --fail --location --retry 2 \
+            'https://oaisdmntprsoutheastus3.blob.core.windows.net/files/00000000-7954-820c-8bcb-da26651c6505/raw?se=2026-08-18T19%3A53%3A16Z&sp=r&sv=2026-02-06&sr=b&scid=01a0165b-a406-74ab-980b-f4521d40ce89&skoid=2757bbe4-5137-4324-975b-acedc0bad279&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-18T11%3A58%3A14Z&ske=2026-08-19T11%3A58%3A14Z&sks=b&skv=2026-02-06&sig=NYEnphZyM4153mKVWW6t8MBuLYZEnJSBtsYAbYKPt8Q%3D' \
+            --output metricool-media/RRGH-Social-Lifestyle-07-Family-Kids-Baby-Dog-Fork-Ice.png
+          echo '30ceb499959c595f1f7e4ab8632c282039f9be5c53674a839e23e8e91b2d2188  metricool-media/RRGH-Social-Lifestyle-07-Family-Kids-Baby-Dog-Fork-Ice.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Lifestyle-07-Family-Kids-Baby-Dog-Fork-Ice.png)" = '2418756'
+
+      - name: Commit exact media to bridge branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'red-river-gorge-hiker-automation'
+          git config user.email 'ryan@redrivergorgehiker.com'
+          git add metricool-media/RRGH-Social-Lifestyle-07-Family-Kids-Baby-Dog-Fork-Ice.png
+          if git diff --cached --quiet; then
+            echo 'Exact Lifestyle 07 media already present.'
+            exit 0
+          fi
+          git commit -m 'Add exact Lifestyle 07 Metricool media'
+          git push origin HEAD:metricool-verified-media-20260818
