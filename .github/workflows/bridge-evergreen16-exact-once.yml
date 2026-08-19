@@ -1,4 +1,4 @@
-name: Bridge exact Evergreen 16 media once
+name: Bridge current product-truth social media once
 
 on:
   push:
@@ -20,16 +20,41 @@ jobs:
           ref: metricool-verified-media-20260818
           fetch-depth: 0
 
-      - name: Retrieve exact bridged Accepted image
+      - name: Retrieve exact current Accepted media and historical placeholder media
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p metricool-media
+          mkdir -p metricool-media metricool-placeholder-archive/2026-superseded
+
           curl --fail --location --retry 2 \
-            'https://oaisdmntprsoutheastus3.blob.core.windows.net/files/00000000-5fbc-820c-bd43-3d2f95e8ebf6/raw?se=2026-08-18T18%3A57%3A15Z&sp=r&sv=2026-02-06&sr=b&scid=01a01635-40e4-79a0-9ba6-a459f3875bfa&skoid=78501c7f-f65d-4e8d-9110-bed29e1beb41&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-18T14%3A20%3A38Z&ske=2026-08-19T14%3A20%3A38Z&sks=b&skv=2026-02-06&sig=LOefyE4eR%2BFeOi1lSoz0ACiB%2BCbkAeSiqqSRb6CjsEo%3D' \
+            'https://oaisdmntprsoutheastus3.blob.core.windows.net/files/00000000-fe30-820c-b619-b1e51f2fce62/raw?se=2026-08-19T20%3A14%3A20Z&sp=r&sv=2026-02-06&sr=b&scid=01a01ba1-499f-7160-ab08-8fc321e731a6&skoid=38550de5-1fab-49d1-9ebb-83af5557cc43&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-19T00%3A11%3A48Z&ske=2026-08-20T00%3A11%3A48Z&sks=b&skv=2026-02-06&sig=fgXfU3tueCkOMalYiw0rfHuloyW8Z1%2ByG7VaBocD%2BW4%3D' \
             --output metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png
-          echo 'c62944573cf8ec4685fb927b43200dd3ddf3bda114d77258c309aae93910f9cc  metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png' | sha256sum --check --strict
-          test "$(stat -c%s metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png)" = '1972602'
+          echo 'c270c1d726494ae2a492c48dbe9844d78397a73b3d816ad843dcdba685b3c5aa  metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png)" = '2579860'
+
+          curl --fail --location --retry 2 \
+            'https://oaisdmntprnorthcentralus.blob.core.windows.net/files/00000000-ca58-822f-a8f9-28bd8b3e8b57/raw?se=2026-08-19T20%3A14%3A34Z&sp=r&sv=2026-02-06&sr=b&scid=01a01ba1-499f-7160-ab08-8fc321e731a6&skoid=38550de5-1fab-49d1-9ebb-83af5557cc43&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-19T00%3A19%3A27Z&ske=2026-08-20T00%3A19%3A27Z&sks=b&skv=2026-02-06&sig=jfcEM0vyJjS6H30ZX3D7e/H3VFVXUNjxkVKfA4XgIuU%3D' \
+            --output metricool-media/RRGH-Social-Thanksgiving-01-Thanksgiving-at-the-Gorge.png
+          echo '1e606f55479fc63e260467a84c6b3f0fe6d1de6f59c3694fe442b3ccedb06ef1  metricool-media/RRGH-Social-Thanksgiving-01-Thanksgiving-at-the-Gorge.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Thanksgiving-01-Thanksgiving-at-the-Gorge.png)" = '2496741'
+
+          curl --fail --location --retry 2 \
+            'https://oaisdmntprwestcentralus.blob.core.windows.net/files/00000000-4c1c-81fb-b280-a607c40ad6c1/raw?se=2026-08-19T20%3A14%3A42Z&sp=r&sv=2026-02-06&sr=b&scid=01a01ba1-499f-7160-ab08-8fc321e731a6&skoid=38550de5-1fab-49d1-9ebb-83af5557cc43&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-19T11%3A39%3A25Z&ske=2026-08-20T11%3A39%3A25Z&sks=b&skv=2026-02-06&sig=78UDgzHwtiBhDhW1YySdO3bJykVzpFmKvCH2u7WT%2Bcc%3D' \
+            --output metricool-media/RRGH-Social-Thanksgiving-02-Gather-Gift-Gorge.png
+          echo '2a7ea0e92bbcced893babfaf19b9efbd8355360a739a3902278a5bcb5fe1da52  metricool-media/RRGH-Social-Thanksgiving-02-Gather-Gift-Gorge.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Thanksgiving-02-Gather-Gift-Gorge.png)" = '2757931'
+
+          curl --fail --location --retry 2 \
+            'https://oaisdmntprcacentral.blob.core.windows.net/files/00000000-85bc-820d-aea5-8d0755f9d81d/raw?se=2026-08-19T20%3A21%3A50Z&sp=r&sv=2026-02-06&sr=b&scid=01a01ba1-499f-7160-ab08-8fc321e731a6&skoid=38550de5-1fab-49d1-9ebb-83af5557cc43&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-19T11%3A16%3A25Z&ske=2026-08-20T11%3A16%3A25Z&sks=b&skv=2026-02-06&sig=%2Bhlt9yrF9rPPbXJV35VWGk4973gK3%2BJW3SOuPePX9N0%3D' \
+            --output metricool-placeholder-archive/2026-superseded/RRGH-Social-Thanksgiving-01-Thanksgiving-at-the-Gorge.png
+          echo '06c1ec32d84dce5834885b3e2f0a58428753d2d57cce2a37e98898e4dab6c16e  metricool-placeholder-archive/2026-superseded/RRGH-Social-Thanksgiving-01-Thanksgiving-at-the-Gorge.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-placeholder-archive/2026-superseded/RRGH-Social-Thanksgiving-01-Thanksgiving-at-the-Gorge.png)" = '2726673'
+
+          curl --fail --location --retry 2 \
+            'https://oaisdmntprsoutheastus3.blob.core.windows.net/files/00000000-5e50-820c-90c9-07b0e43e419c/raw?se=2026-08-19T20%3A22%3A01Z&sp=r&sv=2026-02-06&sr=b&scid=01a01ba1-499f-7160-ab08-8fc321e731a6&skoid=38550de5-1fab-49d1-9ebb-83af5557cc43&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-19T13%3A23%3A09Z&ske=2026-08-20T13%3A23%3A09Z&sks=b&skv=2026-02-06&sig=BN2kWf31sq/3vI8GQgc2JebucpGslMX3YmyHzvBqEb0%3D' \
+            --output metricool-placeholder-archive/2026-superseded/RRGH-Social-Thanksgiving-02-Gather-Gift-Gorge.png
+          echo '9cf0a4df5557bf6aaa829de2f47acfb4da7631d69818b9a9ed9bbca982e49d3e  metricool-placeholder-archive/2026-superseded/RRGH-Social-Thanksgiving-02-Gather-Gift-Gorge.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-placeholder-archive/2026-superseded/RRGH-Social-Thanksgiving-02-Gather-Gift-Gorge.png)" = '3227004'
 
       - name: Commit exact media to bridge branch
         shell: bash
@@ -37,10 +62,14 @@ jobs:
           set -euo pipefail
           git config user.name 'red-river-gorge-hiker-automation'
           git config user.email 'ryan@redrivergorgehiker.com'
-          git add metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png
+          git add metricool-media/RRGH-Social-Evergreen-16-Wear-the-Gorge.png \
+                  metricool-media/RRGH-Social-Thanksgiving-01-Thanksgiving-at-the-Gorge.png \
+                  metricool-media/RRGH-Social-Thanksgiving-02-Gather-Gift-Gorge.png \
+                  metricool-placeholder-archive/2026-superseded/RRGH-Social-Thanksgiving-01-Thanksgiving-at-the-Gorge.png \
+                  metricool-placeholder-archive/2026-superseded/RRGH-Social-Thanksgiving-02-Gather-Gift-Gorge.png
           if git diff --cached --quiet; then
-            echo 'Exact Evergreen 16 media already present.'
+            echo 'All exact product-truth and placeholder media already present.'
             exit 0
           fi
-          git commit -m 'Add exact Evergreen 16 Metricool media'
+          git commit -m 'Bridge current social product-truth media and placeholder archive'
           git push origin HEAD:metricool-verified-media-20260818
