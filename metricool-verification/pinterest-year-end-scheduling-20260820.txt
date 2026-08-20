@@ -1,0 +1,24 @@
+Red River Gorge Hiker — Pinterest year-end scheduling verification — 2026-08-20
+
+Execution result
+- All 25 approved 2026 organic Pinterest Pins are scheduled in Metricool through 2026-12-29 at 12:30 PM America/New_York.
+- Fresh Metricool readback confirms Pins 001-025 as Pinterest Pending, draft=false, on their intended dates/times.
+- Permanent Metricool NEVER DELETE rule remained in force. Failed original time-change cards for Pins 003-004 remain quarantined as 2027 Draft placeholders; clean 2026 replacements are active.
+
+Pins 016-025 source-to-staging checks before scheduling
+016 | RRGH-Social-Thanksgiving-02-Gather-Gift-Gorge.png | Drive 13hkkXF0aclfmVMtZK8JRSi3pvPx__8LI | 2757931 bytes | GitHub staging filename/size MATCH | Metricool 364528846 | UUID -1045247877259116223 | hosted https://static.metricool.com/planner/202608/6690085-file-5459650730521646114.png
+017 | RRGH-Social-Christmas-02-Holiday-Favorites-Family.png | Drive 1oVDrrsfTM3tt7nPyYOnbngugAr1NlRlr | 2797575 bytes | GitHub staging filename/size MATCH | Metricool 364528955 | UUID -1764739504579853394 | hosted https://static.metricool.com/planner/202608/6690085-file-945060850166481039.png
+018 | RRGH-Social-Lifestyle-12-Family-Greeting-Card-Dog-Fork.png | Drive 1tJv7-m_TsCAWY0fLRN8SXyNQn0Rf_7AJ | 2293768 bytes | GitHub staging filename/size MATCH | Metricool 364529065 | UUID -5159401990439679829 | hosted https://static.metricool.com/planner/202608/6690085-file-7241169857306627464.png
+019 | RRGH-Social-Christmas-03-Cozy-Christmas-at-the-Gorge.png | Drive 1d1rc9GZ2pzs5gROLj4jz9I-CJKfdQ6sr | 2576358 bytes | GitHub staging filename/size MATCH | Metricool 364529225 | UUID -996925991206894052 | hosted https://static.metricool.com/planner/202608/6690085-file-8356261461968224096.png
+020 | RRGH-Social-Evergreen-16-Wear-the-Gorge.png | Drive 1ECTBF2fLUUPX_9QRN2vcx6Unf5Ei5Syd | 2579860 bytes | GitHub staging filename/size MATCH | Metricool 364529383 | UUID -9021545496093441652 | hosted https://static.metricool.com/planner/202608/6690085-file-16358215073644019703.png
+021 | RRGH-Social-Lifestyle-01-Hero-Cozy-Blanket-Mug-Double-Rainbow.png | Drive 1iZw1Rq6Qy3FGJsc0zmb9vXnMtKDPmuYc | 2406585 bytes | GitHub staging filename/size MATCH | Metricool 364529447 | UUID -609414705211290313 | hosted https://static.metricool.com/planner/202608/6690085-file-11464571774627744652.png
+022 | RRGH-0004-Winter_at_Red-byrd_Arch-FAA.jpg | Drive 11d6gppGRmc1KDIz0efSKtuvIIuZecpEv | 8410883 bytes | GitHub staging filename/size MATCH | Metricool 364529539 | UUID 5438909644816862307 | hosted https://static.metricool.com/planner/202608/6690085-file-7725999515204677846.jpeg
+023 | RRGH-Social-Lifestyle-16-Sweatshirt-Pillow-Ice.png | Drive 1rWq8LMcDQqyql3EUY3er3Uf4TNKhXzBA | 2460383 bytes | GitHub staging filename/size MATCH | Metricool 364529610 | UUID -1606607636527626934 | hosted https://static.metricool.com/planner/202608/6690085-file-17764309674912286404.png
+024 | RRGH-Social-Lifestyle-10-Friends-Blanket-Tote-Mug-Sunrise.png | Drive 1NTbHT2o6KLc8Vqb2Ql_fQCJMZ-Lh-wGV | 2025655 bytes | GitHub staging filename/size MATCH | Metricool 364529705 | UUID -6918534343552841191 | hosted https://static.metricool.com/planner/202608/6690085-file-3924805745982520428.png
+025 | RRGH-Social-Lifestyle-13-Mother-Child-Tote-Splatter.png | Drive 1BRdhfz1DN_qCYR6nNleJaVCxarqzNfxv | 2367752 bytes | GitHub staging filename/size MATCH | Metricool 364529786 | UUID 3009029237753531497 | hosted https://static.metricool.com/planner/202608/6690085-file-17672193125926642163.png
+
+Hosted-media checksum audit status
+- Current/new Metricool-hosted media for Pins 001-004 was NOT independently checksum-verified after the 12:30 PM time-update/replacement operations.
+- A one-time GitHub Actions audit was attempted using PR #1, but no workflow run was produced/observable.
+- Therefore hosted-media checksum verification remains OPEN/BLOCKED; do not report it as passed.
+- The earlier controlled-test verification remains valid for its then-hosted Test 1/Test 2 files and proved the source/media bridge at that stage; it does not substitute for a checksum of the current re-hosted objects.
