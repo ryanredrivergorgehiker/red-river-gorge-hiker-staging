@@ -1,4 +1,5 @@
 name: Verify Pinterest time-update media once
+# retrigger-after-workflow-registration
 
 on:
   push:
