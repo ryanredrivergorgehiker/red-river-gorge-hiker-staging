@@ -1,0 +1,17 @@
+Pinterest Metricool two-item controlled test media diagnostic
+Test 1 Metricool ID: 364488517
+Test 1 UUID: 5058623714256702120
+Test 1 curl status: 0
+Test 1 actual SHA256: 0d2a68efd399a74581638d3cf4b4c1fdfe3e0eb595ba18788dac7dbff9ddbddf
+Test 1 expected SHA256: 0d2a68efd399a74581638d3cf4b4c1fdfe3e0eb595ba18788dac7dbff9ddbddf
+Test 1 actual bytes: 501465
+Test 1 expected bytes: 501465
+Test 1 file: JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, progressive, precision 8, 2048x710, components 3
+Test 2 Metricool ID: 364488725
+Test 2 UUID: 8216556906256355241
+Test 2 curl status: 0
+Test 2 actual SHA256: cce96d380ce91948fe87322e7b245107447e92c9ef29a1bfe7aec1cfbb283634
+Test 2 expected SHA256: cce96d380ce91948fe87322e7b245107447e92c9ef29a1bfe7aec1cfbb283634
+Test 2 actual bytes: 2688967
+Test 2 expected bytes: 2688967
+Test 2 file: PNG image data, 1122 x 1402, 8-bit/color RGB, non-interlaced
