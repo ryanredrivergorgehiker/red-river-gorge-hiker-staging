@@ -8,7 +8,7 @@ on:
       - .github/workflows/deploy-pinterest-footer-glyph-v2-once.yml
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -128,7 +128,7 @@ jobs:
         run: |
           python - <<'PY'
           import time, urllib.request
-          url = 'https://ryanredrivergorgehiker.github.io/red-river-gorge-hiker-staging/?glyphv2=1'
+          url = 'https://ryanredrivergorgehiker.github.io/red-river-gorge-hiker-staging/?glyphv2=2'
           markers = [
               'https://www.pinterest.com/redrivergorgehiker/',
               'transform="translate(7.6 4.6) scale(0.04375)"',
@@ -148,3 +148,24 @@ jobs:
               time.sleep(10)
           raise RuntimeError('Live staging did not serve the verified Pinterest glyph V2 in time')
           PY
+
+      - name: Record successful staging verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > /tmp/report.json <<'JSON'
+          {
+            "status": "SUCCESS",
+            "sourceCommit": "1c3973ab28cd57c4461fc7e9ec5ebbe6d739e878",
+            "stagingUrl": "https://ryanredrivergorgehiker.github.io/red-river-gorge-hiker-staging/",
+            "oldGlyphAbsent": true,
+            "newGlyphPresent": true,
+            "noindexVerified": true,
+            "robotsDisallowAllVerified": true
+          }
+          JSON
+          encoded="$(base64 -w0 /tmp/report.json)"
+          gh api --method PUT repos/ryanredrivergorgehiker/red-river-gorge-hiker-staging/contents/STAGING-PINTEREST-FOOTER-GLYPH-V2-VERIFIED.json \
+            -f message='Record Pinterest footer glyph V2 staging verification' \
+            -f content="$encoded" \
+            -f branch='deploy/pinterest-footer-glyph-v2'
