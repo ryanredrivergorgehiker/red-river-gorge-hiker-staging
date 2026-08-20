@@ -1,0 +1,61 @@
+name: Verify Pinterest Metricool test media once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/verify-pinterest-metricool-test-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dedicated media verification branch
+        uses: actions/checkout@v6
+        with:
+          ref: metricool-verified-media-20260818
+          fetch-depth: 0
+
+      - name: Download and verify actual Metricool-hosted test media
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p metricool-verification
+          curl --fail --location --retry 2 \
+            'https://static.metricool.com/planner/202608/6690085-file-1115928233969551926.jpeg' \
+            --output /tmp/pinterest-test-1.jpeg
+          curl --fail --location --retry 2 \
+            'https://static.metricool.com/planner/202608/6690085-file-13508756913751661061.png' \
+            --output /tmp/pinterest-test-2.png
+          echo '0d2a68efd399a74581638d3cf4b4c1fdfe3e0eb595ba18788dac7dbff9ddbddf  /tmp/pinterest-test-1.jpeg' | sha256sum --check --strict
+          echo 'cce96d380ce91948fe87322e7b245107447e92c9ef29a1bfe7aec1cfbb283634  /tmp/pinterest-test-2.png' | sha256sum --check --strict
+          test "$(stat -c%s /tmp/pinterest-test-1.jpeg)" = '501465'
+          test "$(stat -c%s /tmp/pinterest-test-2.png)" = '2688967'
+          file /tmp/pinterest-test-1.jpeg | grep -qi 'JPEG image data'
+          file /tmp/pinterest-test-2.png | grep -qi 'PNG image data'
+          cat > metricool-verification/pinterest-test-20260820.txt <<'EOF'
+          Pinterest Metricool two-item controlled test media verification
+          Test 1 Metricool ID: 364488517
+          Test 1 UUID: 5058623714256702120
+          Test 1 SHA256: 0d2a68efd399a74581638d3cf4b4c1fdfe3e0eb595ba18788dac7dbff9ddbddf
+          Test 1 bytes: 501465
+          Test 2 Metricool ID: 364488725
+          Test 2 UUID: 8216556906256355241
+          Test 2 SHA256: cce96d380ce91948fe87322e7b245107447e92c9ef29a1bfe7aec1cfbb283634
+          Test 2 bytes: 2688967
+          Both Metricool-hosted files exactly match the authenticated approved source bytes.
+          EOF
+
+      - name: Commit verification marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'red-river-gorge-hiker-automation'
+          git config user.email 'ryan@redrivergorgehiker.com'
+          git add metricool-verification/pinterest-test-20260820.txt
+          git commit -m 'Record verified Pinterest Metricool test media'
+          git push origin HEAD:metricool-verified-media-20260818
