@@ -1,0 +1,10 @@
+Pinterest Metricool two-item controlled test media verification
+Test 1 Metricool ID: 364488517
+Test 1 UUID: 5058623714256702120
+Test 1 SHA256: 0d2a68efd399a74581638d3cf4b4c1fdfe3e0eb595ba18788dac7dbff9ddbddf
+Test 1 bytes: 501465
+Test 2 Metricool ID: 364488725
+Test 2 UUID: 8216556906256355241
+Test 2 SHA256: cce96d380ce91948fe87322e7b245107447e92c9ef29a1bfe7aec1cfbb283634
+Test 2 bytes: 2688967
+Both Metricool-hosted files exactly match the authenticated approved source bytes.
