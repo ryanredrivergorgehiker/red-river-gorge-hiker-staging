@@ -1,49 +1,33 @@
 name: Verify Pinterest time-update media once
-# retrigger-after-workflow-registration
 
 on:
-  push:
+  pull_request:
     branches: [main]
-    paths: ['.github/workflows/verify-pinterest-time-update-media-20260820-once.yml']
+    paths: ['metricool-verification/pinterest-time-audit-trigger-20260820.txt']
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: metricool-verified-media-20260818
-          fetch-depth: 0
       - name: Verify Metricool-hosted media after time updates
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/pinterest-time-audit metricool-verification
+          mkdir -p /tmp/pinterest-time-audit
           cat > /tmp/manifest.tsv <<'EOF'
 001	RRGH-0001-Double_Rainbow_at_Eagles_Point_Buttress-SOCIAL-WM.jpg	501465	0d2a68efd399a74581638d3cf4b4c1fdfe3e0eb595ba18788dac7dbff9ddbddf	https://static.metricool.com/planner/202608/6690085-file-1415578907906070758.jpeg
 002	RRGH-Social-Showroom-01-Wall-Art-Gear-Family.png	2688967	cce96d380ce91948fe87322e7b245107447e92c9ef29a1bfe7aec1cfbb283634	https://static.metricool.com/planner/202608/6690085-file-3746906986903529494.png
 003	RRGH-0003-Splatter_Falls-FAA.jpg	10822659	50d02868d53f1f1daa742efbb00dde8ceaaed04d23912a013916edec4c8a5904	https://static.metricool.com/planner/202608/6690085-file-2688251715015422801.jpg
 004	RRGH-Social-Lifestyle-15-Couple-Apparel-Sunrise.png	2220337	d56e52c3bb1fb6abe2c0ca756e0f057fda3098757c285c5ea604c23526a224e9	https://static.metricool.com/planner/202608/6690085-file-7355627538483224979.png
 EOF
-          : > metricool-verification/pinterest-time-update-media-20260820.txt
-          echo 'Pinterest time-update Metricool media verification — 2026-08-20' >> metricool-verification/pinterest-time-update-media-20260820.txt
           while IFS=$'\t' read -r pin fn bytes sha url; do
             out="/tmp/pinterest-time-audit/$pin-${fn}"
             curl --fail --location --retry 2 "$url" --output "$out"
             test "$(stat -c%s "$out")" = "$bytes"
             echo "$sha  $out" | sha256sum --check --strict
-            echo "PIN $pin | $fn | $bytes bytes | sha256 $sha | MATCH" >> metricool-verification/pinterest-time-update-media-20260820.txt
+            echo "PIN $pin | $fn | $bytes bytes | sha256 $sha | MATCH"
           done < /tmp/manifest.tsv
-      - name: Commit verification record
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name red-river-gorge-hiker-automation
-          git config user.email ryan@redrivergorgehiker.com
-          git add metricool-verification/pinterest-time-update-media-20260820.txt
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'Verify Pinterest time-update Metricool media'
-          git push origin HEAD:metricool-verified-media-20260818
