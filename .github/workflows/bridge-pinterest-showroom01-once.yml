@@ -1,0 +1,46 @@
+name: Bridge verified Pinterest Showroom 01 media once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/bridge-pinterest-showroom01-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dedicated media bridge branch
+        uses: actions/checkout@v6
+        with:
+          ref: metricool-verified-media-20260818
+          fetch-depth: 0
+
+      - name: Download and verify exact authenticated materialization
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p metricool-media
+          curl --fail --location --retry 2 \
+            'https://oaisdmntprsouthcentralus.blob.core.windows.net/files/00000000-4a30-81f7-90c5-a6b855dd3a68/raw?se=2026-08-20T14%3A55%3A55Z&sp=r&sv=2026-02-06&sr=b&scid=c1925f6c-27eb-4116-aa64-bbad25136e2c&skoid=a1be202a-6464-476c-a496-723317c4a4db&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-20T14%3A14%3A10Z&ske=2026-08-21T14%3A14%3A10Z&sks=b&skv=2026-02-06&sig=GCEkgZKa/ffNyn4cMoCCbWA2cEgb6o7kHnYibqfuBX0%3D' \
+            --output metricool-media/RRGH-Social-Showroom-01-Wall-Art-Gear-Family.png
+          echo 'cce96d380ce91948fe87322e7b245107447e92c9ef29a1bfe7aec1cfbb283634  metricool-media/RRGH-Social-Showroom-01-Wall-Art-Gear-Family.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Showroom-01-Wall-Art-Gear-Family.png)" = '2688967'
+
+      - name: Commit exact verified image to bridge branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'red-river-gorge-hiker-automation'
+          git config user.email 'ryan@redrivergorgehiker.com'
+          git add metricool-media/RRGH-Social-Showroom-01-Wall-Art-Gear-Family.png
+          if git diff --cached --quiet; then
+            echo 'Exact verified image already present.'
+            exit 0
+          fi
+          git commit -m 'Add verified Pinterest Showroom 01 Metricool media bridge'
+          git push origin HEAD:metricool-verified-media-20260818
