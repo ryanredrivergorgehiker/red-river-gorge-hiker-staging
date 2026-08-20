@@ -1,0 +1,60 @@
+name: Bridge remaining Pinterest 2026 media once
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/bridge-pinterest-remaining-20260820-once.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: metricool-verified-media-20260818
+          fetch-depth: 0
+      - name: Materialize and verify approved sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p metricool-media metricool-verification
+          cat > /tmp/manifest.tsv <<'EOF'
+RRGH-0003-Splatter_Falls-FAA.jpg	50d02868d53f1f1daa742efbb00dde8ceaaed04d23912a013916edec4c8a5904	10822659	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-869c-81f6-a6bd-45d47d41c41a/raw?se=2026-08-20T15%3A21%3A39Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-20T14%3A25%3A43Z&ske=2026-08-21T14%3A25%3A43Z&sks=b&skv=2026-02-06&sig=fBsvciJ%2Bauf9DPL%2BMEUn4nDqe7xeXl17lwQvMYqChQY%3D
+RRGH-0002-Dog_Fork_Falls_in_Winter-FAA.jpg	ad04ff89d0ec9b3bcf27a65f4f5eabca4a52059d26677c43d702eaad56564ba1	10563317	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-1c5c-81f6-90cd-ae689dfb14d2/raw?se=2026-08-20T15%3A22%3A02Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-20T13%3A14%3A17Z&ske=2026-08-21T13%3A14%3A17Z&sks=b&skv=2026-02-06&sig=i3ORXEj5afyhocxjgE75jNBlfRSoDrZVGpuvTjpqsGE%3D
+RRGH-0004-Winter_at_Red-byrd_Arch-FAA.jpg	b0f9edb1afe598592596af82cbb1ff381ec470f599e6e6d889dd44fdba99ebce	8410883	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-8474-81f6-9a57-55e3d4c2b075/raw?se=2026-08-20T15%3A22%3A02Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-19T23%3A37%3A44Z&ske=2026-08-20T23%3A37%3A44Z&sks=b&skv=2026-02-06&sig=CWEwKdgI79iBBeRrKjJUquX0hpNlzu8Qtr2OYDxxmCE%3D
+RRGH-Social-Lifestyle-15-Couple-Apparel-Sunrise.png	d56e52c3bb1fb6abe2c0ca756e0f057fda3098757c285c5ea604c23526a224e9	2220337	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-e21c-81f6-8a1c-e7e48cd76427/raw?se=2026-08-20T15%3A22%3A02Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-20T12%3A38%3A48Z&ske=2026-08-21T12%3A38%3A48Z&sks=b&skv=2026-02-06&sig=GKSzfgEqi7YePhgs%2B7gjE/mZeiNlwv7Z3rBfTw/fIUs%3D
+RRGH-Social-Lifestyle-09-Notebook-Mug-Pillow-Splatter.png	85d50a5b743abb9a94d985647ab4d7df1d863ebed072ae65ed12da7701e9afb9	2526663	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-5db8-81f6-8051-c423db9eec9d/raw?se=2026-08-20T15%3A22%3A02Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-20T11%3A55%3A14Z&ske=2026-08-21T11%3A55%3A14Z&sks=b&skv=2026-02-06&sig=BZZ2gvieZK5MyUxpt60Vvq8i4mreh0ft3f0S%2Bvgmges%3D
+RRGH-Social-Showroom-02-Wall-Art-Apparel-Cozy.png	9900762ad569f5655dd4c3e8bef805ea71ab0287e30ed8eedffe96abcdf4b95d	2621996	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-54e4-81f6-aaec-68df574ef645/raw?se=2026-08-20T15%3A22%3A02Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-20T14%3A25%3A43Z&ske=2026-08-21T14%3A25%3A43Z&sks=b&skv=2026-02-06&sig=SNJo9CzzcchFRoSha2femBUV95w58eh%2B0fGUaRoblu8%3D
+RRGH-Social-Lifestyle-04-Mug-Blanket-Fireplace.png	8746bca0ba629cf29e59809d2437d7520c42089592cc57066cd408d629a0cffd	1802749	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-8e30-81f6-8c18-13691f1edbf9/raw?se=2026-08-20T15%3A22%3A02Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-19T23%3A50%3A41Z&ske=2026-08-20T23%3A50%3A41Z&sks=b&skv=2026-02-06&sig=K2BZ4XrR49zH1GCW5oDcKbe/krab0VetIEVp1Rq2wp0%3D
+RRGH-Social-Lifestyle-08-Couple-Apparel-Tote-Sunrise-Ice.png	f6f8539fdbc7e7da227e197da8b142d2792e2cc1322f486d3f76cb6cbda869d9	2424490	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-ac84-81f6-9ad1-df37fb2a8f0d/raw?se=2026-08-20T15%3A22%3A02Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-19T23%3A48%3A41Z&ske=2026-08-20T23%3A48%3A41Z&sks=b&skv=2026-02-06&sig=/auATnsJni8sNESvtginnL6XjAL%2BrtvZ4g3V6hA6KMg%3D
+RRGH-Social-Showroom-03-Wall-Art-Gear-Lounge.png	0f2d206681406711cb95ea3681fdf02c5be1cae26377a24af8811ba197b3e9ba	2603683	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-c930-81f6-9622-917a43b355c4/raw?se=2026-08-20T15%3A22%3A02Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-19T23%3A52%3A29Z&ske=2026-08-20T23%3A52%3A29Z&sks=b&skv=2026-02-06&sig=XVol8vCJg0z/rMqbatCTJ7oacGoTL6KuOgwbJXxOpjQ%3D
+RRGH-Social-Christmas-01-Bring-the-Gorge-Home-Family.png	9307f7790850870a85fb4da78696dd3f5db15485813990212611d07c724813e3	2783764	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-2070-81f6-b68d-6681a0f4535c/raw?se=2026-08-20T15%3A22%3A02Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-19T23%3A10%3A15Z&ske=2026-08-20T23%3A10%3A15Z&sks=b&skv=2026-02-06&sig=wCOXG41HOrXj%2BtDzPmfQ74qr7F9eCzAEsEGC49i2jUI%3D
+RRGH-Social-Christmas-02-Holiday-Favorites-Family.png	e2f577c8c76c6f0164ae4f5e96cb9be20b2d842566be8e2821e9376d119be201	2797575	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-dc5c-81f6-9dd7-baf53cf676f1/raw?se=2026-08-20T15%3A22%3A22Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-19T23%3A52%3A29Z&ske=2026-08-20T23%3A52%3A29Z&sks=b&skv=2026-02-06&sig=ytpo3h/uRLx09yg209g20Q7Zlq8g3Zg1lm6ztH1nFik%3D
+RRGH-Social-Lifestyle-12-Family-Greeting-Card-Dog-Fork.png	a479111ae116f21aa85757f15ca46333b3162615888b289082cf7f721963e7eb	2293768	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-a3b8-81f6-acdd-55bcc5950d8c/raw?se=2026-08-20T15%3A22%3A22Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-20T14%3A25%3A15Z&ske=2026-08-21T14%3A25%3A15Z&sks=b&skv=2026-02-06&sig=nOtr2fRzYH0T9kypKI%2BjlJRZ6FJA5fDxbqoBApfL5JE%3D
+RRGH-Social-Christmas-03-Cozy-Christmas-at-the-Gorge.png	59940b8ad32efe56f3e555812c19278de9fd09deb38b15617c655891ceab51ae	2576358	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-f728-81f6-a9c2-22cde516977f/raw?se=2026-08-20T15%3A22%3A22Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-20T13%3A57%3A47Z&ske=2026-08-21T13%3A57%3A47Z&sks=b&skv=2026-02-06&sig=NQXOx6sPDZDXhBViMWcx5hJlsjZ7G0DayWc96oZbGkg%3D
+RRGH-Social-Lifestyle-01-Hero-Cozy-Blanket-Mug-Double-Rainbow.png	c8887a78cf812a16b1e636749174aad8f599e740940e2b418fd28f7e4d8932bf	2406585	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-bb0c-81f6-ae79-4d5c8aadbdbd/raw?se=2026-08-20T15%3A22%3A22Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-19T23%3A48%3A39Z&ske=2026-08-20T23%3A48%3A39Z&sks=b&skv=2026-02-06&sig=IwZoKPZNfpaGWhCpzuZRi4Xo1oq5hR3IcvNNEvS5DNg%3D
+RRGH-Social-Lifestyle-16-Sweatshirt-Pillow-Ice.png	46ffda2e64adaca830c11400ee95254316fa97ee29e88f3d464ee1e82022323b	2460383	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-bc58-81f6-a94f-dc1431c12e2e/raw?se=2026-08-20T15%3A22%3A22Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-20T14%3A25%3A15Z&ske=2026-08-21T14%3A25%3A15Z&sks=b&skv=2026-02-06&sig=hCclCjRR/1sNUdArREcISxsa3V19SNDV9M73Qu69SnU%3D
+RRGH-Social-Lifestyle-10-Friends-Blanket-Tote-Mug-Sunrise.png	26448f4ef6336bbbff7862d9b8d9198029ddcf0aa6244b4adc1a8f60f4c49707	2025655	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-3c48-81f6-83c2-a82878f03c47/raw?se=2026-08-20T15%3A22%3A22Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-20T12%3A38%3A51Z&ske=2026-08-21T12%3A38%3A51Z&sks=b&skv=2026-02-06&sig=PLdg6MHT0CRLR4K0dIzkZqxfCUCJSJAufB6PYPv5qgE%3D
+RRGH-Social-Lifestyle-13-Mother-Child-Tote-Splatter.png	18f19311f1e48b34205da2204a8eb0e87bda96b0a0ca2c193470d4fd021cbacd	2367752	https://oaisdmntpreastus2.blob.core.windows.net/files/00000000-7d48-81f6-974b-3457d1f94cef/raw?se=2026-08-20T15%3A22%3A22Z&sp=r&sv=2026-02-06&sr=b&scid=bcb8ad1f-121c-4829-8d26-f07bf5866889&skoid=dd316919-ffbf-4550-9c54-dfc99f412009&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-20T14%3A25%3A36Z&ske=2026-08-21T14%3A25%3A36Z&sks=b&skv=2026-02-06&sig=oC/aP2RxkcIRahnZz5Xi1Qi%2BNGae9UzgjF8%2BLD0dM%2BM%3D
+EOF
+          : > metricool-verification/pinterest-remaining-source-bridge-20260820.txt
+          echo 'Pinterest remaining 2026 source bridge verification' >> metricool-verification/pinterest-remaining-source-bridge-20260820.txt
+          while IFS=$'\t' read -r fn sha bytes url; do
+            curl --fail --location --retry 2 "$url" --output "metricool-media/$fn"
+            echo "$sha  metricool-media/$fn" | sha256sum --check --strict
+            test "$(stat -c%s "metricool-media/$fn")" = "$bytes"
+            echo "$fn | $bytes bytes | sha256 $sha" >> metricool-verification/pinterest-remaining-source-bridge-20260820.txt
+          done < /tmp/manifest.tsv
+      - name: Commit verified sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name red-river-gorge-hiker-automation
+          git config user.email ryan@redrivergorgehiker.com
+          git add metricool-media metricool-verification/pinterest-remaining-source-bridge-20260820.txt
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Add verified remaining Pinterest 2026 media bridge'
+          git push origin HEAD:metricool-verified-media-20260818
