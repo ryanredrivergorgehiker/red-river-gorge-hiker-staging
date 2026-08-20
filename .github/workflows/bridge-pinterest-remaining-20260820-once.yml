@@ -1,4 +1,5 @@
 name: Bridge remaining Pinterest 2026 media once
+# retrigger-after-workflow-registration
 
 on:
   push:
