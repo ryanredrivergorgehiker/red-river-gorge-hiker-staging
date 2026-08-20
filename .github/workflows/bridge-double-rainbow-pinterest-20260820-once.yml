@@ -1,0 +1,44 @@
+name: Bridge approved Double Rainbow Pinterest media once
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/bridge-double-rainbow-pinterest-20260820-once.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: metricool-verified-media-20260818
+          fetch-depth: 0
+      - name: Materialize and verify approved Double Rainbow source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p metricool-media metricool-verification
+          url='https://oaisdmntprsoutheastus3.blob.core.windows.net/files/00000000-fcc0-820c-b800-ed1c48a4cf5c/raw?se=2026-08-20T15%3A58%3A44Z&sp=r&sv=2026-02-06&sr=b&scid=bc4f137a-7f3c-426b-aac6-1f676e4b38c4&skoid=864daabb-d06a-46b3-a747-d35075313a83&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-08-19T23%3A47%3A14Z&ske=2026-08-20T23%3A47%3A14Z&sks=b&skv=2026-02-06&sig=Sb3TpWjEhVD4Oo2F2Ca1q0dotdKfQlgsPZ9isr/mCSY%3D'
+          fn='RRGH-0001-Double_Rainbow_at_Eagles_Point_Buttress-SOCIAL-WM.jpg'
+          sha='0d2a68efd399a74581638d3cf4b4c1fdfe3e0eb595ba18788dac7dbff9ddbddf'
+          bytes='501465'
+          curl --fail --location --retry 2 "$url" --output "metricool-media/$fn"
+          echo "$sha  metricool-media/$fn" | sha256sum --check --strict
+          test "$(stat -c%s "metricool-media/$fn")" = "$bytes"
+          {
+            echo 'Pinterest approved Double Rainbow source bridge verification'
+            echo "$fn | $bytes bytes | sha256 $sha"
+          } > metricool-verification/pinterest-double-rainbow-source-bridge-20260820.txt
+      - name: Commit verified source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name red-river-gorge-hiker-automation
+          git config user.email ryan@redrivergorgehiker.com
+          git add metricool-media/RRGH-0001-Double_Rainbow_at_Eagles_Point_Buttress-SOCIAL-WM.jpg metricool-verification/pinterest-double-rainbow-source-bridge-20260820.txt
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Add verified Double Rainbow Pinterest media bridge'
+          git push origin HEAD:metricool-verified-media-20260818
