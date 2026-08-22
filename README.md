@@ -16,12 +16,13 @@ ChatGPT should normally deploy staging without requiring Ryan to use the GitHub 
 
 1. Build and verify one clean UAT candidate in `ryanredrivergorgehiker/red-river-gorge-hiker`.
 2. Record the exact candidate commit SHA.
-3. Update `.staging-source-ref` in this repository. The first line must be the exact source commit SHA. Additional lines may record request metadata such as timestamp or purpose.
+3. Update `.staging-source-ref` in this repository. The first line must be the exact source commit SHA. Additional lines may record request metadata such as request ID, timestamp, or purpose.
 4. A push affecting `.staging-source-ref` automatically runs `Deploy staging preview`.
 5. The workflow resolves the first line of `.staging-source-ref`, checks out that exact source SHA, runs the normal repository checks, builds with the staging URL/base, verifies staging safeguards, and deploys GitHub Pages.
-6. ChatGPT verifies the staging deployment before asking Ryan for UAT review.
+6. Only after the Pages deploy job succeeds, the workflow writes `.staging-last-success` containing the exact deployed source SHA, UTC deployment time, Actions run ID, and Actions run URL.
+7. ChatGPT reads `.staging-last-success` and verifies it matches the requested candidate before asking Ryan for UAT review.
 
-Ryan should not normally need to click **Run workflow** for staging deployments.
+Ryan should not normally need to click **Run workflow** for staging deployments or inspect GitHub Actions to prove what was deployed.
 
 ## Emergency/manual fallback
 
