@@ -15,7 +15,7 @@ on:
       - .staging-source-ref
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -172,3 +172,22 @@ jobs:
       - name: Deploy staging site
         id: deployment
         uses: actions/deploy-pages@v5
+
+  record:
+    name: Record successful staging deployment
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout staging repository
+        uses: actions/checkout@v6
+      - name: Record deployed source SHA
+        run: |
+          printf '%s\n' '895e656bf0b69af43c49f079916bfc70f87ad17c' > .staging-deploy-success
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .staging-deploy-success
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m 'Record successful corrected-card staging deploy'
+          git push
