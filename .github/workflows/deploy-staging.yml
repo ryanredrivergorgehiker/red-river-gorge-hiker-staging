@@ -8,6 +8,11 @@ on:
         required: true
         default: "main"
         type: string
+  push:
+    branches:
+      - main
+    paths:
+      - .staging-source-ref
 
 permissions:
   contents: read
@@ -27,7 +32,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: ryanredrivergorgehiker/red-river-gorge-hiker
-          ref: ${{ inputs.source_ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || '895e656bf0b69af43c49f079916bfc70f87ad17c' }}
           path: site
 
       - name: Set up Node
