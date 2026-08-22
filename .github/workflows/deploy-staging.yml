@@ -8,6 +8,11 @@ on:
         required: true
         default: "main"
         type: string
+  push:
+    branches:
+      - main
+    paths:
+      - .staging-source-ref
 
 permissions:
   contents: read
@@ -23,11 +28,34 @@ jobs:
     name: Build selected source for staging
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout staging control
+        uses: actions/checkout@v6
+        with:
+          path: staging-control
+
+      - name: Resolve source ref
+        id: source
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            source_ref="${{ inputs.source_ref }}"
+          else
+            source_ref="$(head -n 1 staging-control/.staging-source-ref | tr -d '\r\n')"
+          fi
+
+          if [ -z "$source_ref" ]; then
+            echo "No source ref was supplied for staging deployment." >&2
+            exit 1
+          fi
+
+          echo "source_ref=$source_ref" >> "$GITHUB_OUTPUT"
+          echo "Deploying source ref: $source_ref"
+
       - name: Checkout website source
         uses: actions/checkout@v6
         with:
           repository: ryanredrivergorgehiker/red-river-gorge-hiker
-          ref: ${{ inputs.source_ref }}
+          ref: ${{ steps.source.outputs.source_ref }}
           path: site
 
       - name: Set up Node
