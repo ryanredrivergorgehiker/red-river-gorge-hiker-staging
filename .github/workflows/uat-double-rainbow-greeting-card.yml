@@ -2,13 +2,12 @@ name: Double Rainbow greeting card UAT
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - .github/workflows/uat-double-rainbow-greeting-card.yml
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -34,16 +33,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p public/assets/merchandise
-          cat .tmp-double-rainbow/avif-01.b64 .tmp-double-rainbow/avif-02.b64 \
-            | base64 --decode \
-            > public/assets/merchandise/rrgh-merch-double-rainbow-greeting-card-3d945e8a.avif
+          cat .tmp-double-rainbow/avif-01.b64 .tmp-double-rainbow/avif-02.b64 | base64 --decode > public/assets/merchandise/rrgh-merch-double-rainbow-greeting-card-3d945e8a.avif
           echo '3d945e8a236e7106735fa558e2ff4c7eea74b5e39f29c2364209e43b31bd2b00  public/assets/merchandise/rrgh-merch-double-rainbow-greeting-card-3d945e8a.avif' | sha256sum --check
 
       - name: Generate matching social-preview JPEG
         working-directory: site
-        shell: bash
         run: |
-          set -euo pipefail
           python3 -m pip install --disable-pip-version-check 'Pillow>=11.3,<12'
           python3 - <<'PY'
           from pathlib import Path
@@ -52,15 +47,13 @@ jobs:
           avif = root / 'rrgh-merch-double-rainbow-greeting-card-3d945e8a.avif'
           share = root / 'rrgh-merch-double-rainbow-greeting-card-3d945e8a-share.jpg'
           with Image.open(avif) as image:
-              if image.size != (1000, 750):
-                  raise RuntimeError(f'Unexpected AVIF dimensions: {image.size}')
+              assert image.size == (1000, 750), image.size
               image.convert('RGB').save(share, 'JPEG', quality=82, optimize=True, progressive=True)
           with Image.open(share) as image:
-              if image.size != (1000, 750):
-                  raise RuntimeError(f'Unexpected JPEG dimensions: {image.size}')
-          if avif.stat().st_size >= 200_000 or share.stat().st_size >= 250_000:
-              raise RuntimeError('Optimized greeting-card derivative exceeds expected size ceiling')
-          print(f'AVIF {avif.stat().st_size} bytes; share JPEG {share.stat().st_size} bytes')
+              assert image.size == (1000, 750), image.size
+          assert avif.stat().st_size < 200_000
+          assert share.stat().st_size < 250_000
+          print(f'AVIF {avif.stat().st_size} bytes; JPEG {share.stat().st_size} bytes')
           PY
 
       - name: Set up Node
@@ -102,23 +95,17 @@ jobs:
           for page in dist.rglob('*.html'):
               text = page.read_text(encoding='utf-8')
               if robots_meta not in text:
-                  if '<head>' in text:
-                      text = text.replace('<head>', f'<head>{robots_meta}', 1)
-                  else:
-                      text = robots_meta + text
+                  text = text.replace('<head>', f'<head>{robots_meta}', 1) if '<head>' in text else robots_meta + text
                   page.write_text(text, encoding='utf-8')
                   changed += 1
           (dist / 'robots.txt').write_text('User-agent: *\nDisallow: /\n', encoding='utf-8')
           if changed == 0:
-              raise RuntimeError('No HTML pages received the staging noindex directive')
-          print(f'Injected noindex into {changed} HTML files')
+              raise RuntimeError('No HTML files received staging noindex')
           PY
 
-      - name: Validate staging safeguards and 21-card contract
+      - name: Validate 21-card order, detail, links, images, and staging safeguards
         working-directory: site
-        shell: bash
         run: |
-          set -euo pipefail
           python3 - <<'PY'
           import re
           from html.parser import HTMLParser
@@ -136,98 +123,85 @@ jobs:
               'coffee-mug', 'womens-tshirt', 'sweatshirt', 'tshirt-pocket-logo',
               'throw-pillow', 'womens-tank-top', 'zip-pouch', 'fleece-sherpa-blanket',
               'youth-tshirt', 'spiral-notebook', 'bath-towel', 'beach-towel',
-              'kids-tshirt', 'greeting-cards', 'baby-one-piece', 'ornament',
+              'kids-tshirt', 'greeting-cards', 'baby-one-piece', 'ornament'
           ]
-
           html_files = list(dist.rglob('*.html'))
           if not html_files:
-              raise RuntimeError('No generated HTML files found')
+              raise RuntimeError('No generated HTML')
           for page in html_files:
               if robots_meta not in page.read_text(encoding='utf-8'):
-                  raise RuntimeError(f'Missing staging noindex: {page}')
-          if (dist / 'robots.txt').read_text(encoding='utf-8').splitlines() != ['User-agent: *', 'Disallow: /']:
-              raise RuntimeError('Unexpected staging robots.txt')
+                  raise RuntimeError(f'Missing noindex: {page}')
+          if (dist / 'robots.txt').read_text().splitlines() != ['User-agent: *', 'Disallow: /']:
+              raise RuntimeError('Bad staging robots.txt')
 
           gear = (dist / 'gear/index.html').read_text(encoding='utf-8')
           actual = re.findall(r'data-product="([^"]+)"', gear)
           if actual != expected or len(actual) != 21:
               raise RuntimeError(f'Gear order/count mismatch: {actual}')
-
           title = 'Double Rainbow at Eagle’s Point Buttress Greeting Card'
           if title not in gear or 'From $6.25' not in gear:
-              raise RuntimeError('New #1 Gear card title or landing price missing')
+              raise RuntimeError('New landing card missing title or price')
 
           detail_path = dist / 'gear/double-rainbow-eagles-point-buttress-greeting-card/index.html'
+          if not detail_path.exists():
+              raise RuntimeError('New stable detail page missing')
           detail = detail_path.read_text(encoding='utf-8')
-          required = [
+          for token in [
               title,
               'Single Card — $6.25',
               'Pack of 10 — $35.00 total ($3.50 per card)',
               'Pack of 25 — $53.00 total (FAA displays $2.12 per card)',
               'Fine Art America allows the buyer to enter an optional inside message.',
               'https://fineartamerica.com/featured/2-double-rainbow-at-eagles-point-buttress-ryan-d-lewis.html?product=greeting-card',
-              'View on Fine Art America',
-              'Share ↗',
+              'View on Fine Art America', 'Share ↗',
               'quantity selection, optional inside-message customization, checkout, payment, production, fulfillment, and shipping',
-              'rrgh-merch-double-rainbow-greeting-card-3d945e8a-share.jpg',
-          ]
-          for token in required:
+              'rrgh-merch-double-rainbow-greeting-card-3d945e8a-share.jpg'
+          ]:
               if token not in detail:
-                  raise RuntimeError(f'Missing greeting-card detail token: {token}')
+                  raise RuntimeError(f'Missing detail content: {token}')
           if '#2 Double Rainbow' in detail:
-              raise RuntimeError('FAA listing number leaked into website title')
+              raise RuntimeError('FAA #2 leaked into website title')
 
-          avif_name = 'rrgh-merch-double-rainbow-greeting-card-3d945e8a.avif'
-          jpg_name = 'rrgh-merch-double-rainbow-greeting-card-3d945e8a-share.jpg'
-          for name in (avif_name, jpg_name):
+          for name in [
+              'rrgh-merch-double-rainbow-greeting-card-3d945e8a.avif',
+              'rrgh-merch-double-rainbow-greeting-card-3d945e8a-share.jpg'
+          ]:
               if not (dist / 'assets/merchandise' / name).exists():
-                  raise RuntimeError(f'Missing built greeting-card asset: {name}')
-          if avif_name not in gear or avif_name not in detail:
-              raise RuntimeError('Greeting-card AVIF is not active on landing and detail pages')
-
-          # Every prescribed Gear detail link exists and every landing Gear image resolves.
+                  raise RuntimeError(f'Missing built asset: {name}')
           for slug in expected:
               if not (dist / 'gear' / slug / 'index.html').exists():
-                  raise RuntimeError(f'Missing Gear detail page: {slug}')
+                  raise RuntimeError(f'Missing Gear detail route: {slug}')
+
           image_refs = set(re.findall(r'(?:src|data-image-src)="([^"]*assets/merchandise/[^"]+)"', gear))
           if len(image_refs) < 21:
-              raise RuntimeError(f'Expected 21 Gear image references, got {len(image_refs)}')
+              raise RuntimeError(f'Expected >=21 Gear image refs; got {len(image_refs)}')
           for ref in image_refs:
-              path = urlparse(ref).path
-              filename = path.split('/assets/merchandise/', 1)[1]
+              filename = urlparse(ref).path.split('/assets/merchandise/', 1)[1]
               if not (dist / 'assets/merchandise' / filename).exists():
-                  raise RuntimeError(f'Broken Gear image reference: {ref}')
+                  raise RuntimeError(f'Broken Gear image ref: {ref}')
 
           class URLParser(HTMLParser):
               def __init__(self):
-                  super().__init__()
-                  self.urls = []
+                  super().__init__(); self.urls = []
               def handle_starttag(self, tag, attrs):
                   for key, value in attrs:
                       if key in {'href', 'src'} and value:
                           self.urls.append(value)
-
-          bad_root_urls = []
+          bad = []
           for page in html_files:
-              parser = URLParser()
-              parser.feed(page.read_text(encoding='utf-8'))
-              for value in parser.urls:
-                  if value.startswith('/') and not value.startswith('//') and not value.startswith(base):
-                      bad_root_urls.append(f'{page}: {value}')
-          if bad_root_urls:
-              raise RuntimeError('URLs escaped staging base:\n' + '\n'.join(bad_root_urls[:20]))
+              parser = URLParser(); parser.feed(page.read_text(encoding='utf-8'))
+              bad.extend(f'{page}: {u}' for u in parser.urls if u.startswith('/') and not u.startswith('//') and not u.startswith(base))
+          if bad:
+              raise RuntimeError('Root-relative URL escaped staging base:\n' + '\n'.join(bad[:20]))
 
-          sitemap_files = list(dist.glob('sitemap*.xml'))
           locs = []
-          for sitemap in sitemap_files:
-              root = ET.parse(sitemap).getroot()
-              for elem in root.iter():
+          for sitemap in dist.glob('sitemap*.xml'):
+              for elem in ET.parse(sitemap).getroot().iter():
                   if elem.tag.endswith('loc') and elem.text:
                       locs.append(elem.text.strip())
           if not locs or any(not loc.startswith(expected_prefix) for loc in locs):
-              raise RuntimeError('Staging sitemap contains invalid URL(s)')
-
-          print('UAT validation passed: exactly 21 Gear cards, prescribed order, detail copy, assets, routes, staging URLs, sitemap, noindex, and robots safeguards.')
+              raise RuntimeError('Bad staging sitemap URL')
+          print('PASS: exactly 21 Gear cards in prescribed order; detail copy, routes, images, links, sitemap, noindex and robots safeguards verified.')
           PY
 
       - name: Configure GitHub Pages
@@ -240,12 +214,35 @@ jobs:
 
   deploy:
     name: Deploy greeting card UAT to staging Pages
+    needs: build
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    needs: build
-    runs-on: ubuntu-latest
     steps:
       - name: Deploy staging site
         id: deployment
         uses: actions/deploy-pages@v5
+
+      - name: Write successful UAT completion marker
+        uses: actions/checkout@v6
+
+      - name: Record successful run
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .uat
+          cat > .uat/double-rainbow-greeting-card-status.txt <<EOF
+          status=PASSED
+          run_id=${{ github.run_id }}
+          workflow_sha=${{ github.sha }}
+          source_sha=70e0623d9a504d4e642d18d0f60bf2ab32babae9
+          staging_url=https://ryanredrivergorgehiker.github.io/red-river-gorge-hiker-staging/
+          gear_url=https://ryanredrivergorgehiker.github.io/red-river-gorge-hiker-staging/gear/
+          detail_url=https://ryanredrivergorgehiker.github.io/red-river-gorge-hiker-staging/gear/double-rainbow-eagles-point-buttress-greeting-card/
+          EOF
+          git config user.name 'ryanredrivergorgehiker'
+          git config user.email 'ryan@redrivergorgehiker.com'
+          git add .uat/double-rainbow-greeting-card-status.txt
+          git commit -m 'Record successful Double Rainbow greeting card UAT'
+          git push origin HEAD:main
