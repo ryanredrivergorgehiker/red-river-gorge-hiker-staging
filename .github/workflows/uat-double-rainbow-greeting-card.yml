@@ -24,21 +24,24 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: ryanredrivergorgehiker/red-river-gorge-hiker
-          ref: 70e0623d9a504d4e642d18d0f60bf2ab32babae9
+          ref: 8f620c69e24373699325a156b0ceed3ae8d3ea07
           path: site
 
-      - name: Reconstruct optimized greeting-card asset
+      - name: Reconstruct exact optimized greeting-card assets
         working-directory: site
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p public/assets/merchandise
-          cat .tmp-double-rainbow/avif-01.b64 .tmp-double-rainbow/avif-02.b64 | base64 --decode > public/assets/merchandise/rrgh-merch-double-rainbow-greeting-card-3d945e8a.avif
+          cat \
+            .tmp-double-rainbow/avif-01.b64 \
+            .tmp-double-rainbow/avif-gap-15000-15999.b64 \
+            .tmp-double-rainbow/avif-16000-31999.b64 \
+            .tmp-double-rainbow/avif-gap-32000-34532.b64 \
+            .tmp-double-rainbow/avif-02.b64 \
+            | base64 --decode \
+            > public/assets/merchandise/rrgh-merch-double-rainbow-greeting-card-3d945e8a.avif
           echo '3d945e8a236e7106735fa558e2ff4c7eea74b5e39f29c2364209e43b31bd2b00  public/assets/merchandise/rrgh-merch-double-rainbow-greeting-card-3d945e8a.avif' | sha256sum --check
-
-      - name: Generate matching social-preview JPEG
-        working-directory: site
-        run: |
           python3 -m pip install --disable-pip-version-check 'Pillow>=11.3,<12'
           python3 - <<'PY'
           from pathlib import Path
@@ -47,14 +50,16 @@ jobs:
           avif = root / 'rrgh-merch-double-rainbow-greeting-card-3d945e8a.avif'
           share = root / 'rrgh-merch-double-rainbow-greeting-card-3d945e8a-share.jpg'
           with Image.open(avif) as image:
-              assert image.size == (1000, 750), image.size
+              if image.size != (1000, 750):
+                  raise SystemExit(f'Unexpected AVIF dimensions: {image.size}')
               image.convert('RGB').save(share, 'JPEG', quality=82, optimize=True, progressive=True)
           with Image.open(share) as image:
-              assert image.size == (1000, 750), image.size
-          assert avif.stat().st_size < 200_000
-          assert share.stat().st_size < 250_000
-          print(f'AVIF {avif.stat().st_size} bytes; JPEG {share.stat().st_size} bytes')
+              if image.size != (1000, 750):
+                  raise SystemExit(f'Unexpected JPEG dimensions: {image.size}')
+          if avif.stat().st_size >= 200_000 or share.stat().st_size >= 250_000:
+              raise SystemExit('Optimized asset size guard failed')
           PY
+          echo '2710c25065a58b76b1bae6425ccd3baa3fe80e6be0f3ca8e6d71e24e339f544b  public/assets/merchandise/rrgh-merch-double-rainbow-greeting-card-3d945e8a-share.jpg' | sha256sum --check
 
       - name: Set up Node
         uses: actions/setup-node@v6
@@ -63,19 +68,17 @@ jobs:
           cache: npm
           cache-dependency-path: site/package-lock.json
 
-      - name: Install dependencies
+      - name: Install and validate source candidate
         working-directory: site
-        run: npm ci
-
-      - name: Audit dependencies
-        working-directory: site
+        shell: bash
         run: |
+          set -euo pipefail
+          npm ci
+          python3 tests/test_double_rainbow_greeting_card_contract.py
           npm audit --audit-level=critical
           npm audit --omit=dev --audit-level=high
-
-      - name: Run full website checks
-        working-directory: site
-        run: npm run check
+          npm run check
+          git diff --check
 
       - name: Build staging site
         working-directory: site
@@ -103,9 +106,11 @@ jobs:
               raise RuntimeError('No HTML files received staging noindex')
           PY
 
-      - name: Validate 21-card order, detail, links, images, and staging safeguards
+      - name: Validate 21-card order, detail, assets, and staging safeguards
         working-directory: site
+        shell: bash
         run: |
+          set -euo pipefail
           python3 - <<'PY'
           import re
           from html.parser import HTMLParser
@@ -131,7 +136,7 @@ jobs:
           for page in html_files:
               if robots_meta not in page.read_text(encoding='utf-8'):
                   raise RuntimeError(f'Missing noindex: {page}')
-          if (dist / 'robots.txt').read_text().splitlines() != ['User-agent: *', 'Disallow: /']:
+          if (dist / 'robots.txt').read_text(encoding='utf-8').splitlines() != ['User-agent: *', 'Disallow: /']:
               raise RuntimeError('Bad staging robots.txt')
 
           gear = (dist / 'gear/index.html').read_text(encoding='utf-8')
@@ -140,11 +145,11 @@ jobs:
               raise RuntimeError(f'Gear order/count mismatch: {actual}')
           title = 'Double Rainbow at Eagle’s Point Buttress Greeting Card'
           if title not in gear or 'From $6.25' not in gear:
-              raise RuntimeError('New landing card missing title or price')
+              raise RuntimeError('New Gear card missing title or price')
 
           detail_path = dist / 'gear/double-rainbow-eagles-point-buttress-greeting-card/index.html'
           if not detail_path.exists():
-              raise RuntimeError('New stable detail page missing')
+              raise RuntimeError('Greeting card detail page missing')
           detail = detail_path.read_text(encoding='utf-8')
           for token in [
               title,
@@ -153,14 +158,14 @@ jobs:
               'Pack of 25 — $53.00 total (FAA displays $2.12 per card)',
               'Fine Art America allows the buyer to enter an optional inside message.',
               'https://fineartamerica.com/featured/2-double-rainbow-at-eagles-point-buttress-ryan-d-lewis.html?product=greeting-card',
-              'View on Fine Art America', 'Share ↗',
+              'View on Fine Art America',
               'quantity selection, optional inside-message customization, checkout, payment, production, fulfillment, and shipping',
               'rrgh-merch-double-rainbow-greeting-card-3d945e8a-share.jpg'
           ]:
               if token not in detail:
                   raise RuntimeError(f'Missing detail content: {token}')
           if '#2 Double Rainbow' in detail:
-              raise RuntimeError('FAA #2 leaked into website title')
+              raise RuntimeError('FAA listing number leaked into customer-facing title')
 
           for name in [
               'rrgh-merch-double-rainbow-greeting-card-3d945e8a.avif',
@@ -201,7 +206,7 @@ jobs:
                       locs.append(elem.text.strip())
           if not locs or any(not loc.startswith(expected_prefix) for loc in locs):
               raise RuntimeError('Bad staging sitemap URL')
-          print('PASS: exactly 21 Gear cards in prescribed order; detail copy, routes, images, links, sitemap, noindex and robots safeguards verified.')
+          print('PASS: 21 Gear cards in prescribed order; greeting-card detail, routes, assets, noindex, robots and sitemap safeguards verified.')
           PY
 
       - name: Configure GitHub Pages
@@ -224,10 +229,10 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v5
 
-      - name: Write successful UAT completion marker
+      - name: Checkout staging control repo
         uses: actions/checkout@v6
 
-      - name: Record successful run
+      - name: Record successful UAT run
         shell: bash
         run: |
           set -euo pipefail
@@ -236,7 +241,9 @@ jobs:
           status=PASSED
           run_id=${{ github.run_id }}
           workflow_sha=${{ github.sha }}
-          source_sha=70e0623d9a504d4e642d18d0f60bf2ab32babae9
+          source_sha=8f620c69e24373699325a156b0ceed3ae8d3ea07
+          avif_sha256=3d945e8a236e7106735fa558e2ff4c7eea74b5e39f29c2364209e43b31bd2b00
+          share_jpeg_sha256=2710c25065a58b76b1bae6425ccd3baa3fe80e6be0f3ca8e6d71e24e339f544b
           staging_url=https://ryanredrivergorgehiker.github.io/red-river-gorge-hiker-staging/
           gear_url=https://ryanredrivergorgehiker.github.io/red-river-gorge-hiker-staging/gear/
           detail_url=https://ryanredrivergorgehiker.github.io/red-river-gorge-hiker-staging/gear/double-rainbow-eagles-point-buttress-greeting-card/
