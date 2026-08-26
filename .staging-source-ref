@@ -1,3 +1,3 @@
-5bafdb1b54dbbf9d5940bfe2cebc0fe47f22221a
-request_id=llc-footer-refinement-uat-20260822-02
-purpose=deploy exact tested LLC footer refinement for staging UAT only
+67780101cf475d3d882dafa96f0150d5597aa45b
+request_id=final-llc-legal-name-correction-uat-20260826-01
+purpose=deploy exact final LLC legal-name and Privacy-date corrected candidate for staging UAT only
