@@ -1,3 +1,3 @@
-495c161b88e10efd457b11c7de8e6c213805ce63
-request_id=header-logo-pixels-v3-uat-20260829-01
-purpose=deploy approved Pixels V3 header logo refinement for staging UAT only
+ae6728b7174ad186a223b904bb807099b92819a4
+request_id=header-logo-transparent-v3-uat-20260829-02
+purpose=deploy Ryan-supplied V3 AVIF/WebP header logo with existing 25-product Gear UAT candidate
