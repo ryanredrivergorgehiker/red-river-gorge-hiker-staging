@@ -1,3 +1,3 @@
-ef5c25c617be48d4ce4f8304e458d141e660bd60
-request_id=header-circle-logo-desktop-size-20260829-03
-purpose=increase only the desktop circular Red River Gorge Hiker emblem size while preserving the approved mobile and tablet lockup unchanged; staging UAT only; preserve production unchanged
+c13824a23d2a95abad5c8c6cd382b58bdce3e49d
+request_id=gear-copy-price-qualifier-20260829-04
+purpose=remove four obsolete Chest Logo endorsement phrases and add the Store-price reference qualifier to all generated Gear detail pages for staging UAT only; preserve Search & Rescue, photograph ownership, consent architecture, Store mappings, approved header refinements, and production unchanged
