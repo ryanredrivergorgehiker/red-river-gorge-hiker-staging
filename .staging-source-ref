@@ -1,3 +1,3 @@
-fa327e5b5778e41509e5f8ff855334dcea54e60f
-request_id=puzzle-share-height-correction-20260829-06
-purpose=make the Puzzle overview Share control outer box match the full height of the adjacent View in Store and Wall Art Options buttons by overriding the legacy puzzle-grid Share margins with the more specific action-row rule; staging UAT only; preserve approved puzzle label, destinations, wall-art options, photograph ownership, SAR, consent architecture, approved Gear changes, header refinements, and production unchanged
+6c9e638c734826d26c4a411357dc246a3d9beaf5
+request_id=ornament-retirement-20260829-01
+purpose=retire the Ornament from the active Red River Gorge Hiker website Gear assortment after physical sample quality review; remove exactly one active product so staging presents 24 Gear products, remove Ornament Store handoff and public website image/share derivatives, preserve unrelated products and all existing legal/SAR/privacy/consent/header controls; staging UAT only; production unchanged pending Ryan explicit approval
