@@ -1,3 +1,3 @@
-4a2da80202e51732dee24e7e84e500ba6155cf38
-request_id=ornament-retirement-20260829-03
-purpose=continue Ornament-retirement staging UAT with Ryan-requested UI cleanup: remove the sitewide Store footer link, remove the Gear Ordering Shop the Store sentence and button, keep product-level View in Store actions and fulfillment/pricing notices intact, preserve 24 active Gear products and all unrelated legal/SAR/privacy/consent/header controls; staging UAT only; production unchanged pending Ryan explicit approval
+d688fa0e5b8f8e5b515123cb90000588bf205382
+request_id=ornament-retirement-20260829-04
+purpose=continue Ornament-retirement staging UAT with Ryan-approved mobile header refinement: add one subtle 1px existing-line-color separator between the brand lockup and mobile primary navigation, with modest spacing, at max-width 850px only; preserve desktop header unchanged, footer/Ordering cleanup, 24 active Gear products, and all unrelated legal/SAR/privacy/consent/commerce controls; staging UAT only; production unchanged pending Ryan explicit approval
