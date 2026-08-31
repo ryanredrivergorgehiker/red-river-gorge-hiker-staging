@@ -1,3 +1,3 @@
-035ee106f58d0e29f2b652a5b8000011af3a9b9b
-request_id=header-shop-navigation-20260831-01
-purpose=deploy the approved Photography and Shop dropdown navigation candidate for visual UAT; preserve View All Wall Art to the RRGH Photography page and View All Gear to the existing RRGH Gear page; use only Ryan-verified Store category destinations; retire only the /puzzles/ browse page to the verified Store puzzle category while preserving individual puzzle detail pages; preserve existing Gear language, products, prices, legal/SAR/privacy/consent controls, and production unchanged pending explicit approval
+08e546e0d553af117d2b634eac57b21f73fb6d82
+request_id=header-shop-navigation-20260831-02
+purpose=deploy the refined Photography and Shop dropdown navigation candidate for visual UAT; make desktop dropdown panels visually closer to the branded Store taxonomy while preserving RRGH green View All buttons; fix mobile dropdown containment so panels center against the full navigation width; keep the Shop menu in a compact two-column mobile layout with Home Decor, Stationery, Lifestyle, and Apparel; preserve the separately governed exact Store destinations, View All Wall Art, View All Gear, puzzle browse retirement, individual puzzle details, Gear products/prices, legal/SAR/privacy/consent controls, and production unchanged pending explicit approval
