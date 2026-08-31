@@ -1,3 +1,3 @@
-d688fa0e5b8f8e5b515123cb90000588bf205382
-request_id=ornament-retirement-20260829-04
-purpose=continue Ornament-retirement staging UAT with Ryan-approved mobile header refinement: add one subtle 1px existing-line-color separator between the brand lockup and mobile primary navigation, with modest spacing, at max-width 850px only; preserve desktop header unchanged, footer/Ordering cleanup, 24 active Gear products, and all unrelated legal/SAR/privacy/consent/commerce controls; staging UAT only; production unchanged pending Ryan explicit approval
+035ee106f58d0e29f2b652a5b8000011af3a9b9b
+request_id=header-shop-navigation-20260831-01
+purpose=deploy the approved Photography and Shop dropdown navigation candidate for visual UAT; preserve View All Wall Art to the RRGH Photography page and View All Gear to the existing RRGH Gear page; use only Ryan-verified Store category destinations; retire only the /puzzles/ browse page to the verified Store puzzle category while preserving individual puzzle detail pages; preserve existing Gear language, products, prices, legal/SAR/privacy/consent controls, and production unchanged pending explicit approval
