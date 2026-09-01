@@ -1,3 +1,3 @@
-afdf77129189f1866226ab40cb80e8dfe101cf54
-request_id=header-shop-navigation-20260831-10
-purpose=redeploy the exact latest mobile-only header/navigation UAT candidate after a stylesheet-comment-only follow-up commit; rendered behavior remains the same mobile SAR support sentence in white with a small gold bullet after SAR, aligned See More and arrow, and the slightly roomier/lower mobile View All Gear CTA; preserve desktop presentation exactly as approved, verified Store destinations, dropdown anchoring and desktop hover behavior, puzzle browse retirement, Gear products/prices, live full SAR data/calculations, legal/privacy/consent controls, and production unchanged pending explicit approval
+ee9d732b5c1c2027ceffa23634c74ac9b3232e39
+request_id=header-shop-navigation-20260831-11
+purpose=deploy the exact desktop hover-gap fix for Wall Art and Shop; preserve the visible .72rem desktop spacing while adding a desktop-only invisible pointer corridor from each open panel across the gap so the existing mouseleave close handler cannot fire during normal pointer travel into the menu; preserve the approved mobile navigation/SAR/View All Gear presentation unchanged, verified Store destinations, puzzle browse retirement, Gear products/prices, live full SAR data/calculations, legal/privacy/consent controls, and production unchanged pending explicit approval
