@@ -1,0 +1,81 @@
+name: Bridge retired-product V2 media once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/bridge-retired-products-v2-20260902-exact-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dedicated verified media branch
+        uses: actions/checkout@v6
+        with:
+          ref: metricool-verified-media-20260818
+          fetch-depth: 0
+
+      - name: Retrieve exact bridged Accepted V2 images
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p metricool-media
+
+          curl --fail --location --retry 2 'https://oaisdmntprcentralus.blob.core.windows.net/files/00000000-41ec-81f5-a8c8-79a9ca1f13d3/raw?se=2026-09-02T19%3A39%3A19Z&sp=r&sv=2026-02-06&sr=b&scid=40e6a35f-a3aa-4ae9-93e1-ae3c051d2bf6&skoid=a1be202a-6464-476c-a496-723317c4a4db&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-02T11%3A48%3A09Z&ske=2026-09-03T11%3A48%3A09Z&sks=b&skv=2026-02-06&sig=Gmxt5mDWbcaNiadLX0/ohQ%2BiAIoRKK890VYmapfb64I%3D' --output metricool-media/RRGH-Social-Showroom-03-Wall-Art-Gear-Lounge_V2.png
+          echo '2e7e9247d899b2b27ad067bb57464ccfb849329729689c36010754fafaeb3b22  metricool-media/RRGH-Social-Showroom-03-Wall-Art-Gear-Lounge_V2.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Showroom-03-Wall-Art-Gear-Lounge_V2.png)" = '2441702'
+
+          curl --fail --location --retry 2 'https://oaisdmntprcentralus.blob.core.windows.net/files/00000000-eda8-81f5-82c8-e57d413ff34b/raw?se=2026-09-02T19%3A39%3A19Z&sp=r&sv=2026-02-06&sr=b&scid=40e6a35f-a3aa-4ae9-93e1-ae3c051d2bf6&skoid=a1be202a-6464-476c-a496-723317c4a4db&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-01T23%3A30%3A50Z&ske=2026-09-02T23%3A30%3A50Z&sks=b&skv=2026-02-06&sig=tX3J9jkAToBqhg5VT/ToFbtcQCsgEvNml5Y%2B2reJbFY%3D' --output metricool-media/RRGH-Social-Lifestyle-09-Notebook-Mug-Pillow-Splatter_V2.png
+          echo '719b7c98c087d99aa6f4f6299f4183a6e3e7c7ec4d004a333ec2b929646fa211  metricool-media/RRGH-Social-Lifestyle-09-Notebook-Mug-Pillow-Splatter_V2.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Lifestyle-09-Notebook-Mug-Pillow-Splatter_V2.png)" = '2508742'
+
+          curl --fail --location --retry 2 'https://oaisdmntprcentralus.blob.core.windows.net/files/00000000-60d8-81f5-9304-4b33ad7c3fe2/raw?se=2026-09-02T19%3A39%3A19Z&sp=r&sv=2026-02-06&sr=b&scid=40e6a35f-a3aa-4ae9-93e1-ae3c051d2bf6&skoid=a1be202a-6464-476c-a496-723317c4a4db&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-02T15%3A26%3A15Z&ske=2026-09-03T15%3A26%3A15Z&sks=b&skv=2026-02-06&sig=K%2Be4jytJqJyEBWNDWztGk0gj98JyNU8eWZpSEdGIsis%3D' --output metricool-media/RRGH-Social-Lifestyle-10-Friends-Blanket-Tote-Mug-Sunrise_V2.png
+          echo 'fe618f4f97a318a14ff0d4bef7a419763d6770b9561fc8834587c2bb62b29891  metricool-media/RRGH-Social-Lifestyle-10-Friends-Blanket-Tote-Mug-Sunrise_V2.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Lifestyle-10-Friends-Blanket-Tote-Mug-Sunrise_V2.png)" = '2460364'
+
+          curl --fail --location --retry 2 'https://oaisdmntprcentralus.blob.core.windows.net/files/00000000-cbe8-81f5-b5b8-774681451111/raw?se=2026-09-02T19%3A39%3A19Z&sp=r&sv=2026-02-06&sr=b&scid=40e6a35f-a3aa-4ae9-93e1-ae3c051d2bf6&skoid=a1be202a-6464-476c-a496-723317c4a4db&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-01T23%3A24%3A50Z&ske=2026-09-02T23%3A24%3A50Z&sks=b&skv=2026-02-06&sig=nW9nWspNTzHXerEdATUZFnXHxEwelEON3c3bSS/plz8%3D' --output metricool-media/RRGH-Social-Lifestyle-04-Mug-Blanket-Fireplace_V2.png
+          echo '701bc3a07b3044862c5025f78936332672a3c524ea44fcb912357b4ff36dd8d5  metricool-media/RRGH-Social-Lifestyle-04-Mug-Blanket-Fireplace_V2.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Lifestyle-04-Mug-Blanket-Fireplace_V2.png)" = '2540182'
+
+          curl --fail --location --retry 2 'https://oaisdmntprcentralus.blob.core.windows.net/files/00000000-1d14-81f5-b4b7-5942778627fb/raw?se=2026-09-02T19%3A39%3A19Z&sp=r&sv=2026-02-06&sr=b&scid=40e6a35f-a3aa-4ae9-93e1-ae3c051d2bf6&skoid=a1be202a-6464-476c-a496-723317c4a4db&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-02T11%3A47%3A27Z&ske=2026-09-03T11%3A47%3A27Z&sks=b&skv=2026-02-06&sig=GlqJkURbx2BIurEOY2YiYuygzobN36gxfXOaxLQm7wc%3D' --output metricool-media/RRGH-Social-Showroom-02-Wall-Art-Apparel-Cozy_V2.png
+          echo 'b7e367cdb9ac6d82ceff04f5b15d3ba864251f93fb863096044cbff0932a3afc  metricool-media/RRGH-Social-Showroom-02-Wall-Art-Apparel-Cozy_V2.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Showroom-02-Wall-Art-Apparel-Cozy_V2.png)" = '2297576'
+
+          curl --fail --location --retry 2 'https://oaisdmntprcentralus.blob.core.windows.net/files/00000000-d67c-81f5-98cf-80725dbbad06/raw?se=2026-09-02T19%3A39%3A19Z&sp=r&sv=2026-02-06&sr=b&scid=40e6a35f-a3aa-4ae9-93e1-ae3c051d2bf6&skoid=a1be202a-6464-476c-a496-723317c4a4db&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-02T09%3A46%3A12Z&ske=2026-09-03T09%3A46%3A12Z&sks=b&skv=2026-02-06&sig=ZjVV7tC7Z6Re9PXWd024XYFnwZbuIO2seOTaQlddvG8%3D' --output metricool-media/RRGH-Social-Showroom-01-Wall-Art-Gear-Family_V2.png
+          echo '3307f896bb81d6d34b34c13a66fe7db7f6555169a2025fb94cbb5c8084a318e0  metricool-media/RRGH-Social-Showroom-01-Wall-Art-Gear-Family_V2.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Showroom-01-Wall-Art-Gear-Family_V2.png)" = '2240798'
+
+          curl --fail --location --retry 2 'https://oaisdmntprcentralus.blob.core.windows.net/files/00000000-51ac-81f5-9335-74c4a6d705da/raw?se=2026-09-02T19%3A39%3A19Z&sp=r&sv=2026-02-06&sr=b&scid=40e6a35f-a3aa-4ae9-93e1-ae3c051d2bf6&skoid=a1be202a-6464-476c-a496-723317c4a4db&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-02T15%3A26%3A21Z&ske=2026-09-03T15%3A26%3A21Z&sks=b&skv=2026-02-06&sig=DV7H7FX47JDIHhpkowwV1u2LEuEsUK2bCYstjixV2SM%3D' --output metricool-media/RRGH-Social-Christmas-01-Bring-the-Gorge-Home-Family_V2.png
+          echo '8bfcf8af9ee76c815cd253771c757975e2c752f03c7cdab16a5a7286589a91a1  metricool-media/RRGH-Social-Christmas-01-Bring-the-Gorge-Home-Family_V2.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Christmas-01-Bring-the-Gorge-Home-Family_V2.png)" = '2644377'
+
+          curl --fail --location --retry 2 'https://oaisdmntprcentralus.blob.core.windows.net/files/00000000-8ad4-81f5-973f-dadb102c4495/raw?se=2026-09-02T19%3A39%3A19Z&sp=r&sv=2026-02-06&sr=b&scid=40e6a35f-a3aa-4ae9-93e1-ae3c051d2bf6&skoid=a1be202a-6464-476c-a496-723317c4a4db&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-02T13%3A00%3A15Z&ske=2026-09-03T13%3A00%3A15Z&sks=b&skv=2026-02-06&sig=Os0wdcikA5xFBNrjOXrf3Lh4pWB75%2BLBt7sUoUvfRUI%3D' --output metricool-media/RRGH-Social-Christmas-02-Holiday-Favorites-Family_V2.png
+          echo '8a9b47413526dd338d1415cb8e500ead9d8336279153c107b551842d69d4a4cf  metricool-media/RRGH-Social-Christmas-02-Holiday-Favorites-Family_V2.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Christmas-02-Holiday-Favorites-Family_V2.png)" = '2592784'
+
+          curl --fail --location --retry 2 'https://oaisdmntprcentralus.blob.core.windows.net/files/00000000-e4c8-81f5-bb41-98060ac37bd8/raw?se=2026-09-02T19%3A39%3A19Z&sp=r&sv=2026-02-06&sr=b&scid=40e6a35f-a3aa-4ae9-93e1-ae3c051d2bf6&skoid=a1be202a-6464-476c-a496-723317c4a4db&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-02T11%3A48%3A04Z&ske=2026-09-03T11%3A48%3A04Z&sks=b&skv=2026-02-06&sig=zNNrZ5IRhlNM%2BNAtiG2bcUJeobTisJ0OyMEQrCKihk8%3D' --output metricool-media/RRGH-Social-Christmas-03-Cozy-Christmas-at-the-Gorge_V2.png
+          echo 'ec0b9b456d740744d62bbc48119f028e9e2e048081054f95cd0df631eba5b410  metricool-media/RRGH-Social-Christmas-03-Cozy-Christmas-at-the-Gorge_V2.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Christmas-03-Cozy-Christmas-at-the-Gorge_V2.png)" = '2489514'
+
+          curl --fail --location --retry 2 'https://oaisdmntprcentralus.blob.core.windows.net/files/00000000-6200-81f5-ae7a-bb733a438a3d/raw?se=2026-09-02T19%3A39%3A19Z&sp=r&sv=2026-02-06&sr=b&scid=40e6a35f-a3aa-4ae9-93e1-ae3c051d2bf6&skoid=a1be202a-6464-476c-a496-723317c4a4db&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-02T11%3A48%3A09Z&ske=2026-09-03T11%3A48%3A09Z&sks=b&skv=2026-02-06&sig=ntG16BrgQnCyrVYsxAPDSZQnxMCYMiWpSh2oDtANd4M%3D' --output metricool-media/RRGH-Social-Lifestyle-11-Blanket-Mug-Double-Rainbow_V2.png
+          echo '4364c4846c1ec7f418adad3c1c710c77b0b2da111fde4e726c760fde75cc6bdf  metricool-media/RRGH-Social-Lifestyle-11-Blanket-Mug-Double-Rainbow_V2.png' | sha256sum --check --strict
+          test "$(stat -c%s metricool-media/RRGH-Social-Lifestyle-11-Blanket-Mug-Double-Rainbow_V2.png)" = '2234697'
+
+      - name: Commit exact V2 media to verified bridge branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'red-river-gorge-hiker-automation'
+          git config user.email 'ryan@redrivergorgehiker.com'
+          git add metricool-media/*_V2.png
+          if git diff --cached --quiet; then
+            echo 'Exact retired-product V2 media already present.'
+            exit 0
+          fi
+          git commit -m 'Add exact retired-product V2 Metricool media'
+          git push origin HEAD:metricool-verified-media-20260818
