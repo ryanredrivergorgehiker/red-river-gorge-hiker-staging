@@ -1,3 +1,4 @@
 32896e4836465dc97406cd6181e3467e7b012e14
-request_id=five-product-quality-retirement-20260902-06
+request_id=five-product-quality-retirement-20260902-07
+retry_reason=clean staging success-record retry after overlapping staging-control metadata pushes; website source unchanged
 purpose=deploy the exact latest CI-clean PR #31 candidate after the focused About-page visitor-copy refinement; production baseline remains ee9d732b5c1c2027ceffa23634c74ac9b3232e39; preserve the verified 19-product retirement state and approved Wall Art sales refinements; on About, replace only the final section heading "A name meant to include more than one person." and its founder-focused opening copy with heading "For the people who know the Gorge." plus Ryan-approved visitor-focused two-paragraph body; preserve the existing following About copy and all layout, styling, navigation, footer, analytics, legal/privacy, SAR, copyright, canonical, QR, and no-cart controls; production unchanged pending Ryan visual/content approval
