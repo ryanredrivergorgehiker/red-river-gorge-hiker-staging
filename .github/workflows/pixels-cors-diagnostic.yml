@@ -12,32 +12,40 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect Pixels location scripts for readable endpoint
+      - name: Probe lightweight Pixels location endpoints
         shell: bash
         run: |
           set -euo pipefail
-          urls=(
-            'https://store.redrivergorgehiker.com/js/globalScripts.js?v=39b560d48b'
-            'https://store.redrivergorgehiker.com/js/jquery371.js?v=39b560d48b'
+          endpoints=(
+            'enterzipcode.php'
+            'checklocation.php'
+            'validateenterzipcode.php'
           )
-          for url in "${urls[@]}"; do
-            echo "=== $url ==="
-            curl --fail --silent --show-error "$url" -o script.js
+          for endpoint in "${endpoints[@]}"; do
+            url="https://store.redrivergorgehiker.com/${endpoint}"
+            echo "=== ${url} ==="
+            set +e
+            status=$(curl --silent --show-error --location \
+              --header 'Origin: https://redrivergorgehiker.com' \
+              --dump-header headers.txt \
+              --output body.txt \
+              --write-out '%{http_code}' \
+              "$url")
+            rc=$?
+            set -e
+            echo "curl_rc=${rc} http=${status} bytes=$(wc -c < body.txt 2>/dev/null || echo 0)"
+            awk 'BEGIN{IGNORECASE=1} /^(HTTP\/|location:|access-control-allow-origin:|access-control-allow-credentials:|content-type:)/ {print}' headers.txt 2>/dev/null || true
             python3 - <<'PY'
-          import re
           from pathlib import Path
-          text=Path('script.js').read_text(errors='replace')
-          needles=['enterzipcode','validateenterzipcode','checklocation','zipcode','country','latitude','longitude','geolocation']
-          seen=[]
-          for needle in needles:
-              for m in re.finditer(re.escape(needle), text, flags=re.I):
-                  lo=max(0,m.start()-500); hi=min(len(text),m.end()+800)
-                  key=(lo,hi)
-                  if key in seen: continue
-                  seen.append(key)
-                  print(f'--- {needle} ---')
-                  print(re.sub(r'\s+',' ',text[lo:hi]).strip())
-                  if len(seen)>=20: break
-              if len(seen)>=20: break
+          p=Path('body.txt')
+          if p.exists():
+              text=p.read_text(errors='replace')
+              low=text.lower()
+              print('has_country_text=', 'united states' in low or 'great britain' in low or 'country' in low)
+              print('has_gtm=', 'googletagmanager' in low)
+              print('has_fb=', 'fbevents' in low or 'facebook pixel' in low)
+              print('has_location_link=', 'enterzipcode.php' in low)
+              print('sample=', ' '.join(text[:500].split()))
           PY
+            rm -f headers.txt body.txt
           done
