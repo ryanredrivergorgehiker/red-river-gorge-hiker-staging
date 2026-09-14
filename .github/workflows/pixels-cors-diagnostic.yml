@@ -12,60 +12,40 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe Pixels response and public Store markup
+      - name: Inspect Pixels public container geometry
         shell: bash
         run: |
           set -euo pipefail
           URL='https://store.redrivergorgehiker.com/'
-          curl --fail --silent --show-error \
-            --header 'Cache-Control: no-cache' \
-            --dump-header headers.txt \
-            --output body.html \
-            "${URL}"
-
-          echo '=== Response summary ==='
-          awk 'BEGIN{IGNORECASE=1} /^(HTTP\/|access-control-allow-origin:|access-control-allow-credentials:|vary:|content-type:)/ {print}' headers.txt
-
-          echo '=== Set-Cookie metadata (values suppressed) ==='
+          curl --fail --silent --show-error --header 'Cache-Control: no-cache' --output body.html "${URL}"
           python3 - <<'PY'
-          from pathlib import Path
-          for line in Path('headers.txt').read_text(errors='replace').splitlines():
-              if not line.lower().startswith('set-cookie:'):
-                  continue
-              raw = line.split(':', 1)[1].strip()
-              parts = [p.strip() for p in raw.split(';')]
-              name = parts[0].split('=', 1)[0]
-              attrs = []
-              for p in parts[1:]:
-                  low = p.lower()
-                  if low.startswith(('domain=', 'path=', 'samesite=', 'max-age=', 'expires=')) or low in ('secure','httponly','partitioned'):
-                      attrs.append(p)
-              print(f'{name}: ' + '; '.join(attrs))
-          PY
-
-          echo '=== Public custom-bar/location markup excerpts ==='
-          python3 - <<'PY'
+          import re
           from pathlib import Path
           text = Path('body.html').read_text(errors='replace')
-          needles = ['Exit Store', 'Google Analytics:', 'enterzipcode.php', 'rrgh']
-          shown = set()
-          for needle in needles:
-              start = 0
-              while True:
-                  i = text.lower().find(needle.lower(), start)
-                  if i < 0:
-                      break
-                  lo = max(0, i - 2200)
-                  hi = min(len(text), i + 4200)
-                  chunk = text[lo:hi]
-                  key = (lo, hi)
-                  if key not in shown:
-                      print(f'--- excerpt around {needle!r} ---')
-                      print(chunk)
-                      shown.add(key)
-                  start = i + len(needle)
-                  if len(shown) >= 8:
-                      break
-              if len(shown) >= 8:
-                  break
+          hrefs = re.findall(r'<link[^>]+href=["\']([^"\']+\.css[^"\']*)', text, flags=re.I)
+          print('STYLESHEETS')
+          for href in dict.fromkeys(hrefs):
+              print(href)
           PY
+          python3 - <<'PY' > css_urls.txt
+          import re
+          from pathlib import Path
+          from urllib.parse import urljoin
+          text = Path('body.html').read_text(errors='replace')
+          for href in dict.fromkeys(re.findall(r'<link[^>]+href=["\']([^"\']+\.css[^"\']*)', text, flags=re.I)):
+              print(urljoin('https://store.redrivergorgehiker.com/', href))
+          PY
+          i=0
+          while IFS= read -r css; do
+            i=$((i+1))
+            curl --fail --silent --show-error "$css" -o "sheet-${i}.css" || continue
+            echo "=== $css ==="
+            python3 - "$i" <<'PY'
+          import re, sys
+          from pathlib import Path
+          text=Path(f'sheet-{sys.argv[1]}.css').read_text(errors='replace')
+          for pat in [r'\.container\s*\{[^}]*\}', r'#headerAnnouncementWhiteLabelDiv\s*\{[^}]*\}', r'#headerAnnouncementWhiteLabelText\s*\{[^}]*\}']:
+              for m in re.finditer(pat,text,flags=re.I|re.S):
+                  print(re.sub(r'\s+',' ',m.group(0)).strip())
+          PY
+          done < css_urls.txt
