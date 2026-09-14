@@ -12,22 +12,32 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Capture Pixels container media contexts
+      - name: Inspect Pixels location scripts for readable endpoint
         shell: bash
         run: |
           set -euo pipefail
-          for css in \
-            'https://store.redrivergorgehiker.com/css/stylesheet.css?v=39b560d48b' \
-            'https://store.redrivergorgehiker.com/css/whiteLabelWebsites/stylesheetHeader.css?v=39b560d48b'; do
-            echo "=== $css ==="
-            curl --fail --silent --show-error "$css" -o sheet.css
+          urls=(
+            'https://store.redrivergorgehiker.com/js/globalScripts.js?v=39b560d48b'
+            'https://store.redrivergorgehiker.com/js/jquery371.js?v=39b560d48b'
+          )
+          for url in "${urls[@]}"; do
+            echo "=== $url ==="
+            curl --fail --silent --show-error "$url" -o script.js
             python3 - <<'PY'
           import re
           from pathlib import Path
-          text=Path('sheet.css').read_text(errors='replace')
-          for m in re.finditer(r'\.container\s*\{[^}]*\}',text,flags=re.I|re.S):
-              lo=max(0,m.start()-500); hi=min(len(text),m.end()+120)
-              print(re.sub(r'\s+',' ',text[lo:hi]).strip())
-              print('---')
+          text=Path('script.js').read_text(errors='replace')
+          needles=['enterzipcode','validateenterzipcode','checklocation','zipcode','country','latitude','longitude','geolocation']
+          seen=[]
+          for needle in needles:
+              for m in re.finditer(re.escape(needle), text, flags=re.I):
+                  lo=max(0,m.start()-500); hi=min(len(text),m.end()+800)
+                  key=(lo,hi)
+                  if key in seen: continue
+                  seen.append(key)
+                  print(f'--- {needle} ---')
+                  print(re.sub(r'\s+',' ',text[lo:hi]).strip())
+                  if len(seen)>=20: break
+              if len(seen)>=20: break
           PY
           done
