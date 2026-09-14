@@ -12,30 +12,21 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect Store tracker source order
+      - name: Extract current public Store RRGH analytics script
         shell: bash
         run: |
           set -euo pipefail
           curl --fail --silent --show-error --header 'Cache-Control: no-cache' \
             'https://store.redrivergorgehiker.com/' -o body.html
           python3 - <<'PY'
+          import re
           from pathlib import Path
           text=Path('body.html').read_text(errors='replace')
-          needles=[
-            'rrghAnalyticsToggle',
-            'rrgh-store-analytics-consent-v1',
-            'googletagmanager.com',
-            'fbevents.js',
-            'facebook pixel',
-            'GTM-WWP8KCM2'
-          ]
-          for needle in needles:
-              positions=[]
-              start=0
-              low=text.lower(); n=needle.lower()
-              while True:
-                  i=low.find(n,start)
-                  if i<0: break
-                  positions.append(i); start=i+len(n)
-              print(f'{needle}: {positions[:10]}')
+          scripts=re.findall(r'<script[^>]*>(.*?)</script>', text, flags=re.I|re.S)
+          for script in scripts:
+              if 'rrgh-store-analytics-consent-v1' in script:
+                  print(script.strip())
+                  break
+          else:
+              raise SystemExit('RRGH Store analytics script not found')
           PY
