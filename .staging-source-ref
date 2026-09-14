@@ -1,3 +1,3 @@
-e5487d6f5291374b07f796af4fc7b96889b94738
-request_id=unified-rrgh-analytics-header-20260914-03
-purpose=deploy exact PR #41 staging candidate with approved Cloudflare country lookup fallback, exact live Pixels announcement-bar geometry, skip-link defect fix, and updated privacy/contract coverage; source CI run 34901706043 passed both repository contract and Astro build; production remains unchanged; staging only; do not promote without Ryan separate production approval
+5d29c5a012c9dc35730ef290a661c2b1d4398bc0
+request_id=unified-rrgh-analytics-header-20260914-04
+purpose=deploy exact PR #41 staging candidate with main-site analytics controls vertically centered within the approved Store-height announcement bar; source CI run 34903895664 passed both repository contract and Astro build; production remains unchanged; staging only; do not promote without Ryan separate production approval
