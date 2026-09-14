@@ -12,7 +12,7 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Extract live Pixels container geometry
+      - name: Inspect Pixels Cabin font definition
         shell: bash
         run: |
           set -euo pipefail
@@ -35,17 +35,13 @@ jobs:
                   url=href
               else:
                   url='https://store.redrivergorgehiker.com/'+href
-              print(f'=== CSS {url} ===')
-              completed=subprocess.run(['curl','--fail','--silent','--show-error','--header','Cache-Control: no-cache',url], text=True, capture_output=True)
+              completed=subprocess.run(['curl','--fail','--silent','--show-error',url], text=True, capture_output=True)
               if completed.returncode != 0:
-                  print('FETCH FAILED')
                   continue
               css=completed.stdout
-              for m in re.finditer(r'([^{}]*\bcontainer\b[^{}]*)\{([^{}]*)\}', css, flags=re.I):
-                  selector=' '.join(m.group(1).split())
-                  body=' '.join(m.group(2).split())
-                  print(selector+' { '+body+' }')
-              for needle in ['#headerAnnouncementWhiteLabelDiv','#headerAnnouncementWhiteLabelText']:
-                  for m in re.finditer(re.escape(needle)+r'[^{}]*\{([^{}]*)\}', css, flags=re.I):
-                      print(needle+' { '+' '.join(m.group(1).split())+' }')
+              for m in re.finditer(r'@font-face\s*\{([^}]*)\}', css, flags=re.I|re.S):
+                  body=' '.join(m.group(1).split())
+                  if 'cabin' in body.lower():
+                      print(f'CSS={url}')
+                      print('@font-face { '+body+' }')
           PY
