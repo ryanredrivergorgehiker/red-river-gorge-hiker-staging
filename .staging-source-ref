@@ -1,3 +1,3 @@
-e4429f8688155ba178925de1af4303bdd61d7c25
-request_id=unified-rrgh-analytics-header-20260914-06
-purpose=deploy exact PR #41 staging candidate using deterministic Arial/Helvetica system-font controls matching the Store snippet, with approved Cloudflare country lookup, staging-only effective-state diagnostic tooltip, and prior vertical-alignment correction; source CI run 34905349811 passed repository contract and Astro build; production remains unchanged; staging only; do not promote without Ryan separate production approval
+d2186dcb57fe770336fe4ef4996913ffbdc6a5bd
+request_id=unified-rrgh-analytics-header-20260914-07
+purpose=deploy exact PR #41 banner-height correction: main-site RRGH Analytics bar wrapper padding increased from 8px/8px to 10px/10px while preserving 26px controls and all horizontal/font/alignment behavior, producing 46px total height to match the measured Store banner; source CI run 34909724106 passed; production remains unchanged; staging only; do not promote without Ryan separate production approval
