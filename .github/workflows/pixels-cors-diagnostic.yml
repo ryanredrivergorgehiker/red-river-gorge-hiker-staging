@@ -12,21 +12,31 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Extract current public Store RRGH analytics script
+      - name: Probe browser-readable country-only fallback
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --header 'Cache-Control: no-cache' \
-            'https://store.redrivergorgehiker.com/' -o body.html
-          python3 - <<'PY'
-          import re
-          from pathlib import Path
-          text=Path('body.html').read_text(errors='replace')
-          scripts=re.findall(r'<script[^>]*>(.*?)</script>', text, flags=re.I|re.S)
-          for script in scripts:
-              if 'rrgh-store-analytics-consent-v1' in script:
-                  print(script.strip())
-                  break
-          else:
-              raise SystemExit('RRGH Store analytics script not found')
-          PY
+          endpoints=(
+            'https://one.one.one.one/cdn-cgi/trace'
+            'https://1.1.1.1/cdn-cgi/trace'
+            'https://www.cloudflare.com/cdn-cgi/trace'
+          )
+          for url in "${endpoints[@]}"; do
+            echo "=== ${url} ==="
+            set +e
+            status=$(curl --silent --show-error --location --max-time 15 \
+              --header 'Origin: https://redrivergorgehiker.com' \
+              --header 'Cache-Control: no-cache' \
+              --dump-header headers.txt \
+              --output body.txt \
+              --write-out '%{http_code}' \
+              "$url")
+            rc=$?
+            set -e
+            echo "curl_rc=${rc} http=${status} bytes=$(wc -c < body.txt 2>/dev/null || echo 0)"
+            awk 'BEGIN{IGNORECASE=1} /^(HTTP\/|access-control-allow-origin:|access-control-allow-credentials:|vary:|content-type:|cache-control:)/ {print}' headers.txt 2>/dev/null || true
+            if [ -f body.txt ]; then
+              grep -E '^(loc|ip|colo|tls|http)=' body.txt || true
+            fi
+            rm -f headers.txt body.txt
+          done
