@@ -12,32 +12,60 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe Pixels response CORS headers
+      - name: Probe Pixels response and public Store markup
         shell: bash
         run: |
           set -euo pipefail
           URL='https://store.redrivergorgehiker.com/'
-          for ORIGIN in \
-            'https://redrivergorgehiker.com' \
-            'https://www.redrivergorgehiker.com' \
-            'https://ryanredrivergorgehiker.github.io'; do
-            echo "=== Origin: ${ORIGIN} ==="
-            curl --fail --silent --show-error \
-              --header "Origin: ${ORIGIN}" \
-              --header 'Cache-Control: no-cache' \
-              --dump-header headers.txt \
-              --output body.html \
-              "${URL}"
-            awk 'BEGIN{IGNORECASE=1} /^(HTTP\/|access-control-allow-origin:|access-control-allow-credentials:|vary:|content-type:)/ {print}' headers.txt
-            if grep -qi '^access-control-allow-origin:' headers.txt; then
-              echo 'CORS_HEADER_PRESENT=yes'
-            else
-              echo 'CORS_HEADER_PRESENT=no'
-            fi
-            if grep -qi 'enterzipcode.php' body.html; then
-              echo 'PIXELS_AUTOMATIC_LOCATION_LINK_PRESENT=yes'
-            else
-              echo 'PIXELS_AUTOMATIC_LOCATION_LINK_PRESENT=no'
-            fi
-            rm -f headers.txt body.html
-          done
+          curl --fail --silent --show-error \
+            --header 'Cache-Control: no-cache' \
+            --dump-header headers.txt \
+            --output body.html \
+            "${URL}"
+
+          echo '=== Response summary ==='
+          awk 'BEGIN{IGNORECASE=1} /^(HTTP\/|access-control-allow-origin:|access-control-allow-credentials:|vary:|content-type:)/ {print}' headers.txt
+
+          echo '=== Set-Cookie metadata (values suppressed) ==='
+          python3 - <<'PY'
+          from pathlib import Path
+          for line in Path('headers.txt').read_text(errors='replace').splitlines():
+              if not line.lower().startswith('set-cookie:'):
+                  continue
+              raw = line.split(':', 1)[1].strip()
+              parts = [p.strip() for p in raw.split(';')]
+              name = parts[0].split('=', 1)[0]
+              attrs = []
+              for p in parts[1:]:
+                  low = p.lower()
+                  if low.startswith(('domain=', 'path=', 'samesite=', 'max-age=', 'expires=')) or low in ('secure','httponly','partitioned'):
+                      attrs.append(p)
+              print(f'{name}: ' + '; '.join(attrs))
+          PY
+
+          echo '=== Public custom-bar/location markup excerpts ==='
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('body.html').read_text(errors='replace')
+          needles = ['Exit Store', 'Google Analytics:', 'enterzipcode.php', 'rrgh']
+          shown = set()
+          for needle in needles:
+              start = 0
+              while True:
+                  i = text.lower().find(needle.lower(), start)
+                  if i < 0:
+                      break
+                  lo = max(0, i - 2200)
+                  hi = min(len(text), i + 4200)
+                  chunk = text[lo:hi]
+                  key = (lo, hi)
+                  if key not in shown:
+                      print(f'--- excerpt around {needle!r} ---')
+                      print(chunk)
+                      shown.add(key)
+                  start = i + len(needle)
+                  if len(shown) >= 8:
+                      break
+              if len(shown) >= 8:
+                  break
+          PY
