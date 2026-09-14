@@ -12,31 +12,26 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe browser-readable country-only fallback
+      - name: Extract live Store analytics bar code context
         shell: bash
         run: |
           set -euo pipefail
-          endpoints=(
-            'https://one.one.one.one/cdn-cgi/trace'
-            'https://1.1.1.1/cdn-cgi/trace'
-            'https://www.cloudflare.com/cdn-cgi/trace'
-          )
-          for url in "${endpoints[@]}"; do
-            echo "=== ${url} ==="
-            set +e
-            status=$(curl --silent --show-error --location --max-time 15 \
-              --header 'Origin: https://redrivergorgehiker.com' \
-              --header 'Cache-Control: no-cache' \
-              --dump-header headers.txt \
-              --output body.txt \
-              --write-out '%{http_code}' \
-              "$url")
-            rc=$?
-            set -e
-            echo "curl_rc=${rc} http=${status} bytes=$(wc -c < body.txt 2>/dev/null || echo 0)"
-            awk 'BEGIN{IGNORECASE=1} /^(HTTP\/|access-control-allow-origin:|access-control-allow-credentials:|vary:|content-type:|cache-control:)/ {print}' headers.txt 2>/dev/null || true
-            if [ -f body.txt ]; then
-              grep -E '^(loc|ip|colo|tls|http)=' body.txt || true
-            fi
-            rm -f headers.txt body.txt
-          done
+          curl --fail --silent --show-error --header 'Cache-Control: no-cache' \
+            'https://store.redrivergorgehiker.com/' -o body.html
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('body.html').read_text(errors='replace')
+          for needle in ['rrghAnalyticsToggle','rrgh-store-analytics-consent-v1','enterzipcode.php','regional-default-on']:
+              low=text.lower(); n=needle.lower(); start=0; count=0
+              while True:
+                  i=low.find(n,start)
+                  if i<0: break
+                  count += 1
+                  lo=max(0,i-3500); hi=min(len(text),i+6500)
+                  print(f'=== {needle} occurrence {count} @ {i} ===')
+                  print(text[lo:hi])
+                  start=i+len(n)
+                  if count>=2: break
+              if count==0:
+                  print(f'=== {needle}: not found ===')
+          PY
