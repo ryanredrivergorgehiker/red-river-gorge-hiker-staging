@@ -1,3 +1,3 @@
-937a7c7dba6f5a811fdbdf8a9a58b429df6f0e88
-request_id=unified-rrgh-analytics-header-20260914-02
-purpose=deploy exact PR #41 staging candidate with Store-matched analytics bar geometry, skip-link defect fix, first-party country bridge consumer, and updated contract coverage; source CI run 34899528456 passed; production remains unchanged; staging only; do not promote without Ryan separate production approval
+e5487d6f5291374b07f796af4fc7b96889b94738
+request_id=unified-rrgh-analytics-header-20260914-03
+purpose=deploy exact PR #41 staging candidate with approved Cloudflare country lookup fallback, exact live Pixels announcement-bar geometry, skip-link defect fix, and updated privacy/contract coverage; source CI run 34901706043 passed both repository contract and Astro build; production remains unchanged; staging only; do not promote without Ryan separate production approval
