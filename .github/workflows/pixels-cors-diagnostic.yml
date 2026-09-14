@@ -12,40 +12,30 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe lightweight Pixels location endpoints
+      - name: Inspect Store tracker source order
         shell: bash
         run: |
           set -euo pipefail
-          endpoints=(
-            'enterzipcode.php'
-            'checklocation.php'
-            'validateenterzipcode.php'
-          )
-          for endpoint in "${endpoints[@]}"; do
-            url="https://store.redrivergorgehiker.com/${endpoint}"
-            echo "=== ${url} ==="
-            set +e
-            status=$(curl --silent --show-error --location \
-              --header 'Origin: https://redrivergorgehiker.com' \
-              --dump-header headers.txt \
-              --output body.txt \
-              --write-out '%{http_code}' \
-              "$url")
-            rc=$?
-            set -e
-            echo "curl_rc=${rc} http=${status} bytes=$(wc -c < body.txt 2>/dev/null || echo 0)"
-            awk 'BEGIN{IGNORECASE=1} /^(HTTP\/|location:|access-control-allow-origin:|access-control-allow-credentials:|content-type:)/ {print}' headers.txt 2>/dev/null || true
-            python3 - <<'PY'
+          curl --fail --silent --show-error --header 'Cache-Control: no-cache' \
+            'https://store.redrivergorgehiker.com/' -o body.html
+          python3 - <<'PY'
           from pathlib import Path
-          p=Path('body.txt')
-          if p.exists():
-              text=p.read_text(errors='replace')
-              low=text.lower()
-              print('has_country_text=', 'united states' in low or 'great britain' in low or 'country' in low)
-              print('has_gtm=', 'googletagmanager' in low)
-              print('has_fb=', 'fbevents' in low or 'facebook pixel' in low)
-              print('has_location_link=', 'enterzipcode.php' in low)
-              print('sample=', ' '.join(text[:500].split()))
+          text=Path('body.html').read_text(errors='replace')
+          needles=[
+            'rrghAnalyticsToggle',
+            'rrgh-store-analytics-consent-v1',
+            'googletagmanager.com',
+            'fbevents.js',
+            'facebook pixel',
+            'GTM-WWP8KCM2'
+          ]
+          for needle in needles:
+              positions=[]
+              start=0
+              low=text.lower(); n=needle.lower()
+              while True:
+                  i=low.find(n,start)
+                  if i<0: break
+                  positions.append(i); start=i+len(n)
+              print(f'{needle}: {positions[:10]}')
           PY
-            rm -f headers.txt body.txt
-          done
