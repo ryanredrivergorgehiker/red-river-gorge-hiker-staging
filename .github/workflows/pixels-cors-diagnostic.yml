@@ -12,26 +12,40 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Extract live Store analytics bar code context
+      - name: Extract live Pixels container geometry
         shell: bash
         run: |
           set -euo pipefail
           curl --fail --silent --show-error --header 'Cache-Control: no-cache' \
             'https://store.redrivergorgehiker.com/' -o body.html
           python3 - <<'PY'
+          import re, subprocess
           from pathlib import Path
-          text=Path('body.html').read_text(errors='replace')
-          for needle in ['rrghAnalyticsToggle','rrgh-store-analytics-consent-v1','enterzipcode.php','regional-default-on']:
-              low=text.lower(); n=needle.lower(); start=0; count=0
-              while True:
-                  i=low.find(n,start)
-                  if i<0: break
-                  count += 1
-                  lo=max(0,i-3500); hi=min(len(text),i+6500)
-                  print(f'=== {needle} occurrence {count} @ {i} ===')
-                  print(text[lo:hi])
-                  start=i+len(n)
-                  if count>=2: break
-              if count==0:
-                  print(f'=== {needle}: not found ===')
+          html=Path('body.html').read_text(errors='replace')
+          hrefs=re.findall(r"<link[^>]+href=['\"]([^'\"]+\.css(?:\?[^'\"]*)?)['\"]", html, flags=re.I)
+          seen=set()
+          for href in hrefs:
+              if href in seen: continue
+              seen.add(href)
+              if href.startswith('//'):
+                  url='https:'+href
+              elif href.startswith('/'):
+                  url='https://store.redrivergorgehiker.com'+href
+              elif href.startswith('http://') or href.startswith('https://'):
+                  url=href
+              else:
+                  url='https://store.redrivergorgehiker.com/'+href
+              print(f'=== CSS {url} ===')
+              completed=subprocess.run(['curl','--fail','--silent','--show-error','--header','Cache-Control: no-cache',url], text=True, capture_output=True)
+              if completed.returncode != 0:
+                  print('FETCH FAILED')
+                  continue
+              css=completed.stdout
+              for m in re.finditer(r'([^{}]*\bcontainer\b[^{}]*)\{([^{}]*)\}', css, flags=re.I):
+                  selector=' '.join(m.group(1).split())
+                  body=' '.join(m.group(2).split())
+                  print(selector+' { '+body+' }')
+              for needle in ['#headerAnnouncementWhiteLabelDiv','#headerAnnouncementWhiteLabelText']:
+                  for m in re.finditer(re.escape(needle)+r'[^{}]*\{([^{}]*)\}', css, flags=re.I):
+                      print(needle+' { '+' '.join(m.group(1).split())+' }')
           PY
