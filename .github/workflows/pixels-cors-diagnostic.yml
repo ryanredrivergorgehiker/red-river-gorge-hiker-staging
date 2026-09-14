@@ -1,0 +1,43 @@
+name: Pixels cross-origin country-source diagnostic
+
+on:
+  push:
+    branches:
+      - diagnostic/pixels-cors-20260914
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe Pixels response CORS headers
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://store.redrivergorgehiker.com/'
+          for ORIGIN in \
+            'https://redrivergorgehiker.com' \
+            'https://www.redrivergorgehiker.com' \
+            'https://ryanredrivergorgehiker.github.io'; do
+            echo "=== Origin: ${ORIGIN} ==="
+            curl --fail --silent --show-error \
+              --header "Origin: ${ORIGIN}" \
+              --header 'Cache-Control: no-cache' \
+              --dump-header headers.txt \
+              --output body.html \
+              "${URL}"
+            awk 'BEGIN{IGNORECASE=1} /^(HTTP\/|access-control-allow-origin:|access-control-allow-credentials:|vary:|content-type:)/ {print}' headers.txt
+            if grep -qi '^access-control-allow-origin:' headers.txt; then
+              echo 'CORS_HEADER_PRESENT=yes'
+            else
+              echo 'CORS_HEADER_PRESENT=no'
+            fi
+            if grep -qi 'enterzipcode.php' body.html; then
+              echo 'PIXELS_AUTOMATIC_LOCATION_LINK_PRESENT=yes'
+            else
+              echo 'PIXELS_AUTOMATIC_LOCATION_LINK_PRESENT=no'
+            fi
+            rm -f headers.txt body.html
+          done
