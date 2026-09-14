@@ -12,36 +12,22 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect Pixels Cabin font definition
+      - name: Probe Cloudflare trace CORS and Pixels Cabin font
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --header 'Cache-Control: no-cache' \
-            'https://store.redrivergorgehiker.com/' -o body.html
-          python3 - <<'PY'
-          import re, subprocess
-          from pathlib import Path
-          html=Path('body.html').read_text(errors='replace')
-          hrefs=re.findall(r"<link[^>]+href=['\"]([^'\"]+\.css(?:\?[^'\"]*)?)['\"]", html, flags=re.I)
-          seen=set()
-          for href in hrefs:
-              if href in seen: continue
-              seen.add(href)
-              if href.startswith('//'):
-                  url='https:'+href
-              elif href.startswith('/'):
-                  url='https://store.redrivergorgehiker.com'+href
-              elif href.startswith('http://') or href.startswith('https://'):
-                  url=href
-              else:
-                  url='https://store.redrivergorgehiker.com/'+href
-              completed=subprocess.run(['curl','--fail','--silent','--show-error',url], text=True, capture_output=True)
-              if completed.returncode != 0:
-                  continue
-              css=completed.stdout
-              for m in re.finditer(r'@font-face\s*\{([^}]*)\}', css, flags=re.I|re.S):
-                  body=' '.join(m.group(1).split())
-                  if 'cabin' in body.lower():
-                      print(f'CSS={url}')
-                      print('@font-face { '+body+' }')
-          PY
+          for origin in 'https://redrivergorgehiker.com' 'https://ryanredrivergorgehiker.github.io'; do
+            for endpoint in 'https://one.one.one.one/cdn-cgi/trace' 'https://www.cloudflare.com/cdn-cgi/trace'; do
+              echo "=== TRACE endpoint=$endpoint origin=$origin ==="
+              curl --silent --show-error --location --dump-header trace-headers.txt --output trace-body.txt \
+                --header "Origin: $origin" --header 'Cache-Control: no-cache' "$endpoint" || true
+              grep -iE '^(HTTP/|access-control-allow-origin:|content-type:|cache-control:)' trace-headers.txt || true
+              grep -E '^loc=' trace-body.txt || true
+            done
+          done
+
+          echo '=== PIXELS CABIN FONT HEADERS ==='
+          curl --silent --show-error --location --head \
+            --header 'Origin: https://redrivergorgehiker.com' \
+            'https://render.fineartamerica.com/font/cabinregular.woff' \
+            | grep -iE '^(HTTP/|access-control-allow-origin:|content-type:|cache-control:)' || true
