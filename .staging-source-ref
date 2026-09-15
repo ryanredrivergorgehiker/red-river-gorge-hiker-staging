@@ -1,3 +1,3 @@
-d2186dcb57fe770336fe4ef4996913ffbdc6a5bd
-request_id=unified-rrgh-analytics-header-20260914-07
-purpose=deploy exact PR #41 banner-height correction: main-site RRGH Analytics bar wrapper padding increased from 8px/8px to 10px/10px while preserving 26px controls and all horizontal/font/alignment behavior, producing 46px total height to match the measured Store banner; source CI run 34909724106 passed; production remains unchanged; staging only; do not promote without Ryan separate production approval
+34406d4778a9ea3c0d6cbedda7e571f0042e407c
+request_id=unified-rrgh-analytics-header-20260914-final-readiness
+purpose=deploy exact PR #41 production-readiness candidate: Privacy finalized with September 14, 2026 date and present-tense shared-preference wording; exact-source CI 34913413587 passed 159 tests/build; strict real-browser main↔Store UAT 34913869227 passed explicit Off/On continuity, country bridge, GPC override, consent-required/unresolved fail-closed, live Store product/cart, and checkoutstep1 payment-method stage without order completion; production remains unchanged; staging only; do not promote without Ryan separate production approval
