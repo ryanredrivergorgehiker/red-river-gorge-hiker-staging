@@ -1,2 +1,2 @@
-9cfe5e8289d3085a0c364cc2ccde770958f7f56b
-purpose=production-readiness cross-site RRGH Analytics UAT against live store; exact candidate includes final Privacy date/wording; production main unchanged
+34406d4778a9ea3c0d6cbedda7e571f0042e407c
+purpose=production-readiness cross-site RRGH Analytics UAT against live store after final Privacy date/wording and stale contract reconciliation; production main unchanged
