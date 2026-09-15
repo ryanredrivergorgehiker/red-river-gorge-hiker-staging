@@ -175,12 +175,13 @@ async function scenarioCountryBridge(browser) {
     await page.waitForTimeout(500);
   }
   assert(region && region.value, 'Store did not publish shared country cookie');
+  const decodedRegion = decodeURIComponent(region.value).toLowerCase();
   await page.goto(MAIN_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
   const main = await mainState(page);
-  assert.strictEqual(main.country, region.value.toLowerCase(), 'main site did not consume Store country cookie');
+  assert.strictEqual(main.country, decodedRegion, 'main site did not consume Store country cookie');
   assert.strictEqual(main.countrySource, 'first-party-country-cookie', `main country source was ${main.countrySource}`);
   await screenshot(page, 'country-bridge');
-  record('Store country-only state is consumed by main site', 'PASS', { regionCookie: region.value, main });
+  record('Store country-only state is consumed by main site', 'PASS', { regionCookieRaw: region.value, regionCountry: decodedRegion, main });
   await context.close();
 }
 
@@ -261,8 +262,6 @@ async function scenarioStoreBrowsing(browser) {
   await screenshot(page, 'store-cart');
   record('Store home, product link, product page, and Cart load under branded hostname', 'PASS', { productHref, cartUrl: page.url(), relevantCartControls: productUi });
 
-  // Checkout is intentionally probed without completing a purchase. If the live cart is empty,
-  // document the browser-level cart PASS and expose the discovered controls for follow-up rather than fabricating an order.
   const checkoutLink = page.locator('a[href*="checkout"], button:has-text("Checkout"), input[value*="Checkout" i]').first();
   if (await checkoutLink.count()) {
     try {
