@@ -230,6 +230,23 @@ async function scenarioUnresolvedFailsClosed(browser) {
   await context.close();
 }
 
+async function visibleControlSummary(page) {
+  return page.evaluate(() => Array.from(document.querySelectorAll('a,button,input,select')).map((el) => {
+    const style = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    const visible = style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    const text = ((el.textContent || el.getAttribute('value') || el.getAttribute('aria-label') || el.getAttribute('title') || '')).trim().replace(/\s+/g, ' ').slice(0, 160);
+    return {
+      tag: el.tagName,
+      text,
+      href: el instanceof HTMLAnchorElement ? el.href : null,
+      type: el.getAttribute('type'),
+      name: el.getAttribute('name'),
+      visible,
+    };
+  }).filter((x) => x.visible && /cart|checkout|continue|payment|billing|add|quantity|greeting|card/i.test(`${x.text} ${x.href || ''} ${x.name || ''}`)).slice(0, 150));
+}
+
 async function scenarioStoreBrowsing(browser) {
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
   const page = await context.newPage();
@@ -242,41 +259,74 @@ async function scenarioStoreBrowsing(browser) {
     return visible ? visible.href : null;
   });
   assert(productHref, 'No Store product link was discoverable');
-
   const productResponse = await page.goto(productHref, { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(productResponse && productResponse.ok(), `Product page returned ${productResponse ? productResponse.status() : 'no response'}`);
   assert(new URL(page.url()).hostname === 'store.redrivergorgehiker.com', 'Product browsing left branded Store hostname');
   await screenshot(page, 'store-product-page');
+  record('Store home and featured product browsing remain normal under branded hostname', 'PASS', { productHref });
+
+  const purchaseUrl = `${STORE_URL}featured/double-rainbow-at-eagles-point-ryan-d-lewis.html?product=greeting-card`;
+  const purchaseResponse = await page.goto(purchaseUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(purchaseResponse && purchaseResponse.ok(), `Approved greeting-card product page returned ${purchaseResponse ? purchaseResponse.status() : 'no response'}`);
+  await page.waitForTimeout(1000);
+  await screenshot(page, 'store-purchase-product');
+
+  const addCandidates = [
+    page.getByRole('button', { name: /add to (shopping )?cart/i }).first(),
+    page.locator('input[type="submit" i][value*="add" i][value*="cart" i]:visible').first(),
+    page.locator('input[type="button" i][value*="add" i][value*="cart" i]:visible').first(),
+    page.getByRole('link', { name: /add to (shopping )?cart/i }).first(),
+  ];
+  let addControl = null;
+  for (const candidate of addCandidates) {
+    if (await candidate.count() && await candidate.isVisible().catch(() => false)) {
+      addControl = candidate;
+      break;
+    }
+  }
+  if (!addControl) {
+    const controls = await visibleControlSummary(page);
+    throw new Error(`Could not find visible Add to Cart control on approved greeting-card product. Relevant controls: ${JSON.stringify(controls)}`);
+  }
+  await addControl.click({ timeout: 15000 });
+  await page.waitForTimeout(1500);
 
   const cartResponse = await page.goto(`${STORE_URL}shoppingcart.html`, { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(cartResponse && cartResponse.ok(), `Cart returned ${cartResponse ? cartResponse.status() : 'no response'}`);
   assert(new URL(page.url()).hostname === 'store.redrivergorgehiker.com', 'Cart left branded Store hostname');
+  const cartText = await page.locator('body').innerText();
+  assert(!/you do not have any products in your shopping cart/i.test(cartText), 'Cart was still empty after Add to Cart');
+  assert(!/\$0\.00\b/.test(cartText.slice(0, 2500)), 'Cart total remained $0.00 after Add to Cart');
+  await screenshot(page, 'store-cart-nonempty');
+  record('Native Store Cart accepts an approved product and retains nonempty cart state', 'PASS', { cartUrl: page.url() });
 
-  const productUi = await page.evaluate(() => Array.from(document.querySelectorAll('a,button,input')).map((el) => ({
-    tag: el.tagName,
-    text: ((el.textContent || el.getAttribute('value') || el.getAttribute('aria-label') || '')).trim().replace(/\s+/g, ' ').slice(0, 120),
-    href: el instanceof HTMLAnchorElement ? el.href : null,
-    type: el.getAttribute('type'),
-  })).filter((x) => /cart|checkout|continue|payment|shop/i.test(`${x.text} ${x.href || ''}`)).slice(0, 100));
-
-  await screenshot(page, 'store-cart');
-  record('Store home, product link, product page, and Cart load under branded hostname', 'PASS', { productHref, cartUrl: page.url(), relevantCartControls: productUi });
-
-  const checkoutLink = page.locator('a[href*="checkout"], button:has-text("Checkout"), input[value*="Checkout" i]').first();
-  if (await checkoutLink.count()) {
-    try {
-      await checkoutLink.click({ timeout: 10000 });
-      await page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
-      const body = (await page.locator('body').innerText()).slice(0, 5000);
-      const paymentStage = /payment|credit card|paypal|billing/i.test(body);
-      record('Checkout navigation reached a payment/billing stage without order completion', paymentStage ? 'PASS' : 'PARTIAL', { url: page.url(), paymentStage });
-      await screenshot(page, 'store-checkout-stage');
-    } catch (error) {
-      record('Checkout navigation from current cart', 'PARTIAL', { reason: String(error) });
+  const checkoutCandidates = [
+    page.getByRole('button', { name: /checkout/i }).first(),
+    page.getByRole('link', { name: /checkout/i }).first(),
+    page.locator('input[type="submit" i][value*="checkout" i]:visible').first(),
+    page.locator('input[type="button" i][value*="checkout" i]:visible').first(),
+  ];
+  let checkoutControl = null;
+  for (const candidate of checkoutCandidates) {
+    if (await candidate.count() && await candidate.isVisible().catch(() => false)) {
+      checkoutControl = candidate;
+      break;
     }
-  } else {
-    record('Checkout navigation from current cart', 'PARTIAL', { reason: 'Fresh automated browser cart was empty; no checkout control available without selecting/purchasing a product. No order was created.' });
   }
+  if (!checkoutControl) {
+    const controls = await visibleControlSummary(page);
+    throw new Error(`Nonempty Cart did not expose a visible Checkout control. Relevant controls: ${JSON.stringify(controls)}`);
+  }
+
+  await checkoutControl.click({ timeout: 15000 });
+  await page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(750);
+  const checkoutText = await page.locator('body').innerText();
+  const checkoutUrl = page.url();
+  const checkoutReached = /checkout|payment|billing|shipping|credit card|paypal/i.test(`${checkoutUrl} ${checkoutText.slice(0, 10000)}`);
+  assert(checkoutReached, `Checkout control did not reach a recognizable checkout stage: ${checkoutUrl}`);
+  await screenshot(page, 'store-checkout-stage');
+  record('Checkout begins normally from nonempty native Cart without completing an order', 'PASS', { checkoutUrl, pageSignals: checkoutText.slice(0, 1200).replace(/\s+/g, ' ') });
   await context.close();
 }
 
