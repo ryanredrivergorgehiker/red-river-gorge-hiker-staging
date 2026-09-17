@@ -264,6 +264,10 @@ async function liveRokuNetworkAndStorage(browser) {
   const newLocalKeys = Object.keys(afterLocal).filter((k) => !(k in beforeLocal));
   assert.deepStrictEqual(newLocalKeys, [], `Roku live smoke created unexpected first-party localStorage key(s): ${JSON.stringify(newLocalKeys)}`);
 
+  const rokuDomainCookies = afterCookies
+    .filter((c) => c.domain === 'ravm.tv' || c.domain.endsWith('.ravm.tv'))
+    .map((c) => ({ name: c.name, domain: c.domain, path: c.path, sameSite: c.sameSite, secure: c.secure, httpOnly: c.httpOnly }));
+
   const networkText = requests.map((r) => [r.url, r.postData, r.referer].join('\\n')).join('\\n');
   const piiPatterns = [
     /Ryan@RedRiverGorgeHiker\\.com/i,
@@ -283,7 +287,8 @@ async function liveRokuNetworkAndStorage(browser) {
     requests,
     newFirstPartyCookies: newFirstParty.map((c) => ({ name: c.name, domain: c.domain })),
     newFirstPartyLocalStorageKeys: newLocalKeys,
-    note: 'GA4 and Pinterest were blocked; storage delta is measured against the same site/context after an Analytics-Off baseline, so existing site storage is excluded from Roku attribution.',
+    rokuDomainCookies,
+    note: 'GA4 and Pinterest were blocked; storage delta is measured against the same site/context after an Analytics-Off baseline. Roku-domain cookies are reported separately; no new RRGH-domain cookie/localStorage is permitted.',
   });
   await context.close();
 }
