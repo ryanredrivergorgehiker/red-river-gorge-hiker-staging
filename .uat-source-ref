@@ -1,2 +1,2 @@
-34406d4778a9ea3c0d6cbedda7e571f0042e407c
-purpose=production-readiness cross-site RRGH Analytics UAT against live store after final Privacy date/wording and stale contract reconciliation; production main unchanged
+191216943cf2b7b468e830d90c7aed6ca7ff2635
+purpose=rerun production-equivalent main↔Store LEG-DEC-0026 browser UAT against exact PR #42 Roku PAGE_VIEW staging candidate; verify shared preference, country bridge, GPC/fail-closed, Store product/cart/checkout remain unchanged
