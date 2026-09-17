@@ -1,0 +1,111 @@
+name: Roku PAGE_VIEW browser/network UAT
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .roku-uat-source-ref
+      - tools/roku-pageview-uat.js
+      - .github/workflows/roku-pageview-uat.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: roku-pageview-uat
+  cancel-in-progress: true
+
+jobs:
+  roku-uat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout staging control
+        uses: actions/checkout@v6
+
+      - name: Resolve exact website source
+        id: source
+        shell: bash
+        run: |
+          source_ref="$(head -n 1 .roku-uat-source-ref | tr -d '\r\n')"
+          if [ -z "$source_ref" ]; then
+            echo "Missing .roku-uat-source-ref" >&2
+            exit 1
+          fi
+          echo "source_ref=$source_ref" >> "$GITHUB_OUTPUT"
+          echo "Testing exact website source: $source_ref"
+
+      - name: Checkout exact website source
+        uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: ${{ steps.source.outputs.source_ref }}
+          path: site
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install website dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Run full repository checks
+        working-directory: site
+        env:
+          SITE_URL: https://redrivergorgehiker.com
+          BASE_PATH: /
+        run: npm run check
+
+      - name: Build exact source production-equivalently
+        working-directory: site
+        env:
+          SITE_URL: https://redrivergorgehiker.com
+          BASE_PATH: /
+        run: npm run build
+
+      - name: Install Chromium UAT runner
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0 http-server@14.1.1
+          npx playwright install --with-deps chromium
+
+      - name: Create temporary HTTPS certificate
+        run: |
+          openssl req -x509 -newkey rsa:2048 -nodes \
+            -keyout rrgh-roku-uat-key.pem \
+            -out rrgh-roku-uat-cert.pem \
+            -days 1 \
+            -subj "/CN=redrivergorgehiker.com" \
+            -addext "subjectAltName=DNS:redrivergorgehiker.com"
+
+      - name: Serve production-equivalent build under production hostname
+        shell: bash
+        run: |
+          npx http-server site/dist -S -C rrgh-roku-uat-cert.pem -K rrgh-roku-uat-key.pem -p 8443 -a 0.0.0.0 > rrgh-roku-uat-server.log 2>&1 &
+          echo $! > rrgh-roku-uat-server.pid
+          for i in {1..30}; do
+            if curl -kfsS --resolve redrivergorgehiker.com:8443:127.0.0.1 https://redrivergorgehiker.com:8443/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat rrgh-roku-uat-server.log
+          exit 1
+
+      - name: Run Roku PAGE_VIEW browser/network UAT
+        run: node tools/roku-pageview-uat.js
+
+      - name: Upload Roku UAT evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roku-pageview-uat-${{ steps.source.outputs.source_ref }}
+          path: |
+            roku-uat-evidence/
+            rrgh-roku-uat-server.log
+          if-no-files-found: warn
+          retention-days: 30
