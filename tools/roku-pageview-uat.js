@@ -228,34 +228,45 @@ async function qrAndGaAttribution(browser) {
 
 async function liveRokuNetworkAndStorage(browser) {
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
-  await setCookie(context, SHARED, 'allowed');
+  // Establish the existing site's own first-party storage baseline with RRGH Analytics Off.
+  await setCookie(context, SHARED, 'declined');
   await setCookie(context, REGION, 'us');
-  const beforeCookies = await context.cookies();
   const page = await context.newPage();
   await blockNonRokuMeasurement(page);
   const requests = captureRequests(page);
-  const beforeLocal = await page.evaluate(() => Object.fromEntries(Object.entries(localStorage))).catch(() => ({}));
   await page.goto(MAIN, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  const offState = await state(page);
+  assert(/Off$/i.test(offState.text));
+  assert.strictEqual(requests.length, 0, 'Roku requested anything while establishing Off baseline');
+
+  const beforeCookies = await context.cookies();
+  const beforeLocal = await page.evaluate(() => Object.fromEntries(Object.entries(localStorage)));
+
+  // Enable only the shared RRGH measurement choice, then reload the same page/context.
+  await setCookie(context, SHARED, 'allowed');
+  requests.length = 0;
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
   const s = await state(page);
   assert(/On$/i.test(s.text));
   await page.waitForTimeout(6000);
+
   const afterCookies = await context.cookies();
   const afterLocal = await page.evaluate(() => Object.fromEntries(Object.entries(localStorage)));
   assert.strictEqual(requests.filter((r) => r.url === ROKU_LOADER).length, 1, 'live Roku loader request count was not one');
   assert(requests.length >= 2, `Expected loader plus Roku event network activity; saw ${JSON.stringify(requests)}`);
 
-  const firstPartyBefore = new Set(beforeCookies.filter((c) => /(^|\.)redrivergorgehiker\.com$/.test(c.domain)).map((c) => c.name));
-  const newFirstParty = afterCookies.filter((c) => /(^|\.)redrivergorgehiker\.com$/.test(c.domain) && !firstPartyBefore.has(c.name));
+  const firstPartyBefore = new Set(beforeCookies.filter((c) => /(^|\\.)redrivergorgehiker\\.com$/.test(c.domain)).map((c) => c.name));
+  const newFirstParty = afterCookies.filter((c) => /(^|\\.)redrivergorgehiker\\.com$/.test(c.domain) && !firstPartyBefore.has(c.name));
   assert.deepStrictEqual(newFirstParty.map((c) => c.name), [], `Roku live smoke created unexpected first-party cookie(s): ${JSON.stringify(newFirstParty)}`);
 
   const newLocalKeys = Object.keys(afterLocal).filter((k) => !(k in beforeLocal));
   assert.deepStrictEqual(newLocalKeys, [], `Roku live smoke created unexpected first-party localStorage key(s): ${JSON.stringify(newLocalKeys)}`);
 
-  const networkText = requests.map((r) => [r.url, r.postData, r.referer].join('\n')).join('\n');
+  const networkText = requests.map((r) => [r.url, r.postData, r.referer].join('\\n')).join('\\n');
   const piiPatterns = [
-    /Ryan@RedRiverGorgeHiker\.com/i,
+    /Ryan@RedRiverGorgeHiker\\.com/i,
     /mailto:/i,
-    /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i,
+    /[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i,
     /(?:phone|telephone|payment|card_number|postal_address|street_address)=/i,
   ];
   for (const pattern of piiPatterns) assert(!pattern.test(networkText), `PII-like value found in Roku network evidence: ${pattern}`);
@@ -264,12 +275,13 @@ async function liveRokuNetworkAndStorage(browser) {
 
   await screenshot(page, 'live-roku-network-smoke');
   record('Live Roku network/storage smoke', 'PASS', {
+    offBaseline: offState,
     state: s,
     requestCount: requests.length,
     requests,
     newFirstPartyCookies: newFirstParty.map((c) => ({ name: c.name, domain: c.domain })),
     newFirstPartyLocalStorageKeys: newLocalKeys,
-    note: 'GA4 and Pinterest were blocked in this scenario so first-party storage changes could be attributed cleanly to Roku/site code.',
+    note: 'GA4 and Pinterest were blocked; storage delta is measured against the same site/context after an Analytics-Off baseline, so existing site storage is excluded from Roku attribution.',
   });
   await context.close();
 }
