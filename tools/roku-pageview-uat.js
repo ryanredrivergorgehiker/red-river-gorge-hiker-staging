@@ -234,6 +234,18 @@ async function liveRokuNetworkAndStorage(browser) {
   const page = await context.newPage();
   await blockNonRokuMeasurement(page);
   const requests = captureRequests(page);
+  const externalRequests = [];
+  page.on('request', (req) => {
+    let host = '';
+    try { host = new URL(req.url()).hostname.toLowerCase(); } catch {}
+    if (!host || host === 'redrivergorgehiker.com') return;
+    externalRequests.push({
+      url: req.url(),
+      method: req.method(),
+      postData: req.postData() || '',
+      referer: req.headers()['referer'] || '',
+    });
+  });
   await page.goto(MAIN, { waitUntil: 'domcontentloaded', timeout: 60000 });
   const offState = await state(page);
   assert(/Off$/i.test(offState.text));
@@ -285,6 +297,7 @@ async function liveRokuNetworkAndStorage(browser) {
     state: s,
     requestCount: requests.length,
     requests,
+    externalRequests,
     newFirstPartyCookies: newFirstParty.map((c) => ({ name: c.name, domain: c.domain })),
     newFirstPartyLocalStorageKeys: newLocalKeys,
     rokuDomainCookies,
