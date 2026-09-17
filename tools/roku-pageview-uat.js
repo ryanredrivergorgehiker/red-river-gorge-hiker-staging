@@ -60,10 +60,18 @@ async function stubRokuLoader(page) {
   }));
 }
 async function blockNonRokuMeasurement(page) {
-  await page.route('**/googletagmanager.com/**', (route) => route.abort());
-  await page.route('**/google-analytics.com/**', (route) => route.abort());
-  await page.route('**/pinimg.com/**', (route) => route.abort());
-  await page.route('**/pinterest.com/**', (route) => route.abort());
+  await page.route('**/*', (route) => {
+    let host = '';
+    try { host = new URL(route.request().url()).hostname.toLowerCase(); } catch {}
+    const blocked = host === 'www.googletagmanager.com'
+      || host.endsWith('.google-analytics.com')
+      || host === 'google-analytics.com'
+      || host === 's.pinimg.com'
+      || host.endsWith('.pinterest.com')
+      || host === 'pinterest.com';
+    if (blocked) return route.abort();
+    return route.continue();
+  });
 }
 async function rokuQueue(page) {
   return page.evaluate(() => {
