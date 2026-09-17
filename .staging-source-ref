@@ -1,3 +1,3 @@
 191216943cf2b7b468e830d90c7aed6ca7ff2635
-request_id=roku-campaign-02-pageview-20260917
-purpose=deploy exact PR #42 staging candidate for Roku Campaign 02 PAGE_VIEW measurement; CI 35286377502 SUCCESS; staging only; exact Roku base loader and single PAGE_VIEW gated by LEG-DEC-0026 effective RRGH Analytics; Privacy updated; do not promote without Ryan separate approval
+request_id=roku-campaign-02-pageview-20260917-final
+purpose=final exact PR #42 staging deployment after CI 35286377502 SUCCESS, cross-site UAT 35286485341 SUCCESS, and Roku PAGE_VIEW browser/network UAT 35287238872 SUCCESS; exact platform loader/event group PaccInUJusF8; one source PAGE_VIEW invocation; Off/GPC/consent-required/unresolved fail-closed/withdrawal PASS; Roku QR UTM + GA4 attribution PASS; live Roku event transport observed with identical event_id to Roku collectors, no buyer PII/purchase/revenue data, no new RRGH-domain cookie/localStorage, no ravm.tv cookie; staging only; do not promote without Ryan separate explicit approval
