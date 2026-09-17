@@ -238,6 +238,8 @@ async function liveRokuNetworkAndStorage(browser) {
   const offState = await state(page);
   assert(/Off$/i.test(offState.text));
   assert.strictEqual(requests.length, 0, 'Roku requested anything while establishing Off baseline');
+  // Let ordinary asynchronous site initialization settle before taking the storage baseline.
+  await page.waitForTimeout(6000);
 
   const beforeCookies = await context.cookies();
   const beforeLocal = await page.evaluate(() => Object.fromEntries(Object.entries(localStorage)));
