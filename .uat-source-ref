@@ -1,2 +1,2 @@
-191216943cf2b7b468e830d90c7aed6ca7ff2635
-purpose=rerun production-equivalent main↔Store LEG-DEC-0026 browser UAT against exact PR #42 Roku PAGE_VIEW staging candidate; verify shared preference, country bridge, GPC/fail-closed, Store product/cart/checkout remain unchanged
+ed1540363be8d835be381eb54aa95bd2713bacf4
+purpose=rerun production-equivalent main↔Store LEG-DEC-0026 browser UAT against exact PR #42 US-only Roku scope candidate; verify shared preference, country bridge, GPC/fail-closed, Store product/cart/checkout, GA4 and Pinterest behavior remain unchanged

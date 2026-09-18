@@ -103,7 +103,25 @@ async function explicitOff(browser) {
   await context.close();
 }
 
-async function effectiveOn(browser) {
+async function usRegionalDefaultOn(browser) {
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  await setCookie(context, REGION, 'us');
+  const page = await context.newPage();
+  const requests = captureRequests(page);
+  await stubRokuLoader(page);
+  await page.goto(MAIN, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  const s = await state(page);
+  const queue = await rokuQueue(page);
+  assert(/On$/i.test(s.text));
+  assert.strictEqual(s.source, 'regional-default-on');
+  assert.strictEqual(requests.filter((r) => r.url === ROKU_LOADER).length, 1);
+  assert.strictEqual(queue.filter((x) => x[0] === 'init' && x[1] === 'PaccInUJusF8').length, 1);
+  assert.strictEqual(queue.filter((x) => x[0] === 'event' && x[1] === 'PAGE_VIEW').length, 1);
+  record('US regional-default On loads Roku once and queues exactly one PAGE_VIEW', 'PASS', { state: s, queue, requests });
+  await context.close();
+}
+
+async function usExplicitAllowed(browser) {
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
   await setCookie(context, SHARED, 'allowed');
   await setCookie(context, REGION, 'us');
@@ -118,7 +136,7 @@ async function effectiveOn(browser) {
   assert.strictEqual(requests.filter((r) => r.url === ROKU_LOADER).length, 1);
   assert.strictEqual(queue.filter((x) => x[0] === 'init' && x[1] === 'PaccInUJusF8').length, 1);
   assert.strictEqual(queue.filter((x) => x[0] === 'event' && x[1] === 'PAGE_VIEW').length, 1);
-  record('Effective On loads Roku base once and queues exactly one PAGE_VIEW', 'PASS', { state: s, queue, requests });
+  record('US explicit Allowed loads Roku once and queues exactly one PAGE_VIEW', 'PASS', { state: s, queue, requests });
   await context.close();
 }
 
@@ -151,6 +169,62 @@ async function consentRequiredOff(browser) {
   assert.strictEqual(s.source, 'consent-required');
   assert.strictEqual(requests.length, 0);
   record('Consent-required pre-permission path prevents Roku measurement', 'PASS', { state: s, note: 'Chromium control path with first-party gb country signal; not live UK-network proof.' });
+  await context.close();
+}
+
+async function gbAndEeaExplicitAllowedNoRoku(browser) {
+  for (const country of ['gb', 'de']) {
+    const context = await browser.newContext({ ignoreHTTPSErrors: true });
+    await setCookie(context, SHARED, 'allowed');
+    await setCookie(context, REGION, country);
+    const page = await context.newPage();
+    const requests = captureRequests(page);
+    await page.goto(MAIN, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    const s = await state(page);
+    const queue = await rokuQueue(page);
+    assert(/On$/i.test(s.text));
+    assert.strictEqual(s.source, 'explicit-allowed');
+    assert.strictEqual(s.rokuLoaded, false);
+    assert.strictEqual(requests.length, 0);
+    assert.deepStrictEqual(queue, []);
+    record(`GB/EEA explicit Allowed keeps RRGH Analytics On but blocks Roku (${country})`, 'PASS', { state: s, requests, queue });
+    await context.close();
+  }
+}
+
+async function nonUsExplicitAllowedNoRoku(browser) {
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  await setCookie(context, SHARED, 'allowed');
+  await setCookie(context, REGION, 'ca');
+  const page = await context.newPage();
+  const requests = captureRequests(page);
+  await page.goto(MAIN, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  const s = await state(page);
+  const queue = await rokuQueue(page);
+  assert(/On$/i.test(s.text));
+  assert.strictEqual(s.source, 'explicit-allowed');
+  assert.strictEqual(s.rokuLoaded, false);
+  assert.strictEqual(requests.length, 0);
+  assert.deepStrictEqual(queue, []);
+  record('Non-US explicit Allowed keeps RRGH Analytics On but blocks Roku', 'PASS', { country: 'ca', state: s, requests, queue });
+  await context.close();
+}
+
+async function unresolvedExplicitAllowedNoRoku(browser) {
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  await setCookie(context, SHARED, 'allowed');
+  const page = await context.newPage();
+  const requests = captureRequests(page);
+  await page.route('https://one.one.one.one/cdn-cgi/trace', (route) => route.abort());
+  await page.goto(MAIN, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  const s = await state(page);
+  const queue = await rokuQueue(page);
+  assert(/On$/i.test(s.text));
+  assert.strictEqual(s.source, 'explicit-allowed');
+  assert.strictEqual(s.rokuLoaded, false);
+  assert.strictEqual(requests.length, 0);
+  assert.deepStrictEqual(queue, []);
+  record('Unresolved country with explicit Allowed keeps main Analytics On but blocks Roku', 'PASS', { state: s, requests, queue });
   await context.close();
 }
 
@@ -334,10 +408,14 @@ async function mobileDesktopSmoke(browser) {
   let failure = null;
   try {
     await explicitOff(browser);
-    await effectiveOn(browser);
+    await usRegionalDefaultOn(browser);
+    await usExplicitAllowed(browser);
     await gpcOff(browser);
     await consentRequiredOff(browser);
+    await gbAndEeaExplicitAllowedNoRoku(browser);
+    await nonUsExplicitAllowedNoRoku(browser);
     await regionalFailureOff(browser);
+    await unresolvedExplicitAllowedNoRoku(browser);
     await withdrawal(browser);
     await qrAndGaAttribution(browser);
     await liveRokuNetworkAndStorage(browser);
