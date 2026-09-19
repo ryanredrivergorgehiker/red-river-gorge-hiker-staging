@@ -34,7 +34,8 @@ async function desktopExplore(browser) {
   const menu = page.locator('.desktop-nav .nav-details-explore');
   const trigger = menu.locator(':scope > summary');
   assert.strictEqual(await trigger.textContent().then(t => t.trim().startsWith('Explore')), true);
-  await trigger.click();
+  await trigger.hover();
+  await page.waitForTimeout(120);
   assert.strictEqual(await menu.getAttribute('open') !== null, true);
 
   const stories = menu.locator('.nav-explore-choice-details').filter({ hasText: 'Stories' }).first();
@@ -56,6 +57,7 @@ async function desktopExplore(browser) {
   await page.keyboard.press('Escape');
   assert.strictEqual(await menu.getAttribute('open'), null);
 
+  await page.mouse.move(1, 1);
   await trigger.focus();
   await page.keyboard.press('Enter');
   assert.strictEqual(await menu.getAttribute('open') !== null, true);
@@ -66,7 +68,8 @@ async function desktopExplore(browser) {
   await page.keyboard.press('Escape');
   assert.strictEqual(await menu.getAttribute('open'), null);
 
-  await trigger.click();
+  await trigger.focus();
+  await page.keyboard.press('Enter');
   await page.locator('main').click({ position: { x: 20, y: 20 } });
   assert.strictEqual(await menu.getAttribute('open'), null);
 
