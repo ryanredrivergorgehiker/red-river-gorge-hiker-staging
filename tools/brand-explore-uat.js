@@ -33,22 +33,26 @@ async function desktopExplore(browser) {
   await page.goto(MAIN, { waitUntil: 'domcontentloaded', timeout: 60000 });
   const menu = page.locator('.desktop-nav .nav-details-explore');
   const trigger = menu.locator(':scope > summary');
-  assert.strictEqual(await trigger.textContent().then(t => t.trim().startsWith('Explore')), true);
   await trigger.hover();
   await page.waitForTimeout(120);
   assert.strictEqual(await menu.getAttribute('open') !== null, true);
 
-  const stories = menu.locator('.nav-explore-choice-details').filter({ hasText: 'Stories' }).first();
-  await stories.locator(':scope > summary').hover();
-  await page.waitForTimeout(120);
-  assert.strictEqual(await stories.getAttribute('open') !== null, true);
-  const storyLinks = stories.locator('.nav-explore-flyout a');
-  assert.strictEqual(await storyLinks.count(), 7);
-  assert((await storyLinks.first().getAttribute('href')).includes('/stories/lilis-leap/'));
+  const panel = menu.locator('.nav-panel-explore');
+  const sections = panel.locator('.nav-explore-section');
+  assert.strictEqual(await sections.count(), 8);
+  assert.strictEqual(await panel.locator('.nav-explore-title').count(), 0);
 
-  const landforms = menu.locator('.nav-explore-choice-details').filter({ hasText: 'Landforms' }).first();
-  await landforms.locator(':scope > summary').hover();
-  await page.waitForTimeout(120);
+  const stories = sections.filter({ hasText: 'Stories' }).first();
+  const storyLinks = stories.locator('a');
+  assert.strictEqual(await storyLinks.count(), 6);
+  assert((await storyLinks.first().getAttribute('href')).includes('/stories/lilis-leap/'));
+  assert.strictEqual(await stories.getByText('View All Stories', { exact: true }).count(), 0);
+
+  const sarSection = sections.filter({ hasText: 'Search & Rescue' }).first();
+  assert.strictEqual(await sarSection.locator('a[href*="kyem.ky.gov"]').count(), 0);
+  assert(await sarSection.locator('a[href="https://www.pocosar.org/"]').count() === 1);
+
+  const landforms = sections.filter({ hasText: 'Landforms' }).first();
   const ext = landforms.locator('a[href="https://redrivergorgearches.com/"]');
   assert.strictEqual(await ext.getAttribute('target'), '_blank');
   assert((await ext.getAttribute('rel') || '').includes('noopener'));
@@ -57,14 +61,11 @@ async function desktopExplore(browser) {
   await page.keyboard.press('Escape');
   assert.strictEqual(await menu.getAttribute('open'), null);
 
-  await page.mouse.move(1, 1);
   await trigger.focus();
   await page.keyboard.press('Enter');
   assert.strictEqual(await menu.getAttribute('open') !== null, true);
-  const sarChoice = menu.locator('.nav-explore-choice-details').filter({ hasText: 'Search & Rescue' }).first();
-  await sarChoice.locator(':scope > summary').focus();
-  await page.waitForTimeout(80);
-  assert.strictEqual(await sarChoice.getAttribute('open') !== null, true);
+  await storyLinks.first().focus();
+  assert.strictEqual(await storyLinks.first().isVisible(), true);
   await page.keyboard.press('Escape');
   assert.strictEqual(await menu.getAttribute('open'), null);
 
@@ -73,8 +74,8 @@ async function desktopExplore(browser) {
   await page.locator('main').click({ position: { x: 20, y: 20 } });
   assert.strictEqual(await menu.getAttribute('open'), null);
 
-  await shot(page, 'desktop-home-explore-closed');
-  record('Desktop Explore flyout, nested hover/keyboard, Escape and outside-click behavior', 'PASS');
+  await shot(page, 'desktop-home-explore-wide-grid');
+  record('Desktop Explore wide section grid, keyboard, Escape and outside-click behavior', 'PASS');
   await context.close();
 }
 
@@ -85,14 +86,14 @@ async function mobileExplore(browser) {
   const menu = page.locator('.mobile-primary-nav .nav-details-explore');
   await menu.locator(':scope > summary').click();
   assert.strictEqual(await menu.getAttribute('open') !== null, true);
-  const stories = menu.locator('.nav-explore-choice-details').filter({ hasText: 'Stories' }).first();
-  await stories.locator(':scope > summary').click();
-  assert.strictEqual(await stories.getAttribute('open') !== null, true);
-  await stories.locator('.nav-explore-flyout').waitFor({ state: 'visible' });
-  const box = await menu.locator('.nav-panel-explore').boundingBox();
+  const panel = menu.locator('.nav-panel-explore');
+  const box = await panel.boundingBox();
   assert(box && box.x >= -1 && box.x + box.width <= 391);
-  await shot(page, 'mobile-explore-stories-open');
-  record('Mobile Explore nested tap/accordion hierarchy without horizontal clipping', 'PASS', { panel: box });
+  assert.strictEqual(await panel.locator('.nav-explore-section').count(), 8);
+  const columns = await panel.locator('.nav-explore-grid').evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(' ').filter(Boolean).length);
+  assert.strictEqual(columns, 2);
+  await shot(page, 'mobile-explore-section-grid');
+  record('Mobile Explore two-column section grid without horizontal clipping', 'PASS', { panel: box, columns });
   await context.close();
 }
 
@@ -101,7 +102,6 @@ async function routeAndMetadata(browser) {
   const page = await context.newPage();
   const routes = [
     'explore/',
-    'stories/',
     'stories/lilis-leap/',
     'stories/the-day-the-gorge-took-13-hours/',
     'stories/the-blank-places-on-the-map/',
@@ -114,6 +114,9 @@ async function routeAndMetadata(browser) {
     assert(response && response.ok(), route);
     assert((await page.locator('link[rel="canonical"]').getAttribute('href') || '').endsWith('/' + route));
   }
+
+  await page.goto(MAIN + 'stories/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForURL('**/explore/#stories', { timeout: 10000 });
 
   await page.goto(MAIN, { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert.strictEqual(await page.title(), 'Red River Gorge Hiker | Explore the Gorge, Art & Gear');
@@ -129,7 +132,7 @@ async function routeAndMetadata(browser) {
 
   await page.goto(MAIN + 'exploring-the-gorge/#lilis-leap', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForURL('**/stories/lilis-leap/', { timeout: 10000 });
-  record('Explore/story routes, canonicals, legacy story compatibility and homepage SEO/schema', 'PASS', { routes });
+  record('Explore/story routes, retired Stories hub, canonicals, legacy compatibility and homepage SEO/schema', 'PASS', { routes });
   await context.close();
 }
 
@@ -137,17 +140,30 @@ async function brandCreatorAndSar(browser) {
   const context = await preparedContext(browser, { viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
 
+  await page.goto(MAIN + 'photography/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(!(await page.locator('body').innerText()).includes('Photography by Ryan D. Lewis'));
+
   await page.goto(MAIN + 'photographs/splatter-falls/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   const body = await page.locator('body').innerText();
-  assert(body.includes('Photography by Ryan D. Lewis'));
-  assert(body.includes('Story by Ryan D. Lewis'));
-  assert(body.includes('© Ryan D. Lewis. All rights reserved.'));
-  assert(body.includes('I discovered Splatter Falls on April 13, 2024'));
+  assert(!body.includes('Photography by Ryan D. Lewis'));
+  assert(!body.includes('Story by Ryan D. Lewis'));
+  assert(body.includes('Ryan discovered Splatter Falls on April 13, 2024'));
+  assert(!body.includes('I discovered Splatter Falls on April 13, 2024'));
+  for (const label of ['Creator','Copyright holder','Medium','Creator role','Story author']) {
+    assert(await page.locator('dt', { hasText: label }).count() >= 1);
+  }
   const schemas = (await page.locator('script[type="application/ld+json"]').allTextContents()).map(t => JSON.parse(t));
   const photoSchema = schemas.find(s => s['@type'] === 'VisualArtwork');
   assert(photoSchema && photoSchema.creator.name === 'Ryan D. Lewis');
   assert(photoSchema.copyrightHolder.name === 'Ryan D. Lewis');
   assert(await page.locator('a[href^="https://store.redrivergorgehiker.com/"]').count() > 0);
+
+  await page.goto(MAIN + 'stories/lilis-leap/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  const storyParagraphCount = await page.locator('.story-longform > p').count();
+  assert(storyParagraphCount >= 5 && storyParagraphCount <= 10);
+  const storyBody = await page.locator('body').innerText();
+  assert(!storyBody.includes('Related photograph'));
+  assert(!storyBody.includes('All stories'));
 
   const footer = page.locator('footer');
   assert((await footer.innerText()).includes('© Red River Gorge Hiker, LLC. All rights reserved.'));
@@ -166,13 +182,16 @@ async function brandCreatorAndSar(browser) {
   const sar = await page.locator('body').innerText();
   assert(sar.includes('Search & Rescue Across the Greater Red River Gorge'));
   for (const county of ['Wolfe County','Powell County','Menifee County','Lee County']) assert(sar.includes(county));
+  assert(!sar.includes('Ryan'));
+  assert(!sar.includes('Kentucky Emergency Management Search & Rescue'));
+  assert(sar.includes('RRGH annual commitment'));
   assert(sar.includes('20% of RRGH business profit is allocated to Wolfe County Search & Rescue.'));
-  assert(sar.includes('business-support commitment remains solely directed to Wolfe County Search & Rescue'));
+  assert(await page.locator('.sar-regional-resource-grid .sar-resource-card').count() === 4);
   assert(await page.locator('main a[href="https://www.pocosar.org/"][target="_blank"]').count() === 1);
-  assert(await page.locator('main a[href="https://www.kyem.ky.gov/operations-programs/search-and-rescue"][target="_blank"]').count() === 1);
-  await shot(page, 'desktop-sar-regional-context');
+  assert(await page.locator('main a[href*="kyem.ky.gov"]').count() === 0);
+  await shot(page, 'desktop-sar-regional-four-card-grid');
 
-  record('Creator attribution/copyright, Info contact, brand-first About and greater-Gorge SAR context', 'PASS');
+  record('Photography cleanup, paragraph reflow, creator metadata, brand-first About/contact and cleaned Gorge SAR context', 'PASS', { storyParagraphCount });
   await context.close();
 }
 
