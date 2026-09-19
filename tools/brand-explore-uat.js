@@ -140,108 +140,96 @@ async function brandCreatorAndSar(browser) {
   const context = await preparedContext(browser, { viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
 
-  await page.goto(MAIN + 'photography/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  const photographyBody = await page.locator('body').innerText();
-  assert(!photographyBody.includes('Photography by Ryan D. Lewis'));
-  assert(!photographyBody.includes('—'));
-  const introBox = await page.locator('.prose-wide').boundingBox();
-  const firstArtworkBox = await page.locator('.collection-mosaic .card').first().locator('.artwork').boundingBox();
-  assert(introBox && firstArtworkBox);
-  const photographyLeadGap = firstArtworkBox.y - (introBox.y + introBox.height);
-  assert(photographyLeadGap >= 0 && photographyLeadGap <= 34, `Photography lead gap too large: ${photographyLeadGap}`);
-  await shot(page, 'desktop-photography-tight-grid');
+  await page.goto(MAIN, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  const desktopExploreMenu = page.locator('.desktop-nav .nav-details-explore');
+  await desktopExploreMenu.locator(':scope > summary').hover();
+  await page.waitForTimeout(120);
+  const camping = desktopExploreMenu.locator('.nav-explore-section').filter({ hasText: 'Camping' }).first();
+  const guide = camping.getByRole('link', { name: '2026 DBNF Dispersed Camping Guide Download', exact: true });
+  assert.strictEqual(await guide.count(), 1);
+  assert((await guide.getAttribute('href')).endsWith('/downloads/red-river-gorge-hiker-2026-dbnf-dispersed-camping-guide.pdf'));
+  assert.strictEqual(await guide.getAttribute('download'), '');
+  assert.strictEqual(await camping.getByRole('link', { name: 'Download Guide', exact: true }).count(), 0);
 
-  await page.goto(MAIN + 'photographs/splatter-falls/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  const body = await page.locator('body').innerText();
-  assert(!body.includes('Photography by Ryan D. Lewis'));
-  assert(!body.includes('Story by Ryan D. Lewis'));
-  assert(body.includes('Ryan discovered Splatter Falls on April 13, 2024'));
-  assert(!body.includes('I discovered Splatter Falls on April 13, 2024'));
-  assert(!body.includes('—'));
-  assert.strictEqual(await page.locator('.photo-story dt').count(), 2);
-  assert.strictEqual(await page.locator('.creator-details').count(), 0);
-  assert(!body.includes('Copyright holder'));
-  assert(!body.includes('Creator role'));
-  assert(!body.includes('Story author'));
-  const credit = page.locator('.photo-copyright-credit');
-  assert.strictEqual((await credit.innerText()).trim(), 'Photographs © Ryan D. Lewis. All rights reserved.');
-  const imageBox = await page.locator('.photo-artwork-stage .artwork').boundingBox();
-  const creditBox = await credit.boundingBox();
-  assert(imageBox && creditBox);
-  const copyrightGap = creditBox.y - (imageBox.y + imageBox.height);
-  assert(copyrightGap >= 0 && copyrightGap <= 18, `Copyright credit too far from image: ${copyrightGap}`);
-  const schemas = (await page.locator('script[type="application/ld+json"]').allTextContents()).map(t => JSON.parse(t));
-  const photoSchema = schemas.find(s => s['@type'] === 'VisualArtwork');
-  assert(photoSchema && photoSchema.creator.name === 'Ryan D. Lewis');
-  assert(photoSchema.copyrightHolder.name === 'Ryan D. Lewis');
-  assert(await page.locator('a[href^="https://store.redrivergorgehiker.com/"]').count() > 0);
-  await shot(page, 'desktop-photo-compact-details');
+  const photoSlugs = [
+    'double-rainbow-at-eagles-point-buttress',
+    'winter-at-red-byrd-arch',
+    'sunrise-at-eagles-nest',
+    'dog-fork-falls-in-winter',
+    'ice-at-west-of-copperas-pillar',
+    'splatter-falls'
+  ];
+  for (const slug of photoSlugs) {
+    await page.goto(MAIN + 'photographs/' + slug + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    const credit = page.locator('.photo-copyright-credit');
+    assert.strictEqual((await credit.innerText()).trim(), 'Photograph © Ryan D. Lewis. All rights reserved.', slug);
+    const schemas = (await page.locator('script[type="application/ld+json"]').allTextContents()).map(t => JSON.parse(t));
+    const photoSchema = schemas.find(s => s['@type'] === 'VisualArtwork');
+    assert(photoSchema && photoSchema.creator.name === 'Ryan D. Lewis', slug);
+    assert(photoSchema.copyrightHolder.name === 'Ryan D. Lewis', slug);
+  }
 
-  await page.goto(MAIN + 'stories/lilis-leap/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  const storyParagraphCount = await page.locator('.story-longform > p').count();
-  assert(storyParagraphCount >= 5 && storyParagraphCount <= 10);
-  const storyBody = await page.locator('body').innerText();
-  assert(!storyBody.includes('Related photograph'));
-  assert(!storyBody.includes('All stories'));
-  assert(!storyBody.includes('—'));
-  assert.strictEqual(await page.locator('.story-detail-page img').count(), 0);
-  assert.strictEqual(await page.locator('.story-image').count(), 0);
-
-  const safetyLink = page.getByRole('link', { name: 'Hiking safety' });
-  await safetyLink.click();
-  await page.waitForURL('**/search-and-rescue/#hiking-safety', { timeout: 10000 });
-  await page.waitForTimeout(250);
-  const headerBox = await page.locator('.site-header').boundingBox();
-  const prepBox = await page.locator('#hiking-safety').boundingBox();
-  const prepKicker = page.locator('#hiking-safety .sar-section-kicker');
-  const prepTitle = page.locator('#prep-title');
-  assert(headerBox && prepBox);
-  assert(await prepKicker.isVisible());
-  assert(await prepTitle.isVisible());
-  const headerBottom = headerBox.y + headerBox.height;
-  assert(prepBox.y >= headerBottom - 4, `Safety section hidden under sticky header: section=${prepBox.y}, headerBottom=${headerBottom}`);
-  assert(prepBox.y <= headerBottom + 110, `Safety section landed too low: section=${prepBox.y}, headerBottom=${headerBottom}`);
-
+  await page.goto(MAIN + 'search-and-rescue/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForFunction(() => document.documentElement.dataset.sarDataSource === 'live', null, { timeout: 15000 });
+  assert.strictEqual(await page.evaluate(() => document.documentElement.dataset.sarDataSource), 'live');
   const sar = await page.locator('body').innerText();
-  assert(sar.includes('Search & Rescue Across the Greater Red River Gorge'));
-  for (const county of ['Wolfe County','Powell County','Menifee County','Lee County']) assert(sar.includes(county));
-  assert(!sar.includes('Ryan'));
-  assert(!sar.includes('Kentucky Emergency Management Search & Rescue'));
-  assert(sar.includes('RRGH annual commitment'));
+  assert(sar.includes('RRGH SAR Commitment'));
+  assert(sar.includes('RRGH annual base commitment'));
+  assert(sar.includes('RRGH profit allocation generated'));
+  assert(sar.includes('Total current-year RRGH commitment'));
+  assert(sar.includes('RRGH actually transferred'));
+  assert(sar.includes('Total outstanding commitment'));
+  assert(sar.includes('Commitment fulfilled: 0.0%'));
+  assert(!sar.includes('SAR Match-O-Meter'));
   assert(!sar.includes('RRGH Match:'));
-  assert(sar.includes('20% of RRGH business profit is allocated to Wolfe County Search & Rescue.'));
-  assert(await page.locator('.sar-regional-resource-grid .sar-resource-card').count() === 4);
-  assert(await page.locator('main a[href="https://www.pocosar.org/"][target="_blank"]').count() === 1);
-  assert(await page.locator('main a[href*="kyem.ky.gov"]').count() === 0);
-  const sourceNote = page.locator('.sar-regional-resources > .sar-source-note');
-  assert.strictEqual(await sourceNote.evaluate(node => getComputedStyle(node).color), 'rgb(70, 80, 71)');
-  const sourceNoteBox = await sourceNote.boundingBox();
-  const prepHeadingBox = await prepKicker.boundingBox();
-  assert(sourceNoteBox && prepHeadingBox);
-  const regionalPrepGap = prepHeadingBox.y - (sourceNoteBox.y + sourceNoteBox.height);
-  assert(regionalPrepGap >= 0 && regionalPrepGap <= 95, `Regional-to-prep spacing too large: ${regionalPrepGap}`);
-  await shot(page, 'desktop-sar-tight-spacing-and-safety-anchor');
+  assert(!sar.includes('milestone, not a cap'));
+  assert(sar.includes('Red River Gorge Hiker, LLC maintains two separate commitments to Wolfe County Search & Rescue: at least $500 each calendar year, plus 20% of positive Red River Gorge Hiker business profit.'));
+  assert(sar.includes('Before the current RRGH business-support program, Ryan D. Lewis personally contributed $500 to Wolfe County Search & Rescue in 2025.'));
+  assert(sar.includes('That historical personal support remains separate from Red River Gorge Hiker, LLC support.'));
+  assert(sar.includes('RRGH transferred: $0 / $500'));
+  assert(sar.includes('WOLFE COUNTY'));
+  assert(sar.includes('POWELL COUNTY'));
+  assert(sar.includes('MENIFEE COUNTY'));
+  assert(sar.includes('LEE COUNTY'));
+  assert(sar.includes('Powell County Search & Rescue serves the Powell County side of the Gorge and works alongside other local and regional responders when mutual aid is needed.'));
+  assert(sar.includes('Search-and-rescue incidents in Menifee County may involve local emergency services, neighboring SAR teams, Kentucky State Police, and other mutual-aid resources depending on the location and situation.'));
+  assert(sar.includes('Lee County emergency-management and public-safety resources may respond locally and work with neighboring teams and other mutual-aid partners when incidents require additional support.'));
+  assert(!sar.includes('legitimate Gorge-area rescue resource'));
+  assert(!sar.includes('RRGH does not claim'));
+  assert(!sar.includes('identifies an Emergency Management Director'));
+  assert.strictEqual(await page.getByRole('link', { name: 'Visit Powell County SAR ↗', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('link', { name: 'Menifee County Contacts ↗', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('link', { name: 'Lee County Emergency Management ↗', exact: true }).count(), 1);
 
-  const footer = page.locator('footer');
-  assert((await footer.innerText()).includes('© Red River Gorge Hiker, LLC. All rights reserved.'));
-  assert(!(await footer.innerText()).includes('Photographs © Ryan D. Lewis'));
+  const liveValues = await page.locator('#sar-match-details .sar-stat strong').allTextContents();
+  assert(liveValues.includes('$500'));
+  assert(liveValues.filter(v => v === '$0').length >= 2);
+  await shot(page, 'desktop-sar-leg-dec-0027-live-feed');
+
+  await page.goto(MAIN + 'about/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  const about = await page.locator('body').innerText();
+  assert(about.includes('It began with one hiker spending a lot of time exploring the Gorge, but it was never meant to stop there.'));
+  assert(about.includes('The exploration came first. The photographs came from being out there.'));
+  assert(about.includes('Red River Gorge Hiker, LLC maintains two separate commitments to Wolfe County Search & Rescue: at least $500 each calendar year, plus 20% of positive Red River Gorge Hiker business profit.'));
+  assert(!about.includes('makes direct contributions to Wolfe County Search & Rescue'));
+
+  await page.goto(MAIN + 'explore/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  const exploreBody = await page.locator('body').innerText();
+  assert(exploreBody.includes('Take the Gorge with you'));
+  assert(exploreBody.includes('Explore photography and gear inspired by the same places, or see how Red River Gorge Hiker supports Wolfe County Search & Rescue.'));
+
+  await page.goto(MAIN + 'copyright-and-terms/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  const terms = await page.locator('body').innerText();
+  assert(terms.includes('RRGH maintains a minimum $500 annual Company commitment and separately allocates 20% of positive Red River Gorge Hiker business profit.'));
+  assert(terms.includes('neither offsets or satisfies the other'));
+  assert(terms.includes('Historical personal support by Ryan D. Lewis remains separate from Company support.'));
+  assert(terms.includes('No formal partnership, sponsorship, endorsement, agency relationship, promotional arrangement, or commercial relationship'));
+  assert(terms.includes("Direct charitable donations do not pass through Red River Gorge Hiker, LLC or Ryan D. Lewis"));
 
   await page.goto(MAIN + 'contact/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(await page.locator('a[href="mailto:Info@RedRiverGorgeHiker.com"]').count() > 0);
-  await page.goto(MAIN + 'photography-use-and-permissions/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  assert((await page.locator('body').innerText()).includes('applicable copyright holder or authorized rights representative'));
-  await page.goto(MAIN + 'about/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  const about = await page.locator('body').innerText();
-  assert(about.includes('The goal is not to make one person the center of the story.'));
-  assert(!about.includes("Ryan's story"));
-  assert(!about.includes('—'));
 
-  record('Compact photography, no story imagery, em-dash removal, safety-anchor placement and tightened SAR presentation', 'PASS', {
-    storyParagraphCount,
-    photographyLeadGap,
-    copyrightGap,
-    regionalPrepGap
-  });
+  record('Camping download, six data-driven photograph rights lines, live LEG-DEC-0027 SAR feed, regional cards, About/Explore/Terms/Contact', 'PASS', { liveValues });
   await context.close();
 }
 
@@ -252,12 +240,19 @@ async function exploreVisual(browser) {
   ]) {
     const context = await preparedContext(browser, spec[1]);
     const page = await context.newPage();
+    for (const route of ['explore/','about/','search-and-rescue/','copyright-and-terms/','contact/']) {
+      await page.goto(MAIN + route, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert(overflow <= 2, `${spec[0]} horizontal overflow on ${route}: ${overflow}`);
+    }
     await page.goto(MAIN + 'explore/', { waitUntil: 'domcontentloaded', timeout: 60000 });
     assert.strictEqual(await page.locator('.explore-card').count(), 8);
     await shot(page, `${spec[0]}-explore-hub`);
+    await page.goto(MAIN + 'search-and-rescue/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await shot(page, `${spec[0]}-sar-leg-dec-0027`);
     await context.close();
   }
-  record('Desktop/mobile Explore hub visual smoke', 'PASS');
+  record('Desktop/mobile Explore, About, SAR, Terms and Contact visual/overflow smoke', 'PASS');
 }
 
 (async () => {
