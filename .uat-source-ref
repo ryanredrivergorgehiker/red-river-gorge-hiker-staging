@@ -1,2 +1,2 @@
-ed1540363be8d835be381eb54aa95bd2713bacf4
-purpose=rerun production-equivalent main↔Store LEG-DEC-0026 browser UAT against exact PR #42 US-only Roku scope candidate; verify shared preference, country bridge, GPC/fail-closed, Store product/cart/checkout, GA4 and Pinterest behavior remain unchanged
+ce1b2e8f99dc8e4951f9bbf7de8b38986a6f1ae3
+purpose=rerun production-equivalent main↔Store LEG-DEC-0026 regression against PR #43 exact source

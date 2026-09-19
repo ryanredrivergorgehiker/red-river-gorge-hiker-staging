@@ -1,2 +1,2 @@
-ed1540363be8d835be381eb54aa95bd2713bacf4
-purpose=production-equivalent Roku PAGE_VIEW browser/network UAT for PR #42 US-only geographic scope correction; verify US regional-default On and US explicit Allowed each queue exactly one PAGE_VIEW; US Off/GPC zero Roku; GB/EEA explicit Allowed zero Roku; non-US explicit Allowed zero Roku; unresolved region zero Roku even with Allowed; withdrawal prevents subsequent Roku loading; first-party cookies and Automatic Advanced Matching remain off; PAGE_VIEW only; no PII/purchase/revenue/lead/signup/cart/checkout events
+ce1b2e8f99dc8e4951f9bbf7de8b38986a6f1ae3
+purpose=rerun Roku PAGE_VIEW US-only network regression against PR #43 exact source; no measurement changes intended

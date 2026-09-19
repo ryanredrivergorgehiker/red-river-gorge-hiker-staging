@@ -1,3 +1,2 @@
-ed1540363be8d835be381eb54aa95bd2713bacf4
-request_id=roku-campaign-02-us-only-scope-20260917-final
-purpose=final exact PR #42 staging deployment after CI 35293412849 SUCCESS, cross-site UAT 35293537423 SUCCESS, and expanded Roku PAGE_VIEW browser/network UAT 35293537386 SUCCESS; Roku restricted to resolved US traffic while RRGH Analytics is effectively On; US regional-default and explicit Allowed each one source PAGE_VIEW; US Off/GPC zero Roku; GB/EEA and other non-US explicit Allowed zero Roku; unresolved zero Roku; withdrawal zero subsequent Roku; first-party cookies OFF; Automatic Advanced Matching OFF; PAGE_VIEW only; no PII/purchase/revenue/lead/signup/cart/checkout events; staging only; do not promote without Ryan separate explicit approval
+ce1b2e8f99dc8e4951f9bbf7de8b38986a6f1ae3
+purpose=noindex staging deployment for PR #43 brand-first Explore architecture after exact-source CI success
