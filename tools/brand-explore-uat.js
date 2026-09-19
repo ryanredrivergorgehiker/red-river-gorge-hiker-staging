@@ -141,7 +141,15 @@ async function brandCreatorAndSar(browser) {
   const page = await context.newPage();
 
   await page.goto(MAIN + 'photography/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  assert(!(await page.locator('body').innerText()).includes('Photography by Ryan D. Lewis'));
+  const photographyBody = await page.locator('body').innerText();
+  assert(!photographyBody.includes('Photography by Ryan D. Lewis'));
+  assert(!photographyBody.includes('—'));
+  const introBox = await page.locator('.prose-wide').boundingBox();
+  const firstArtworkBox = await page.locator('.collection-mosaic .card').first().locator('.artwork').boundingBox();
+  assert(introBox && firstArtworkBox);
+  const photographyLeadGap = firstArtworkBox.y - (introBox.y + introBox.height);
+  assert(photographyLeadGap >= 0 && photographyLeadGap <= 34, `Photography lead gap too large: ${photographyLeadGap}`);
+  await shot(page, 'desktop-photography-tight-grid');
 
   await page.goto(MAIN + 'photographs/splatter-falls/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   const body = await page.locator('body').innerText();
@@ -149,14 +157,25 @@ async function brandCreatorAndSar(browser) {
   assert(!body.includes('Story by Ryan D. Lewis'));
   assert(body.includes('Ryan discovered Splatter Falls on April 13, 2024'));
   assert(!body.includes('I discovered Splatter Falls on April 13, 2024'));
-  for (const label of ['Creator','Copyright holder','Medium','Creator role','Story author']) {
-    assert(await page.locator('dt', { hasText: label }).count() >= 1);
-  }
+  assert(!body.includes('—'));
+  assert.strictEqual(await page.locator('.photo-story dt').count(), 2);
+  assert.strictEqual(await page.locator('.creator-details').count(), 0);
+  assert(!body.includes('Copyright holder'));
+  assert(!body.includes('Creator role'));
+  assert(!body.includes('Story author'));
+  const credit = page.locator('.photo-copyright-credit');
+  assert.strictEqual((await credit.innerText()).trim(), 'Photographs © Ryan D. Lewis. All rights reserved.');
+  const imageBox = await page.locator('.photo-artwork-stage .artwork').boundingBox();
+  const creditBox = await credit.boundingBox();
+  assert(imageBox && creditBox);
+  const copyrightGap = creditBox.y - (imageBox.y + imageBox.height);
+  assert(copyrightGap >= 0 && copyrightGap <= 18, `Copyright credit too far from image: ${copyrightGap}`);
   const schemas = (await page.locator('script[type="application/ld+json"]').allTextContents()).map(t => JSON.parse(t));
   const photoSchema = schemas.find(s => s['@type'] === 'VisualArtwork');
   assert(photoSchema && photoSchema.creator.name === 'Ryan D. Lewis');
   assert(photoSchema.copyrightHolder.name === 'Ryan D. Lewis');
   assert(await page.locator('a[href^="https://store.redrivergorgehiker.com/"]').count() > 0);
+  await shot(page, 'desktop-photo-compact-details');
 
   await page.goto(MAIN + 'stories/lilis-leap/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   const storyParagraphCount = await page.locator('.story-longform > p').count();
@@ -164,6 +183,44 @@ async function brandCreatorAndSar(browser) {
   const storyBody = await page.locator('body').innerText();
   assert(!storyBody.includes('Related photograph'));
   assert(!storyBody.includes('All stories'));
+  assert(!storyBody.includes('—'));
+  assert.strictEqual(await page.locator('.story-detail-page img').count(), 0);
+  assert.strictEqual(await page.locator('.story-image').count(), 0);
+
+  const safetyLink = page.getByRole('link', { name: 'Hiking safety' });
+  await safetyLink.click();
+  await page.waitForURL('**/search-and-rescue/#hiking-safety', { timeout: 10000 });
+  await page.waitForTimeout(250);
+  const headerBox = await page.locator('.site-header').boundingBox();
+  const prepBox = await page.locator('#hiking-safety').boundingBox();
+  const prepKicker = page.locator('#hiking-safety .sar-section-kicker');
+  const prepTitle = page.locator('#prep-title');
+  assert(headerBox && prepBox);
+  assert(await prepKicker.isVisible());
+  assert(await prepTitle.isVisible());
+  const headerBottom = headerBox.y + headerBox.height;
+  assert(prepBox.y >= headerBottom - 4, `Safety section hidden under sticky header: section=${prepBox.y}, headerBottom=${headerBottom}`);
+  assert(prepBox.y <= headerBottom + 110, `Safety section landed too low: section=${prepBox.y}, headerBottom=${headerBottom}`);
+
+  const sar = await page.locator('body').innerText();
+  assert(sar.includes('Search & Rescue Across the Greater Red River Gorge'));
+  for (const county of ['Wolfe County','Powell County','Menifee County','Lee County']) assert(sar.includes(county));
+  assert(!sar.includes('Ryan'));
+  assert(!sar.includes('Kentucky Emergency Management Search & Rescue'));
+  assert(sar.includes('RRGH annual commitment'));
+  assert(!sar.includes('RRGH Match:'));
+  assert(sar.includes('20% of RRGH business profit is allocated to Wolfe County Search & Rescue.'));
+  assert(await page.locator('.sar-regional-resource-grid .sar-resource-card').count() === 4);
+  assert(await page.locator('main a[href="https://www.pocosar.org/"][target="_blank"]').count() === 1);
+  assert(await page.locator('main a[href*="kyem.ky.gov"]').count() === 0);
+  const sourceNote = page.locator('.sar-regional-resources > .sar-source-note');
+  assert.strictEqual(await sourceNote.evaluate(node => getComputedStyle(node).color), 'rgb(70, 80, 71)');
+  const sourceNoteBox = await sourceNote.boundingBox();
+  const prepHeadingBox = await prepKicker.boundingBox();
+  assert(sourceNoteBox && prepHeadingBox);
+  const regionalPrepGap = prepHeadingBox.y - (sourceNoteBox.y + sourceNoteBox.height);
+  assert(regionalPrepGap >= 0 && regionalPrepGap <= 95, `Regional-to-prep spacing too large: ${regionalPrepGap}`);
+  await shot(page, 'desktop-sar-tight-spacing-and-safety-anchor');
 
   const footer = page.locator('footer');
   assert((await footer.innerText()).includes('© Red River Gorge Hiker, LLC. All rights reserved.'));
@@ -177,21 +234,14 @@ async function brandCreatorAndSar(browser) {
   const about = await page.locator('body').innerText();
   assert(about.includes('The goal is not to make one person the center of the story.'));
   assert(!about.includes("Ryan's story"));
+  assert(!about.includes('—'));
 
-  await page.goto(MAIN + 'search-and-rescue/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  const sar = await page.locator('body').innerText();
-  assert(sar.includes('Search & Rescue Across the Greater Red River Gorge'));
-  for (const county of ['Wolfe County','Powell County','Menifee County','Lee County']) assert(sar.includes(county));
-  assert(!sar.includes('Ryan'));
-  assert(!sar.includes('Kentucky Emergency Management Search & Rescue'));
-  assert(sar.includes('RRGH annual commitment'));
-  assert(sar.includes('20% of RRGH business profit is allocated to Wolfe County Search & Rescue.'));
-  assert(await page.locator('.sar-regional-resource-grid .sar-resource-card').count() === 4);
-  assert(await page.locator('main a[href="https://www.pocosar.org/"][target="_blank"]').count() === 1);
-  assert(await page.locator('main a[href*="kyem.ky.gov"]').count() === 0);
-  await shot(page, 'desktop-sar-regional-four-card-grid');
-
-  record('Photography cleanup, paragraph reflow, creator metadata, brand-first About/contact and cleaned Gorge SAR context', 'PASS', { storyParagraphCount });
+  record('Compact photography, no story imagery, em-dash removal, safety-anchor placement and tightened SAR presentation', 'PASS', {
+    storyParagraphCount,
+    photographyLeadGap,
+    copyrightGap,
+    regionalPrepGap
+  });
   await context.close();
 }
 
