@@ -168,8 +168,8 @@ async function brandCreatorAndSar(browser) {
   for (const county of ['Wolfe County','Powell County','Menifee County','Lee County']) assert(sar.includes(county));
   assert(sar.includes('20% of RRGH business profit is allocated to Wolfe County Search & Rescue.'));
   assert(sar.includes('business-support commitment remains solely directed to Wolfe County Search & Rescue'));
-  assert(await page.locator('a[href="https://www.pocosar.org/"][target="_blank"]').count() === 1);
-  assert(await page.locator('a[href="https://www.kyem.ky.gov/operations-programs/search-and-rescue"][target="_blank"]').count() === 1);
+  assert(await page.locator('main a[href="https://www.pocosar.org/"][target="_blank"]').count() === 1);
+  assert(await page.locator('main a[href="https://www.kyem.ky.gov/operations-programs/search-and-rescue"][target="_blank"]').count() === 1);
   await shot(page, 'desktop-sar-regional-context');
 
   record('Creator attribution/copyright, Info contact, brand-first About and greater-Gorge SAR context', 'PASS');
