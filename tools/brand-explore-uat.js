@@ -27,6 +27,55 @@ async function shot(page, name) {
   await page.screenshot({ path: path.join(EVIDENCE, `${name}.png`), fullPage: true });
 }
 
+async function homeHeroActions(browser) {
+  const desktopContext = await preparedContext(browser, { viewport: { width: 1440, height: 1000 } });
+  const desktop = await desktopContext.newPage();
+  await desktop.goto(MAIN, { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+  const desktopHero = desktop.locator('.home-hero');
+  assert.strictEqual((await desktopHero.locator('.sar-hero-commitment').innerText()).trim(), 'Stories, gear, and original photography from the Red River Gorge.');
+  const desktopActions = desktopHero.locator('.sar-hero-actions .sar-button');
+  assert.strictEqual(await desktopActions.count(), 3);
+  const desktopTexts = (await desktopActions.allTextContents()).map(x => x.trim());
+  assert.deepStrictEqual(desktopTexts, ['Explore the Gorge', 'Explore Art', 'Shop']);
+  assert((await desktopActions.nth(0).getAttribute('href')).endsWith('/explore/'));
+  assert((await desktopActions.nth(1).getAttribute('href')).endsWith('/photography/'));
+  assert((await desktopActions.nth(2).getAttribute('href')).endsWith('/gear/'));
+  assert((await desktopActions.nth(1).getAttribute('class')).includes('sar-button-light'));
+  assert((await desktopActions.nth(2).getAttribute('class')).includes('sar-button-light'));
+  const desktopBoxes = await Promise.all([0,1,2].map(i => desktopActions.nth(i).boundingBox()));
+  assert(desktopBoxes.every(Boolean));
+  const desktopY = desktopBoxes.map(box => Math.round(box.y));
+  assert(Math.max(...desktopY) - Math.min(...desktopY) <= 2, `Desktop hero actions wrapped: ${desktopY.join(',')}`);
+  assert.strictEqual((await desktopHero.locator('.home-sar-link').innerText()).trim(), 'Proudly supporting Wolfe County Search & Rescue →');
+  await shot(desktop, 'desktop-home-hero-three-actions');
+  await desktopContext.close();
+
+  const mobileContext = await preparedContext(browser, { viewport: { width: 390, height: 844 }, isMobile: true });
+  const mobile = await mobileContext.newPage();
+  await mobile.goto(MAIN, { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+  const mobileHero = mobile.locator('.home-hero');
+  const mobileActions = mobileHero.locator('.sar-hero-actions .sar-button');
+  assert.strictEqual(await mobileActions.count(), 3);
+  const mobileBoxes = await Promise.all([0,1,2].map(i => mobileActions.nth(i).boundingBox()));
+  assert(mobileBoxes.every(Boolean));
+  const widths = mobileBoxes.map(box => box.width);
+  const heights = mobileBoxes.map(box => box.height);
+  assert(widths.every(width => Math.abs(width - 208) <= 2), `Mobile button width changed: ${widths.join(',')}`);
+  assert(Math.max(...widths) - Math.min(...widths) <= 1, `Mobile button widths differ: ${widths.join(',')}`);
+  assert(heights.every(height => height <= 42), `Mobile buttons are too tall: ${heights.join(',')}`);
+  assert(mobileBoxes[1].y > mobileBoxes[0].y && mobileBoxes[2].y > mobileBoxes[1].y, 'Mobile hero actions are not vertically stacked');
+  assert((await mobileActions.nth(1).getAttribute('class')).includes('sar-button-light'));
+  assert((await mobileActions.nth(2).getAttribute('class')).includes('sar-button-light'));
+  assert.strictEqual((await mobileHero.locator('.home-sar-link').innerText()).trim(), 'Proudly supporting Wolfe County Search & Rescue →');
+  const overflow = await mobile.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert(overflow <= 2, `Mobile homepage horizontal overflow: ${overflow}`);
+  await shot(mobile, 'mobile-home-hero-three-actions');
+  record('Homepage hero short copy, three desktop actions, preserved mobile width and shorter stacked buttons', 'PASS', { widths, heights, desktopY });
+  await mobileContext.close();
+}
+
 async function desktopExplore(browser) {
   const context = await preparedContext(browser, { viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();
@@ -260,6 +309,7 @@ async function exploreVisual(browser) {
   const browser = await chromium.launch({ headless: true, args: ['--host-resolver-rules=MAP redrivergorgehiker.com 127.0.0.1'] });
   let failure = null;
   try {
+    await homeHeroActions(browser);
     await desktopExplore(browser);
     await mobileExplore(browser);
     await routeAndMetadata(browser);
