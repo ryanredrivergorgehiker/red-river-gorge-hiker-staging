@@ -144,7 +144,7 @@ async function brandCreatorAndSar(browser) {
   assert(body.includes('© Ryan D. Lewis. All rights reserved.'));
   assert(body.includes('I discovered Splatter Falls on April 13, 2024'));
   const schemas = (await page.locator('script[type="application/ld+json"]').allTextContents()).map(t => JSON.parse(t));
-  const photoSchema = schemas.find(s => s['@type'] === 'Photograph');
+  const photoSchema = schemas.find(s => s['@type'] === 'VisualArtwork');
   assert(photoSchema && photoSchema.creator.name === 'Ryan D. Lewis');
   assert(photoSchema.copyrightHolder.name === 'Ryan D. Lewis');
   assert(await page.locator('a[href^="https://store.redrivergorgehiker.com/"]').count() > 0);
