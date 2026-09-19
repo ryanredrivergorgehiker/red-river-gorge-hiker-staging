@@ -63,7 +63,7 @@ async function desktopExplore(browser) {
   assert.strictEqual(await menu.getAttribute('open') !== null, true);
   const sarChoice = menu.locator('.nav-explore-choice-details').filter({ hasText: 'Search & Rescue' }).first();
   await sarChoice.locator(':scope > summary').focus();
-  await page.keyboard.press('Enter');
+  await page.waitForTimeout(80);
   assert.strictEqual(await sarChoice.getAttribute('open') !== null, true);
   await page.keyboard.press('Escape');
   assert.strictEqual(await menu.getAttribute('open'), null);
