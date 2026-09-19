@@ -101,6 +101,12 @@ async function desktopExplore(browser) {
   assert.strictEqual(await sarSection.locator('a[href*="kyem.ky.gov"]').count(), 0);
   assert(await sarSection.locator('a[href="https://www.pocosar.org/"]').count() === 1);
 
+  const shopMenu = page.locator('.desktop-nav .nav-details-shop');
+  await shopMenu.locator(':scope > summary').hover();
+  await page.waitForTimeout(120);
+  assert.strictEqual(await shopMenu.getByText('Kids T-Shirts', { exact: true }).count(), 1);
+  assert.strictEqual(await shopMenu.getByText("Kid's T-Shirts", { exact: true }).count(), 0);
+
   const landforms = sections.filter({ hasText: 'Landforms' }).first();
   const ext = landforms.locator('a[href="https://redrivergorgearches.com/"]');
   assert.strictEqual(await ext.getAttribute('target'), '_blank');
@@ -208,10 +214,19 @@ async function brandCreatorAndSar(browser) {
     'ice-at-west-of-copperas-pillar',
     'splatter-falls'
   ];
+  const expectedDescriptions = {
+    'double-rainbow-at-eagles-point-buttress': 'A brilliant double rainbow breaks over the Red River Gorge from Eagle’s Point Buttress after a heavy summer storm, spanning the landscape as the storm clears.',
+    'sunrise-at-eagles-nest': 'A vivid winter sunrise illuminates the horizon beside the sandstone hueco known as Eagle’s Nest, photographed from a campsite that provided a better view of the morning sky.',
+    'dog-fork-falls-in-winter': 'Snow, flowing water, and long icicles surround Dog Fork Falls during the final weeks of winter in the Clifty Wilderness.',
+    'splatter-falls': 'A remote four-drop cascade descends through layered sandstone before splattering into an amber pool. Ryan documented and named the waterfall during an off-trail exploration.'
+  };
   for (const slug of photoSlugs) {
     await page.goto(MAIN + 'photographs/' + slug + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
     const credit = page.locator('.photo-copyright-credit');
     assert.strictEqual((await credit.innerText()).trim(), 'Photograph © Ryan D. Lewis. All rights reserved.', slug);
+    if (expectedDescriptions[slug]) {
+      assert.strictEqual((await page.locator('.photo-page > .lede').innerText()).trim(), expectedDescriptions[slug], slug);
+    }
     const schemas = (await page.locator('script[type="application/ld+json"]').allTextContents()).map(t => JSON.parse(t));
     const photoSchema = schemas.find(s => s['@type'] === 'VisualArtwork');
     assert(photoSchema && photoSchema.creator.name === 'Ryan D. Lewis', slug);
@@ -236,6 +251,13 @@ async function brandCreatorAndSar(browser) {
   assert(sar.includes('Red River Gorge Hiker, LLC maintains two separate commitments to Wolfe County Search & Rescue: at least $500 each calendar year, plus 20% of positive Red River Gorge Hiker business profit.'));
   assert(sar.includes('Before the current RRGH business-support program, Ryan D. Lewis personally contributed $500 to Wolfe County Search & Rescue in 2025.'));
   assert(sar.includes('That historical personal support remains separate from Red River Gorge Hiker, LLC support.'));
+  assert(sar.includes('Neither commitment offsets nor satisfies the other.'));
+  assert(!sar.includes('Neither commitment offsets or satisfies the other.'));
+  assert(sar.includes('Last updated September 19, 2026.'));
+  assert(!sar.includes('2026-09-19T14:39:00-04:00'));
+  assert(sar.includes('WCSART is the search-and-rescue organization supported by Red River Gorge Hiker through RRGH’s two separate Company commitments: at least $500 each calendar year plus 20% of positive business profit.'));
+  const fullMeterLabel = await page.locator('[data-sar-meter-variant="full"]').getAttribute('aria-label');
+  assert(fullMeterLabel && fullMeterLabel.includes('0.0% fulfilled. View Search and Rescue resources.'));
   assert(sar.includes('RRGH transferred: $0 / $500'));
   assert(sar.includes('WOLFE COUNTY'));
   assert(sar.includes('POWELL COUNTY'));
@@ -271,15 +293,34 @@ async function brandCreatorAndSar(browser) {
   await page.goto(MAIN + 'copyright-and-terms/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   const terms = await page.locator('body').innerText();
   assert(terms.includes('RRGH maintains a minimum $500 annual Company commitment and separately allocates 20% of positive Red River Gorge Hiker business profit.'));
-  assert(terms.includes('neither offsets or satisfies the other'));
+  assert(terms.includes('neither offsets nor satisfies the other'));
+  assert(!terms.includes('neither offsets or satisfies the other'));
+  assert(terms.includes('The formation and operation of Red River Gorge Hiker, LLC do not transfer ownership of those photograph copyrights to the LLC.'));
   assert(terms.includes('Historical personal support by Ryan D. Lewis remains separate from Company support.'));
   assert(terms.includes('No formal partnership, sponsorship, endorsement, agency relationship, promotional arrangement, or commercial relationship'));
   assert(terms.includes("Direct charitable donations do not pass through Red River Gorge Hiker, LLC or Ryan D. Lewis"));
 
+  await page.goto(MAIN + 'shipping-and-returns/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  const shipping = await page.locator('body').innerText();
+  assert(shipping.includes('order-specific questions, including delivery, damage, returns, refunds, and transaction questions, should be directed'));
+  assert(shipping.includes('Info@RedRiverGorgeHiker.com'));
+  assert(!shipping.includes('Ryan@RedRiverGorgeHiker.com'));
+
+  await page.goto(MAIN + 'stories/lilis-leap/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  let storyBody = await page.locator('body').innerText();
+  assert(storyBody.includes('working my way down an approximately 20-foot wall'));
+  await page.goto(MAIN + 'stories/the-day-the-gorge-took-13-hours/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  storyBody = await page.locator('body').innerText();
+  assert(storyBody.includes('Between Frenchburg and Hemlock Lodge lay the Red River Gorge—and 31.87 miles of walking.'));
+  await page.goto(MAIN + 'stories/the-fletcher-ridge-hunt/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  storyBody = await page.locator('body').innerText();
+  assert(storyBody.includes('bring it into a modern record in which it had not previously appeared'));
+  assert(storyBody.includes('My records date the discovery and documentation to the February 3–6, 2023 trip'));
+
   await page.goto(MAIN + 'contact/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(await page.locator('a[href="mailto:Info@RedRiverGorgeHiker.com"]').count() > 0);
 
-  record('Camping download, six data-driven photograph rights lines, live LEG-DEC-0027 SAR feed, regional cards, About/Explore/Terms/Contact', 'PASS', { liveValues });
+  record('Copy-corrected photography/stories, navigation, shipping contact, live LEG-DEC-0027 SAR feed, accessibility/date, About/Explore/Terms', 'PASS', { liveValues, fullMeterLabel });
   await context.close();
 }
 
