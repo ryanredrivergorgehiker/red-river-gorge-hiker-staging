@@ -1,2 +1,2 @@
-ce1b2e8f99dc8e4951f9bbf7de8b38986a6f1ae3
-purpose=noindex staging deployment for PR #43 brand-first Explore architecture after exact-source CI success
+a32a6eca857b4d5c8c945596aa46ae3db1473b13
+purpose=corrective PR #43 noindex staging deployment after CI 35456250326 SUCCESS, brand Explore UAT 35456333466 SUCCESS, cross-site UAT 35456333478 SUCCESS, Roku UAT 35456333474 SUCCESS; wide Shop-style Explore grid, Stories hub retired from visible IA, story paragraph reflow, repeated photography bylines removed, creator metadata moved to photograph footer details, photograph provenance third-person, RRGH-centered SAR copy, statewide KYEM SAR block removed, four-card regional SAR layout; staging only; do not promote without Ryan explicit approval
