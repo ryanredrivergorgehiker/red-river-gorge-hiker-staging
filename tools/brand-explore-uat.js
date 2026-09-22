@@ -104,7 +104,9 @@ async function desktopExplore(browser) {
   const shopMenu = page.locator('.desktop-nav .nav-details-shop');
   await shopMenu.locator(':scope > summary').hover();
   await page.waitForTimeout(120);
-  assert.strictEqual(await shopMenu.getByText('Kids T-Shirts', { exact: true }).count(), 1);
+  assert.strictEqual(await shopMenu.getByText('Kids T-Shirts', { exact: true }).count(), 0);
+  assert.strictEqual(await shopMenu.getByText('Toddler T-Shirts', { exact: true }).count(), 0);
+  assert.strictEqual(await shopMenu.getByText('Baby One-Pieces', { exact: true }).count(), 0);
   assert.strictEqual(await shopMenu.getByText("Kid's T-Shirts", { exact: true }).count(), 0);
 
   const landforms = sections.filter({ hasText: 'Landforms' }).first();
@@ -324,6 +326,40 @@ async function brandCreatorAndSar(browser) {
   await context.close();
 }
 
+async function gearTemporaryRetirement(browser) {
+  const context = await preparedContext(browser, { viewport: { width: 1440, height: 1000 } });
+  const page = await context.newPage();
+
+  const response = await page.goto(MAIN + 'gear/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(response && response.ok());
+  const cards = page.locator('.merch-card');
+  assert.strictEqual(await cards.count(), 15);
+
+  const activeSlugs = await cards.evaluateAll(nodes => nodes.map(node => node.getAttribute('data-product')));
+  for (const held of ['youth-tshirt', 'kids-tshirt', 'toddler-tshirt', 'baby-one-piece']) {
+    assert(!activeSlugs.includes(held), `temporarily retired slug still active: ${held}`);
+    const heldResponse = await page.goto(MAIN + `gear/${held}/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    assert(heldResponse && heldResponse.status() === 404, `expected retired route 404 for ${held}, got ${heldResponse && heldResponse.status()}`);
+  }
+
+  const survivorResponse = await page.goto(MAIN + 'gear/long-sleeve-tshirt/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(survivorResponse && survivorResponse.ok());
+  assert((await page.locator('body').innerText()).includes('Long-Sleeve T-Shirt'));
+
+  await page.goto(MAIN + 'gear/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  const storeLinks = page.locator('a.merch-button[data-store-item-type="gear"]');
+  assert.strictEqual(await storeLinks.count(), 15);
+  const destinations = await storeLinks.evaluateAll(nodes => nodes.map(node => node.getAttribute('href')));
+  assert(destinations.every(href => href && href.startsWith('https://store.redrivergorgehiker.com/')));
+  for (const survivor of ['double-rainbow-eagles-point-buttress-greeting-card', 'tshirt-chest-logo', 'long-sleeve-tshirt', 'mens-tank-top', 'greeting-cards']) {
+    assert(activeSlugs.includes(survivor), `expected surviving Gear slug missing: ${survivor}`);
+  }
+
+  await shot(page, 'desktop-gear-15-active-children-retired');
+  record('15 active Gear products, children apparel absent, retired routes 404, surviving Store handoffs intact', 'PASS', { activeSlugs, storeLinkCount: destinations.length });
+  await context.close();
+}
+
 async function exploreVisual(browser) {
   for (const spec of [
     ['desktop', { viewport: { width: 1440, height: 1000 } }],
@@ -352,6 +388,7 @@ async function exploreVisual(browser) {
   try {
     await homeHeroActions(browser);
     await desktopExplore(browser);
+    await gearTemporaryRetirement(browser);
     await mobileExplore(browser);
     await routeAndMetadata(browser);
     await brandCreatorAndSar(browser);
