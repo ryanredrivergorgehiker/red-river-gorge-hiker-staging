@@ -1,2 +1,6 @@
-6279526b257e33e30a81937bb71833f18cbc1f9a
-purpose=PR #43 copy-only visitor-facing correction after CI 35467862949 SUCCESS, brand/Explore/SAR browser UAT 35467975182 SUCCESS, main↔Store Analytics UAT 35467975184 SUCCESS, Roku PAGE_VIEW UAT 35467975192 SUCCESS. Grammar, story/photo descriptions, reader-formatted SAR timestamp, punctuation, Info contact convention, Wolfe two-commitment card copy, Kids T-Shirts label, Copyright & Terms grammar, SAR accessibility punctuation, Explore camping phrasing, and clearer pricing only. No functional scope changes. Staging only; do not promote without Ryan explicit approval of exact SHA.
+6fd00d548471adcf9e4a8d04f49ea14ca02b6d20
+purpose=PR #44 temporary children apparel website retirement; 15 active Gear; youth/kids/toddler/baby held from RRGH website only; Store settings unchanged
+ci=35749468613 SUCCESS
+brand_uat=35749780794 SUCCESS
+analytics_uat=35749626971 SUCCESS
+roku_uat=35749630128 SUCCESS
