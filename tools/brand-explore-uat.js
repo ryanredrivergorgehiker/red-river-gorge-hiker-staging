@@ -48,6 +48,18 @@ async function homeHeroActions(browser) {
   const desktopY = desktopBoxes.map(box => Math.round(box.y));
   assert(Math.max(...desktopY) - Math.min(...desktopY) <= 2, `Desktop hero actions wrapped: ${desktopY.join(',')}`);
   assert.strictEqual((await desktopHero.locator('.home-sar-link').innerText()).trim(), 'Proudly supporting Wolfe County Search & Rescue →');
+
+  const exploreCard = desktop.locator('.home-feature-grid article').filter({ hasText: 'Exploring the Gorge' }).first();
+  assert.strictEqual(await exploreCard.count(), 1);
+  const exploreCardText = await exploreCard.innerText();
+  assert(exploreCardText.includes('Exploration & Stories'));
+  assert(exploreCardText.includes('Field notes, trail stories, changing weather, waterfalls, maps, safety, and practical resources for exploring the Gorge.'));
+  assert(!exploreCardText.includes('Stories from the Gorge'));
+  assert(!exploreCardText.includes('Read the Stories'));
+  const exploreAllHome = exploreCard.getByRole('link', { name: 'Explore All →', exact: true });
+  assert.strictEqual(await exploreAllHome.count(), 1);
+  assert((await exploreAllHome.getAttribute('href')).endsWith('/explore/'));
+
   await shot(desktop, 'desktop-home-hero-three-actions');
   await desktopContext.close();
 
@@ -72,7 +84,7 @@ async function homeHeroActions(browser) {
   const overflow = await mobile.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert(overflow <= 2, `Mobile homepage horizontal overflow: ${overflow}`);
   await shot(mobile, 'mobile-home-hero-three-actions');
-  record('Homepage hero short copy, three desktop actions, preserved mobile width and shorter stacked buttons', 'PASS', { widths, heights, desktopY });
+  record('Homepage hero short copy, three desktop actions, Explore-first homepage card, preserved mobile width and shorter stacked buttons', 'PASS', { widths, heights, desktopY });
   await mobileContext.close();
 }
 
@@ -100,6 +112,17 @@ async function desktopExplore(browser) {
   const sarSection = sections.filter({ hasText: 'Search & Rescue' }).first();
   assert.strictEqual(await sarSection.locator('a[href*="kyem.ky.gov"]').count(), 0);
   assert(await sarSection.locator('a[href="https://www.pocosar.org/"]').count() === 1);
+
+  const trailsSection = sections.filter({ hasText: 'Trails' }).first();
+  const exploreAll = panel.getByRole('link', { name: 'EXPLORE ALL', exact: true });
+  const trailsBox = await trailsSection.boundingBox();
+  const exploreAllBox = await exploreAll.boundingBox();
+  const panelBox = await panel.boundingBox();
+  assert(trailsBox && exploreAllBox && panelBox);
+  const trailsToExploreAllGap = exploreAllBox.y - (trailsBox.y + trailsBox.height);
+  const exploreAllBottomGap = (panelBox.y + panelBox.height) - (exploreAllBox.y + exploreAllBox.height);
+  assert(trailsToExploreAllGap >= 0 && trailsToExploreAllGap <= 42, `desktop Explore All gap after Trails is too large: ${trailsToExploreAllGap}`);
+  assert(exploreAllBottomGap >= 12 && exploreAllBottomGap <= 28, `desktop Explore All bottom gap unexpected: ${exploreAllBottomGap}`);
 
   const shopMenu = page.locator('.desktop-nav .nav-details-shop');
   await shopMenu.locator(':scope > summary').hover();
@@ -132,7 +155,7 @@ async function desktopExplore(browser) {
   assert.strictEqual(await menu.getAttribute('open'), null);
 
   await shot(page, 'desktop-home-explore-wide-grid');
-  record('Desktop Explore wide section grid, keyboard, Escape and outside-click behavior', 'PASS');
+  record('Desktop Explore wide section grid, compact Explore All placement, keyboard, Escape and outside-click behavior', 'PASS', { trailsToExploreAllGap, exploreAllBottomGap });
   await context.close();
 }
 
