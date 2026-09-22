@@ -52,7 +52,7 @@ async function homeHeroActions(browser) {
   const exploreCard = desktop.locator('.home-feature-grid article').filter({ hasText: 'Exploring the Gorge' }).first();
   assert.strictEqual(await exploreCard.count(), 1);
   const exploreCardText = await exploreCard.innerText();
-  assert(exploreCardText.includes('Exploration & Stories'));
+  assert(exploreCardText.toUpperCase().includes('EXPLORATION & STORIES'));
   assert(exploreCardText.includes('Field notes, trail stories, changing weather, waterfalls, maps, safety, and practical resources for exploring the Gorge.'));
   assert(!exploreCardText.includes('Stories from the Gorge'));
   assert(!exploreCardText.includes('Read the Stories'));
