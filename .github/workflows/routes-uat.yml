@@ -1,0 +1,102 @@
+name: Routes & Tracks browser/network UAT
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .routes-uat-source-ref
+      - tools/routes-uat.js
+      - .github/workflows/routes-uat.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: routes-uat
+  cancel-in-progress: true
+
+jobs:
+  routes-uat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout staging control
+        uses: actions/checkout@v6
+
+      - name: Resolve exact website source
+        id: source
+        shell: bash
+        run: |
+          source_ref="$(head -n 1 .routes-uat-source-ref | tr -d '\r\n')"
+          test -n "$source_ref"
+          echo "source_ref=$source_ref" >> "$GITHUB_OUTPUT"
+          echo "Testing exact Routes source: $source_ref"
+
+      - name: Checkout exact website source
+        uses: actions/checkout@v6
+        with:
+          repository: ryanredrivergorgehiker/red-river-gorge-hiker
+          ref: ${{ steps.source.outputs.source_ref }}
+          path: site
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install website dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Run exact-source repository checks and build
+        working-directory: site
+        env:
+          SITE_URL: https://redrivergorgehiker.com
+          BASE_PATH: /
+        run: |
+          npm run check
+          npm run build
+
+      - name: Install Chromium UAT runner
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0 http-server@14.1.1
+          npx playwright install --with-deps chromium
+
+      - name: Create temporary HTTPS certificate
+        run: |
+          openssl req -x509 -newkey rsa:2048 -nodes \
+            -keyout rrgh-routes-uat-key.pem \
+            -out rrgh-routes-uat-cert.pem \
+            -days 1 \
+            -subj "/CN=redrivergorgehiker.com" \
+            -addext "subjectAltName=DNS:redrivergorgehiker.com"
+
+      - name: Serve production-equivalent build under production hostname
+        shell: bash
+        run: |
+          npx http-server site/dist -S -C rrgh-routes-uat-cert.pem -K rrgh-routes-uat-key.pem -p 8443 -a 0.0.0.0 > rrgh-routes-uat-server.log 2>&1 &
+          for i in {1..30}; do
+            if curl -kfsS --resolve redrivergorgehiker.com:8443:127.0.0.1 https://redrivergorgehiker.com:8443/routes/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat rrgh-routes-uat-server.log
+          exit 1
+
+      - name: Run Routes & Tracks browser/network UAT
+        env:
+          SOURCE_REF: ${{ steps.source.outputs.source_ref }}
+        run: node tools/routes-uat.js
+
+      - name: Upload Routes UAT evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: routes-uat-${{ steps.source.outputs.source_ref }}
+          path: |
+            routes-uat-evidence/
+            rrgh-routes-uat-server.log
+          if-no-files-found: warn
+          retention-days: 30
