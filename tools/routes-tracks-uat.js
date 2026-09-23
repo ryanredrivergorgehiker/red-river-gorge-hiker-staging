@@ -273,6 +273,10 @@ async function routeDetailAndMap(browser) {
 
   assert.strictEqual(await page.locator('.route-waypoint-icon').count(), 2);
 
+  if (!(await layerPanel.getAttribute('open'))) {
+    await layerPanel.locator('summary').click();
+  }
+
   const aerial = page.locator('[data-map-layer="kyaerial-phase3"]');
   await aerial.check();
   await page.waitForTimeout(150);
