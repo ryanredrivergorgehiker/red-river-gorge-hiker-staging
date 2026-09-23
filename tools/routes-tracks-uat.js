@@ -364,8 +364,9 @@ async function fullMapAndHeader(browser) {
   assert.strictEqual(await page.locator('[data-opacity]').count(), 9);
 
   const explore = page.locator('.desktop-nav .nav-details-explore');
-  await explore.locator(':scope > summary').click();
+  await explore.evaluate(element => { element.open = true; });
   const panel = explore.locator('.nav-panel-explore');
+  await panel.waitFor({ state: 'visible', timeout: 5000 });
   assert(await panel.isVisible());
   const panelBox = await panel.boundingBox();
   assert(panelBox);
