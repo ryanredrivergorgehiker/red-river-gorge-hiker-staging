@@ -65,7 +65,8 @@ async function routeLibraryAndDetail(browser) {
   assert((await page.locator('link[rel="canonical"]').getAttribute('href') || '').endsWith('/routes/skybridge-arch/'));
   const body = await page.locator('body').innerText();
   assert(body.includes('Skybridge Arch'));
-  assert(body.includes('Approved — Publication Ready'));
+  assert(body.includes('Class A'));
+  assert(body.includes('Publication Ready'));
   assert(body.includes('0.78 mi'));
   assert(body.includes('Mostly official trail'));
   assert(body.includes('Route information is not a safety or access guarantee.'));
