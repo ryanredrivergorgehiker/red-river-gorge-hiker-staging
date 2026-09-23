@@ -92,7 +92,7 @@ async function routePageAndArtifacts(browser) {
     'Straightforward official-trail navigation',
     'Route information is not a safety or access guarantee.',
     'Sky Bridge Picnic Area',
-    'No water on the route',
+    'Ryan reports no water on the route.',
     'Approved public waypoints',
     'Turnaround Overlook',
     'Download GPX',
