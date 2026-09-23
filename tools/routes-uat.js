@@ -10,37 +10,112 @@ const SHARED = 'rrgh-analytics-consent-v1';
 const REGION = 'rrgh-region-country-v1';
 const GPX_SHA = '2469c85ebaddd3e701ba6dc8eea3664d90a0667dcd86f2aab43ae1445986830d';
 const GEO_SHA = '123fdb57e1142299f86c714367cc466b70f18fa90cfbaabb92b0d9ced157dc66';
-const PROVIDERS = ['kygisserver.ky.gov', 'basemap.nationalmap.gov'];
+const TRANSPARENT_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X3JmAAAAAElFTkSuQmCC',
+  'base64'
+);
+const TRAILS = {
+  type: 'FeatureCollection',
+  features: [{
+    type: 'Feature',
+    properties: { trail_name: 'Sky Bridge Trail', trail_no: '214' },
+    geometry: { type: 'LineString', coordinates: [
+      [-83.58262, 37.81765], [-83.58010, 37.81832], [-83.57903, 37.81886], [-83.57688, 37.81915]
+    ] }
+  }]
+};
+const ROADS = {
+  type: 'FeatureCollection',
+  features: [{
+    type: 'Feature',
+    properties: { name: 'Sky Bridge Road', id: '10' },
+    geometry: { type: 'LineString', coordinates: [
+      [-83.589, 37.8145], [-83.585, 37.816], [-83.5828, 37.8175]
+    ] }
+  }]
+};
+const COUNTIES = {
+  type: 'FeatureCollection',
+  features: [{
+    type: 'Feature',
+    properties: { NAME: 'Powell' },
+    geometry: { type: 'Polygon', coordinates: [[
+      [-83.90, 37.70], [-83.50, 37.70], [-83.50, 38.00], [-83.90, 38.00], [-83.90, 37.70]
+    ]] }
+  }]
+};
+
 fs.mkdirSync(EVIDENCE, { recursive: true });
 const results = [];
 
-const sha256 = (bytes) => crypto.createHash('sha256').update(Buffer.from(bytes)).digest('hex');
+const sha256 = bytes => crypto.createHash('sha256').update(Buffer.from(bytes)).digest('hex');
 const record = (name, status, details = {}) => {
   results.push({ name, status, ...details });
-  console.log(`[${status}] ${name}`, JSON.stringify(details));
+  console.log('[' + status + '] ' + name, JSON.stringify(details));
 };
+
 async function setCookie(context, name, value) {
-  await context.addCookies([{ name, value, domain: '.redrivergorgehiker.com', path: '/', secure: true, httpOnly: false, sameSite: 'Lax' }]);
+  await context.addCookies([{
+    name,
+    value,
+    domain: '.redrivergorgehiker.com',
+    path: '/',
+    secure: true,
+    httpOnly: false,
+    sameSite: 'Lax'
+  }]);
 }
+
 async function contextFor(browser, options = {}) {
   const context = await browser.newContext({ ignoreHTTPSErrors: true, ...options });
   await setCookie(context, SHARED, 'declined');
   await setCookie(context, REGION, 'us');
   return context;
 }
+
+async function installStubs(page) {
+  await page.route('https://kygisserver.ky.gov/**', async route => {
+    const url = route.request().url();
+    if (url.includes('Ky_CountyLines_WGS84WM') && url.includes('/query?')) {
+      await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(COUNTIES) });
+    } else {
+      await route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG });
+    }
+  });
+  await page.route('https://basemap.nationalmap.gov/**', route =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG })
+  );
+  await page.route('https://apps.fs.usda.gov/**', async route => {
+    const url = route.request().url();
+    if (url.includes('EDW_TrailNFSPublishWithDataStatus_01')) {
+      await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(TRAILS) });
+    } else if (url.includes('EDW_RoadBasic_01')) {
+      await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(ROADS) });
+    } else {
+      await route.abort();
+    }
+  });
+}
+
 async function fetchBytes(page, url) {
-  const values = await page.evaluate(async (u) => Array.from(new Uint8Array(await (await fetch(u)).arrayBuffer())), url);
+  const values = await page.evaluate(async u => {
+    const response = await fetch(u);
+    if (!response.ok) throw new Error(u + ': HTTP ' + response.status);
+    return Array.from(new Uint8Array(await response.arrayBuffer()));
+  }, url);
   return Uint8Array.from(values);
 }
+
 async function fetchText(page, url) {
-  return page.evaluate(async (u) => {
-    const r = await fetch(u);
-    if (!r.ok) throw new Error(`${u}: HTTP ${r.status}`);
-    return r.text();
+  return page.evaluate(async u => {
+    const response = await fetch(u);
+    if (!response.ok) throw new Error(u + ': HTTP ' + response.status);
+    return response.text();
   }, url);
 }
+
 async function shot(page, name) {
-  await page.screenshot({ path: path.join(EVIDENCE, `${name}.png`), fullPage: true });
+  await page.screenshot({ path: path.join(EVIDENCE, name + '.png'), fullPage: true });
 }
 
 async function routeLibrary(browser) {
@@ -52,10 +127,16 @@ async function routeLibrary(browser) {
   assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '1 route');
   assert.strictEqual(await page.getByRole('link', { name: 'Skybridge Arch', exact: true }).count(), 1);
 
+  const pageText = await page.locator('body').innerText();
+  assert(pageText.includes('Field-tested routes'));
+  assert(!pageText.includes('Class A'));
+  assert(!pageText.includes('publication process'));
+  assert(!pageText.includes('Lane 19'));
+
   const search = page.locator('[data-route-search]');
-  await search.fill('does-not-exist');
+  await search.fill('nothing-here');
   assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '0 routes');
-  assert.strictEqual(await page.locator('[data-route-empty]').isVisible(), true);
+  assert(await page.locator('[data-route-empty]').isVisible());
   await search.fill('Skybridge');
   assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '1 route');
 
@@ -65,26 +146,22 @@ async function routeLibrary(browser) {
   await trip.selectOption('day-hike');
   assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '1 route');
 
-  const status = page.locator('[data-route-status]');
-  await status.selectOption('off-trail');
-  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '0 routes');
-  await status.selectOption('official');
-  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '1 route');
-
   await shot(page, 'desktop-route-library');
-  record('Route library static content and search/filter behavior', 'PASS');
+  record('Route library public copy and filters', 'PASS');
   await context.close();
 }
 
-async function routePageAndArtifacts(browser) {
+async function routeArtifactsAndContent(browser) {
   const context = await contextFor(browser, { viewport: { width: 1440, height: 1100 } });
   const page = await context.newPage();
+  await installStubs(page);
+
   const response = await page.goto(MAIN + 'routes/skybridge-arch/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(response && response.ok());
   assert((await page.locator('link[rel="canonical"]').getAttribute('href') || '').endsWith('/routes/skybridge-arch/'));
 
   const body = await page.locator('body').innerText();
-  for (const text of [
+  for (const expected of [
     'Skybridge Arch',
     '0.78 mi',
     'Mostly official trail',
@@ -93,16 +170,25 @@ async function routePageAndArtifacts(browser) {
     'Route information is not a safety or access guarantee.',
     'Sky Bridge Picnic Area',
     'Ryan reports no water on the route.',
-    'Approved public waypoints',
+    'Landmarks & viewpoints',
     'Turnaround Overlook',
     'Download GPX',
-    'Current land-manager resources'
-  ]) assert(body.includes(text), text);
+    'Current land-manager resources',
+    'Map & route data sources'
+  ]) assert(body.includes(expected), expected);
+
+  for (const forbidden of [
+    'Approved public waypoints',
+    'Publication Ready',
+    'Class A',
+    'Lane 19',
+    'Approved route shape',
+    'Approved web geometry',
+    'SHA-256'
+  ]) assert(!body.includes(forbidden), forbidden);
 
   assert(!/drive\.google\.com|RAW Gaia|PROPOSED|eagle.?nest/i.test(body));
   assert.strictEqual(await page.locator('.route-waypoint-list li').count(), 2);
-  assert.strictEqual(await page.getByText('Skybridge Arch', { exact: true }).count() >= 1, true);
-  assert.strictEqual(await page.getByText('Turnaround Overlook', { exact: true }).count() >= 1, true);
 
   const gpxHref = await page.getByRole('link', { name: 'Download GPX', exact: true }).getAttribute('href');
   assert(gpxHref);
@@ -112,176 +198,133 @@ async function routePageAndArtifacts(browser) {
   const geoBytes = await fetchBytes(page, MAIN + 'data/routes/skybridge-arch-v1.geojson');
   assert.strictEqual(sha256(geoBytes), GEO_SHA);
   const geo = JSON.parse(Buffer.from(geoBytes).toString('utf8'));
-  assert.strictEqual(geo.features.filter(f => f.geometry.type === 'LineString').length, 1);
-  const waypointFeatures = geo.features.filter(f => f.geometry.type === 'Point');
-  assert.deepStrictEqual(
-    waypointFeatures.map(f => [f.properties.waypointId, f.properties.name, f.geometry.coordinates]),
-    [
-      ['WP-0001', 'Skybridge Arch', [-83.57903, 37.81886]],
-      ['WP-0002', 'Turnaround Overlook', [-83.57684, 37.81913]]
-    ]
-  );
+  assert.strictEqual(geo.features.filter(feature => feature.geometry.type === 'LineString').length, 1);
+  assert.strictEqual(geo.features.filter(feature => feature.geometry.type === 'Point').length, 2);
 
   const elevation = JSON.parse(await fetchText(page, MAIN + 'data/routes/skybridge-arch.elevation.json'));
   assert.strictEqual(elevation.routeId, 'RTE-0001');
   assert.strictEqual(elevation.sampleCount, 100);
+  assert.strictEqual(elevation.points.length, 100);
   assert.strictEqual(elevation.source.id, 'usgs-3dep-bare-earth-dem');
-  assert(elevation.stats.ascentFt >= 0 && elevation.stats.descentFt >= 0);
   assert(elevation.stats.maxElevationFt > elevation.stats.minElevationFt);
-  assert(!body.includes('Not supplied in approved package') || body.toLowerCase().includes('duration'));
 
-  const schemas = (await page.locator('script[type="application/ld+json"]').allTextContents()).map(t => JSON.parse(t));
-  assert(schemas.some(s => s['@type'] === 'BreadcrumbList'));
-  const dataset = schemas.find(s => s['@type'] === 'Dataset');
+  const schemas = (await page.locator('script[type="application/ld+json"]').allTextContents()).map(text => JSON.parse(text));
+  assert(schemas.some(schema => schema['@type'] === 'BreadcrumbList'));
+  const dataset = schemas.find(schema => schema['@type'] === 'Dataset');
   assert(dataset && dataset.distribution && dataset.distribution['@type'] === 'DataDownload');
-
-  const terms = await fetchText(page, MAIN + 'copyright-and-terms/');
-  assert(terms.includes('GPX Download License'));
-  assert(terms.includes('personal, noncommercial'));
-  const privacy = await fetchText(page, MAIN + 'privacy/');
-  assert(privacy.includes('Interactive Maps and Map-Data Services'));
-  assert(privacy.includes('Third-party map-service requests are separate from RRGH Analytics'));
+  assert(dataset.distribution.contentUrl.endsWith('/downloads/routes/Skybridge_Arch_APPROVED_v1.gpx'));
+  assert(dataset.license.endsWith('/copyright-and-terms/#gpx-download-license'));
 
   const sitemapIndex = await fetchText(page, MAIN + 'sitemap-index.xml');
   assert(sitemapIndex.includes('sitemap-0.xml'));
   const sitemap = await fetchText(page, MAIN + 'sitemap-0.xml');
-  assert(sitemap.includes('/routes/'));
-  assert(sitemap.includes('/routes/skybridge-arch/'));
-  assert(sitemap.includes('/routes/map/'));
-  assert(sitemap.includes('/guides/kentucky-lidar/'));
+  for (const route of ['/routes/', '/routes/skybridge-arch/', '/routes/map/', '/guides/kentucky-lidar/']) {
+    assert(sitemap.includes(route), route);
+  }
 
-  await shot(page, 'desktop-skybridge-route-page');
-  record('Skybridge route page, legal controls, SEO/schema, approved GPX/GeoJSON/elevation artifacts', 'PASS', {
+  await shot(page, 'desktop-route-artifacts');
+  record('Route content, exact public artifacts, elevation and SEO/schema', 'PASS', {
     gpxSha256: GPX_SHA,
     geojsonSha256: GEO_SHA,
-    elevationStats: elevation.stats,
-    elevationSamples: elevation.sampleCount
+    elevationSamples: elevation.sampleCount,
+    elevationStats: elevation.stats
   });
+
   await context.close();
 }
 
-async function mapNetworkAndAccessibility(browser) {
+async function mapControlsAndAccessibility(browser) {
+  const context = await contextFor(browser, { viewport: { width: 1365, height: 900 } });
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error)));
+  await installStubs(page);
+
+  await page.goto(MAIN + 'routes/map/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForSelector('.leaflet-container', { timeout: 10000 });
+  await page.waitForFunction(() => {
+    const button = document.querySelector('[data-map-tool="plan"]');
+    return button && !button.disabled;
+  }, { timeout: 10000 });
+
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 9);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 9);
+  assert.strictEqual(await page.getByRole('button', { name: 'Measure', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Plan on trails', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Clear', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Load interactive map', exact: true }).count(), 0);
+
+  const arch = page.locator('.leaflet-marker-icon[title="Skybridge Arch"]');
+  const overlook = page.locator('.leaflet-marker-icon[title="Turnaround Overlook"]');
+  assert.strictEqual(await arch.count(), 1);
+  assert.strictEqual(await overlook.count(), 1);
+  assert.strictEqual(await arch.getAttribute('tabindex'), '0');
+  assert.strictEqual(await overlook.getAttribute('tabindex'), '0');
+
+  await page.locator('[data-map-layer="kyaerial-phase3"]').check();
+  await page.locator('[data-opacity="kyaerial-phase3"]').fill('42');
+  const aerialOpacity = await page.locator('.leaflet-baseAerial-pane .leaflet-layer').first().evaluate(element => getComputedStyle(element).opacity);
+  assert(Math.abs(Number(aerialOpacity) - 0.42) < 0.02);
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert(overflow <= 2, 'Desktop map horizontal overflow: ' + overflow);
+  assert.deepStrictEqual(pageErrors, []);
+
+  await shot(page, 'desktop-map-controls');
+  record('Map controls, layer opacity and accessible landmarks', 'PASS', { aerialOpacity });
+  await context.close();
+}
+
+async function legalExploreAndMobile(browser) {
   const context = await contextFor(browser, { viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();
-  const providerRequests = [];
-  const providerResponses = [];
-  page.on('request', request => {
-    const url = new URL(request.url());
-    if (PROVIDERS.includes(url.hostname) || url.hostname === 'elevation.nationalmap.gov') {
-      providerRequests.push({ url: request.url(), host: url.hostname, referer: request.headers()['referer'] || null });
-    }
-  });
-  page.on('response', async response => {
-    const url = new URL(response.url());
-    if (PROVIDERS.includes(url.hostname) || url.hostname === 'elevation.nationalmap.gov') {
-      const headers = response.headers();
-      providerResponses.push({ url: response.url(), host: url.hostname, status: response.status(), setCookie: headers['set-cookie'] || null });
-    }
-  });
 
-  await page.goto(MAIN + 'routes/skybridge-arch/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await page.waitForTimeout(800);
-  assert.strictEqual(providerRequests.length, 0, 'External map provider request occurred before Load interactive map');
+  await page.goto(MAIN, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  const explore = page.locator('.desktop-nav .nav-details-explore');
+  await explore.locator(':scope > summary').hover();
+  assert.strictEqual(await explore.getByRole('link', { name: 'RRGH Hikes & Routes', exact: true }).count(), 1);
+  assert.strictEqual(await explore.getByRole('link', { name: 'RRGH Interactive Map', exact: true }).count(), 1);
+  assert.strictEqual(await explore.getByRole('link', { name: 'Kentucky LiDAR Guide', exact: true }).count(), 1);
 
-  await page.getByRole('button', { name: 'Load interactive map', exact: true }).click();
-  await page.waitForTimeout(2500);
-  assert(providerRequests.some(r => r.host === 'kygisserver.ky.gov'));
-  assert(!providerRequests.some(r => r.host === 'elevation.nationalmap.gov'), 'Elevation provider must not be browser-loaded');
+  await page.goto(MAIN + 'privacy/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  let body = await page.locator('body').innerText();
+  assert(body.includes('Interactive Maps and Map-Data Services'));
+  assert(body.includes('default map layers begin loading immediately'));
+  assert(body.includes('USDA Forest Service Enterprise Data Warehouse'));
 
-  const shell = page.locator('.route-map-shell').first();
-  await shell.locator('[data-base-map]').selectOption('kyaerial-phase3');
-  await page.waitForTimeout(1000);
-  await shell.locator('[data-overlay="ky-hillshade"]').check();
-  await page.waitForTimeout(1000);
-  await shell.locator('[data-base-map]').selectOption('usgs-topo');
-  await page.waitForTimeout(1800);
-  assert(providerRequests.some(r => r.host === 'basemap.nationalmap.gov'));
+  await page.goto(MAIN + 'copyright-and-terms/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  body = await page.locator('body').innerText();
+  for (const expected of [
+    'Routes, Maps, GPS Tracks, and Location Information',
+    'Outdoor and Backcountry Risk; User Responsibility',
+    'Property, Boundaries, and Access',
+    'GPX Download License',
+    'Map, Data, and Third-Party Sources'
+  ]) assert(body.includes(expected), expected);
 
-  const unauthorized = providerRequests.filter(r => !PROVIDERS.includes(r.host));
-  assert.strictEqual(unauthorized.length, 0);
-  assert(providerRequests.every(r => !/gaia|caltopo|parcel/i.test(r.url)));
-  assert(providerResponses.every(r => !r.setCookie), 'Approved map provider response set a cookie during UAT');
-  const providerCookies = (await context.cookies()).filter(c => PROVIDERS.includes(c.domain.replace(/^\./, '')));
-  assert.strictEqual(providerCookies.length, 0);
+  await page.goto(MAIN + 'guides/kentucky-lidar/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  body = await page.locator('body').innerText();
+  assert(body.includes('Kentucky LiDAR & Custom Map Sources'));
+  assert(body.includes('Gaia GPS'));
+  assert(body.includes('CalTopo'));
 
-  await page.evaluate(() => {
-    const map = document.querySelector('[data-rrgh-route-map]');
-    if (map) map.focus();
-  });
-  const archMarker = page.locator('.leaflet-marker-icon[title="Skybridge Arch"]');
-  const overlookMarker = page.locator('.leaflet-marker-icon[title="Turnaround Overlook"]');
-  assert.strictEqual(await archMarker.count(), 1);
-  assert.strictEqual(await overlookMarker.count(), 1);
-  assert.strictEqual(await archMarker.getAttribute('tabindex'), '0');
-  assert.strictEqual(await overlookMarker.getAttribute('tabindex'), '0');
-
-  const sourceText = await shell.locator('.route-map-sources').textContent();
-  assert(sourceText.includes('Kentucky Topo / KyTopo'));
-  assert(sourceText.includes('Parcel / Private Property'));
-  assert(sourceText.includes('Disabled'));
-
-  await shot(page, 'desktop-skybridge-interactive-map');
-  record('Map deliberate-load privacy boundary, exact provider network, no provider cookies, accessible approved waypoint markers', 'PASS', {
-    providerRequestCount: providerRequests.length,
-    providers: [...new Set(providerRequests.map(r => r.host))],
-    requestExamples: providerRequests.slice(0, 8),
-    responseExamples: providerResponses.slice(0, 8)
-  });
   await context.close();
-}
 
-async function fullMapAndMobile(browser) {
-  const desktop = await contextFor(browser, { viewport: { width: 1440, height: 1000 } });
-  const page = await desktop.newPage();
-  await page.goto(MAIN + 'routes/map/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  for (const label of ['Simple', 'Terrain', 'Route Planning', 'Land & Access', 'All Layers']) {
-    assert.strictEqual(await page.getByRole('button', { name: label, exact: true }).count(), 1);
-  }
-  for (const label of ['Day hikes', 'Backpacking', 'Multi-day', 'Official / on-trail', 'Mixed', 'Selected off-trail']) {
-    assert.strictEqual(await page.getByLabel(label, { exact: true }).count(), 1);
-  }
-  assert((await page.locator('body').innerText()).includes('Parcel/private-property boundaries are not enabled.'));
-  await page.getByRole('button', { name: 'Load interactive map', exact: true }).click();
-  await page.waitForTimeout(1600);
-  await page.getByRole('button', { name: 'Terrain', exact: true }).click();
-  await page.getByRole('button', { name: 'Route Planning', exact: true }).click();
-  await page.getByRole('button', { name: 'Land & Access', exact: true }).click();
-  await page.getByRole('button', { name: 'All Layers', exact: true }).click();
-  await shot(page, 'desktop-full-routes-map');
-  await desktop.close();
-
-  const mobile = await contextFor(browser, { viewport: { width: 390, height: 844 }, isMobile: true });
+  const mobile = await contextFor(browser, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const mp = await mobile.newPage();
-  for (const route of ['routes/', 'routes/skybridge-arch/', 'routes/map/', 'guides/kentucky-lidar/', 'privacy/', 'copyright-and-terms/']) {
+  await installStubs(mp);
+  for (const route of ['routes/', 'routes/skybridge-arch/', 'routes/map/', 'privacy/', 'copyright-and-terms/']) {
     const response = await mp.goto(MAIN + route, { waitUntil: 'domcontentloaded', timeout: 60000 });
     assert(response && response.ok(), route);
     const overflow = await mp.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    assert(overflow <= 2, `mobile horizontal overflow on ${route}: ${overflow}`);
+    assert(overflow <= 2, 'Mobile horizontal overflow on ' + route + ': ' + overflow);
   }
-  await mp.goto(MAIN + 'routes/skybridge-arch/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await shot(mp, 'mobile-skybridge-route');
-  record('Full map preset/filter smoke and mobile no-horizontal-overflow', 'PASS');
+  await mp.goto(MAIN + 'routes/map/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await mp.waitForSelector('.leaflet-container', { timeout: 10000 });
+  await shot(mp, 'mobile-full-map');
+
+  record('Explore integration, Legal/Privacy and mobile responsiveness', 'PASS');
   await mobile.close();
-}
-
-async function exploreIntegration(browser) {
-  const context = await contextFor(browser, { viewport: { width: 1440, height: 1000 } });
-  const page = await context.newPage();
-  await page.goto(MAIN, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  const menu = page.locator('.desktop-nav .nav-details-explore');
-  await menu.locator(':scope > summary').hover();
-  assert.strictEqual(await menu.getByRole('link', { name: 'RRGH Hikes & Routes', exact: true }).count(), 1);
-  assert.strictEqual(await menu.getByRole('link', { name: 'RRGH Interactive Map', exact: true }).count(), 1);
-  assert.strictEqual(await menu.getByRole('link', { name: 'Kentucky LiDAR Guide', exact: true }).count(), 1);
-
-  await page.goto(MAIN + 'guides/kentucky-lidar/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  const guide = await page.locator('body').innerText();
-  assert(guide.includes('Kentucky LiDAR & Custom Map Sources'));
-  assert(guide.includes('Gaia GPS'));
-  assert(guide.includes('CalTopo'));
-  assert(guide.includes('Last reviewed: September 23, 2026'));
-  record('Explore navigation and LiDAR guide integration', 'PASS');
-  await context.close();
 }
 
 (async () => {
@@ -289,23 +332,26 @@ async function exploreIntegration(browser) {
     headless: true,
     args: ['--host-resolver-rules=MAP redrivergorgehiker.com 127.0.0.1']
   });
+
   let failure = null;
   try {
     await routeLibrary(browser);
-    await routePageAndArtifacts(browser);
-    await mapNetworkAndAccessibility(browser);
-    await fullMapAndMobile(browser);
-    await exploreIntegration(browser);
+    await routeArtifactsAndContent(browser);
+    await mapControlsAndAccessibility(browser);
+    await legalExploreAndMobile(browser);
   } catch (error) {
     failure = error;
-    record('Routes UAT fatal assertion', 'FAIL', { error: String(error), stack: error && error.stack ? error.stack : null });
+    record('Routes UAT fatal assertion', 'FAIL', {
+      error: String(error),
+      stack: error && error.stack ? error.stack : null
+    });
   } finally {
     await browser.close();
-    fs.writeFileSync(path.join(EVIDENCE, 'routes-uat-results.json'), JSON.stringify({
-      sourceRef: process.env.SOURCE_REF || null,
-      generatedAt: new Date().toISOString(),
-      results
-    }, null, 2));
+    fs.writeFileSync(
+      path.join(EVIDENCE, 'routes-uat-results.json'),
+      JSON.stringify({ sourceRef: process.env.SOURCE_REF || null, generatedAt: new Date().toISOString(), results }, null, 2)
+    );
   }
+
   if (failure) process.exit(1);
 })();
