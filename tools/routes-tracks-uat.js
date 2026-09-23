@@ -162,7 +162,10 @@ async function installProviderStubs(page, providerRequests) {
 async function probeLiveServices() {
   const details = [];
   for (const [label, url, expectedName] of LIVE_SERVICES) {
-    const response = await fetch(url, { signal: AbortSignal.timeout(20000) });
+    const response = await fetch(url, {
+      headers: { Origin: 'https://redrivergorgehiker.com' },
+      signal: AbortSignal.timeout(20000)
+    });
     assert(response.ok, label + ' metadata HTTP ' + response.status);
     const setCookies = typeof response.headers.getSetCookie === 'function'
       ? response.headers.getSetCookie()
@@ -173,7 +176,7 @@ async function probeLiveServices() {
     assert(String(payload.capabilities || '').includes('Query'), label + ' must support Query');
     assert(/geojson/i.test(String(payload.supportedQueryFormats || '')), label + ' must support GeoJSON');
     assert.strictEqual(setCookies.length, 0, label + ' metadata response unexpectedly set cookies');
-    assert(allowOrigin === '*' || allowOrigin === null, label + ' unexpected CORS policy: ' + allowOrigin);
+    assert(allowOrigin === '*' || allowOrigin === 'https://redrivergorgehiker.com', label + ' browser CORS not authorized: ' + allowOrigin);
     details.push({ label, name: payload.name, capabilities: payload.capabilities, queryFormats: payload.supportedQueryFormats, allowOrigin });
   }
   record('Live public GIS service metadata and browser-use capability', 'PASS', { services: details });
