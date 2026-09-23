@@ -1,8 +1,8 @@
-aa49aee85b01ec7e93cb5f7dff957ecebf9c23e5
-purpose=PR #46 Routes & Tracks / Interactive Map staging candidate; RTE-0001 Skybridge Arch; approved GPX + approved web GeoJSON + two approved public waypoints; data-only future route schema; public route library/detail/full map/LiDAR guide; parcel layer disabled; production unchanged
-ci=35924149958 SUCCESS
-routes_uat=35924481661 SUCCESS
-routes_tracks_uat=35924303224 SUCCESS
-brand_uat=35924303266 SUCCESS
-analytics_uat=35924303283 SUCCESS
-roku_uat=35924303305 SUCCESS
+cbcf2813bacd05817ec358151c56556ed2cbc053
+purpose=PR #46 redesigned Routes & Tracks staging candidate after Ryan visual-UAT rejection; immediate interactive map; stackable topo/aerial/USGS/LiDAR layers with per-layer opacity; live USDA Forest Service trails + roads; Kentucky county boundaries; RRGH routes + public landmarks/viewpoints; measurement + trail-snap planning; public-facing workflow/admin language removed; header stacking fixed; parcel/private-property disabled; production unchanged
+ci=35935149281 SUCCESS
+routes_uat=35935297529 SUCCESS
+routes_tracks_uat=35935416701 SUCCESS
+brand_uat=35935297442 SUCCESS
+analytics_uat=35935297362 SUCCESS
+roku_uat=35935297378 SUCCESS
