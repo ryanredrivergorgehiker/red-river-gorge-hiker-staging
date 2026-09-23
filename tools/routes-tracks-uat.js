@@ -150,7 +150,7 @@ async function fullMapAndFilters(browser) {
   await page.getByRole('button', { name: 'Land & Access', exact: true }).click();
   await page.waitForTimeout(400);
   assert(providerRequests.some(url => url.includes('basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/')));
-  const sources = await page.locator('.route-map-sources').innerText();
+  const sources = await page.locator('.route-map-sources').textContent();
   assert(sources.includes('Parcel / Private Property'));
   assert(sources.includes('Disabled. No authorized source is approved under LEG-DEC-0028.'));
   assert(sources.includes('USFS Trails / Roads / MVUM / Wilderness / NFS Land Units'));
