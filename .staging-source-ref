@@ -1,6 +1,8 @@
-988a9e9563e81123bcf425d87760e95bfba69b9c
-purpose=PR #44 final staged candidate: temporary children apparel retirement + Ryan-requested homepage Exploration & Stories / Exploring the Gorge card + compact desktop Explore All placement; 15 active Gear; Store configuration unchanged; mobile Explore layout unchanged
-ci=35753641017 SUCCESS
-brand_uat=35753733655 SUCCESS
-analytics_uat=35753738525 SUCCESS
-roku_uat=35753745523 SUCCESS
+aa49aee85b01ec7e93cb5f7dff957ecebf9c23e5
+purpose=PR #46 Routes & Tracks / Interactive Map staging candidate; RTE-0001 Skybridge Arch; approved GPX + approved web GeoJSON + two approved public waypoints; data-only future route schema; public route library/detail/full map/LiDAR guide; parcel layer disabled; production unchanged
+ci=35924149958 SUCCESS
+routes_uat=35924481661 SUCCESS
+routes_tracks_uat=35924303224 SUCCESS
+brand_uat=35924303266 SUCCESS
+analytics_uat=35924303283 SUCCESS
+roku_uat=35924303305 SUCCESS
