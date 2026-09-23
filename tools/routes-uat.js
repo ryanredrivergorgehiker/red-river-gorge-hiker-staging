@@ -215,7 +215,7 @@ async function mapNetworkAndAccessibility(browser) {
   assert.strictEqual(await archMarker.getAttribute('tabindex'), '0');
   assert.strictEqual(await overlookMarker.getAttribute('tabindex'), '0');
 
-  const sourceText = await shell.locator('.route-map-sources').innerText();
+  const sourceText = await shell.locator('.route-map-sources').textContent();
   assert(sourceText.includes('Kentucky Topo / KyTopo'));
   assert(sourceText.includes('Parcel / Private Property'));
   assert(sourceText.includes('Disabled'));
