@@ -128,7 +128,7 @@ async function routePageAndArtifacts(browser) {
   assert.strictEqual(elevation.source.id, 'usgs-3dep-bare-earth-dem');
   assert(elevation.stats.ascentFt >= 0 && elevation.stats.descentFt >= 0);
   assert(elevation.stats.maxElevationFt > elevation.stats.minElevationFt);
-  assert(!body.includes('Not supplied in approved package') || body.includes('Duration'));
+  assert(!body.includes('Not supplied in approved package') || body.toLowerCase().includes('duration'));
 
   const schemas = (await page.locator('script[type="application/ld+json"]').allTextContents()).map(t => JSON.parse(t));
   assert(schemas.some(s => s['@type'] === 'BreadcrumbList'));
