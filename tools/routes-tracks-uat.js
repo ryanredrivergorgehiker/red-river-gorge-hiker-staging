@@ -11,6 +11,11 @@ const REGION = 'rrgh-region-country-v1';
 const GPX_SHA = '2469c85ebaddd3e701ba6dc8eea3664d90a0667dcd86f2aab43ae1445986830d';
 const GEO_SHA = '123fdb57e1142299f86c714367cc466b70f18fa90cfbaabb92b0d9ced157dc66';
 const PROVIDERS = new Set(['kygisserver.ky.gov', 'basemap.nationalmap.gov', 'apps.fs.usda.gov']);
+const LIVE_SERVICES = [
+  ['USDA Forest Service trails', 'https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_TrailNFSPublishWithDataStatus_01/MapServer/0?f=pjson', 'National Forest System Trails'],
+  ['USDA Forest Service roads', 'https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_RoadBasic_01/MapServer/0?f=pjson', 'National Forest System Roads'],
+  ['Kentucky county boundaries', 'https://kygisserver.ky.gov/arcgis/rest/services/WGS84WM_Services/Ky_CountyLines_WGS84WM/MapServer/0?f=pjson', 'County Lines']
+];
 const TRANSPARENT_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X3JmAAAAAElFTkSuQmCC',
   'base64'
@@ -154,6 +159,26 @@ async function installProviderStubs(page, providerRequests) {
   });
 }
 
+async function probeLiveServices() {
+  const details = [];
+  for (const [label, url, expectedName] of LIVE_SERVICES) {
+    const response = await fetch(url, { signal: AbortSignal.timeout(20000) });
+    assert(response.ok, label + ' metadata HTTP ' + response.status);
+    const setCookies = typeof response.headers.getSetCookie === 'function'
+      ? response.headers.getSetCookie()
+      : (response.headers.get('set-cookie') ? [response.headers.get('set-cookie')] : []);
+    const allowOrigin = response.headers.get('access-control-allow-origin');
+    const payload = await response.json();
+    assert.strictEqual(payload.name, expectedName, label + ' identity');
+    assert(String(payload.capabilities || '').includes('Query'), label + ' must support Query');
+    assert(/geojson/i.test(String(payload.supportedQueryFormats || '')), label + ' must support GeoJSON');
+    assert.strictEqual(setCookies.length, 0, label + ' metadata response unexpectedly set cookies');
+    assert(allowOrigin === '*' || allowOrigin === null, label + ' unexpected CORS policy: ' + allowOrigin);
+    details.push({ label, name: payload.name, capabilities: payload.capabilities, queryFormats: payload.supportedQueryFormats, allowOrigin });
+  }
+  record('Live public GIS service metadata and browser-use capability', 'PASS', { services: details });
+}
+
 async function fetchBytes(page, url) {
   const values = await page.evaluate(async target => {
     const response = await fetch(target);
@@ -218,6 +243,7 @@ async function routeDetailAndMap(browser) {
   }, { timeout: 10000 });
 
   assert.strictEqual(await page.getByRole('button', { name: 'Load interactive map', exact: true }).count(), 0);
+  const layerPanel = page.locator('.route-layer-panel');
   for (const label of [
     'Kentucky Topo',
     'Aerial imagery',
@@ -229,7 +255,7 @@ async function routeDetailAndMap(browser) {
     'Hikes & routes',
     'Landmarks & viewpoints'
   ]) {
-    assert.strictEqual(await page.getByText(label, { exact: true }).count(), 1, label);
+    assert.strictEqual(await layerPanel.getByText(label, { exact: true }).count(), 1, label);
   }
 
   for (const preset of ['Simple', 'Terrain', 'Route Planning', 'Land & Access', 'All Layers']) {
@@ -416,6 +442,7 @@ async function legalAndPrivacy(browser) {
 
   let failure = null;
   try {
+    await probeLiveServices();
     await routeDetailAndMap(browser);
     await fullMapAndHeader(browser);
     await mobile(browser);
