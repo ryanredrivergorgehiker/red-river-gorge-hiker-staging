@@ -1,8 +1,8 @@
-859cfe711635700c820c95c339a62625ba069161
-purpose=Routes map visual-UAT refinement after Ryan review; Hiking and Terrain now default to both Kentucky Topo and USGS Topo; supporting travel geometry uses separate high-visibility utility colors (cyan Forest Service trails, lime dashed Community/Informal trails, bright yellow Forest Service roads) while the multicolor RRGH route palette remains unchanged; full-map Home/initial center shifted slightly east and south at zoom 13 to bring Rock Bridge inward while keeping Natural Bridge in the lower-left planning frame; every RouteMap now links to Copyright & Terms #outdoor-safety-location-disclaimer; production unchanged
-source_ci=36036186785 SUCCESS
-routes_uat=36036483836 SUCCESS
-routes_tracks_uat=36036484019 SUCCESS
-analytics_uat=36036483783 SUCCESS
-brand_uat=36036483860 SUCCESS
-roku_uat=36036484083 SUCCESS
+7efcf0ecb68f6d3980f108e8ea5cec8e6f56aea6
+purpose=Routes map UAT refinement after Ryan review; reverse-corrected Home framing at zoom 13; County boundaries moved into the top legend with no Always shown label; Terrain preset equalizes Kentucky Topo, USGS Topo, and LiDAR opacity; map safety link lands at Outdoor Safety and Location Disclaimer; Explore/Plan stay disabled until Community / Informal trails load and then restore operating guidance; Aerial and topo/LiDAR are mutually exclusive; planner automatically snaps near mapped trails/roads or creates dashed off-trail segments, supports segment drag/resnap/off-trail conversion and right-click deletion; production unchanged
+source_ci=36059969930 SUCCESS
+routes_uat=36060104277 SUCCESS
+routes_tracks_uat=36060541533 SUCCESS
+analytics_uat=36060104609 SUCCESS
+brand_uat=36060104243 SUCCESS
+roku_uat=36060104179 SUCCESS
