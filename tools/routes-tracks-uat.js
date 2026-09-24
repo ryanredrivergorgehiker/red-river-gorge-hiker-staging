@@ -224,8 +224,9 @@ async function routeDetail(browser) {
   for (const swatch of ['swatch-route','swatch-usfs-trail','swatch-usfs-road','swatch-county','swatch-landmark','swatch-start','swatch-trailhead','swatch-informal']) {
     assert.strictEqual(await page.locator('.' + swatch).count(), 1, swatch);
   }
-  assert.strictEqual(await page.locator('.route-static-legend-grid .route-layer-static-row').count(), 4);
-  assert.strictEqual(await page.getByText('Always shown', { exact: true }).count(), 1, 'Only county context may retain the Always shown note');
+  assert.strictEqual(await page.locator('.route-static-legend-grid .route-layer-static-row').count(), 5);
+  assert((await page.locator('.route-static-legend-grid').innerText()).includes('County boundaries'));
+  assert.strictEqual(await page.getByText('Always shown', { exact: true }).count(), 0, 'County boundaries belong in the top symbol legend without an Always shown label');
   assert.strictEqual(await page.locator('.route-waypoint-icon').count(), 2);
   assert((await page.locator('.route-start-icon').count()) >= 1);
   assert((await page.locator('.route-parking-icon').count()) >= 1);
@@ -278,25 +279,46 @@ async function fullMap(browser) {
   page.on('pageerror', error => pageErrors.push(String(error)));
   await installProviderStubs(page, providerRequests, true);
 
+  let releaseInformalCache;
+  const informalCacheGate = new Promise(resolve => { releaseInformalCache = resolve; });
+  await page.route('**/data/map/osm-informal-trails.geojson', async route => {
+    await informalCacheGate;
+    await route.continue();
+  });
+
   const response = await page.goto(MAIN + 'routes/map/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(response && response.ok());
   await page.waitForSelector('.leaflet-container', { timeout: 10000 });
 
-  // Regression gate: core controls work immediately and the same-origin OSM cache
-  // succeeds even when every public Overpass endpoint is unavailable.
+  // Search/Home/Layers remain usable while the planning trail graph loads, but
+  // Explore and Plan must stay disabled until Community / Informal trails are ready.
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   await page.waitForFunction(
     () => document.querySelector('[data-map-status]')?.textContent?.includes('Core Red River Gorge hiking view restored'),
     { timeout: 1500 }
   );
-  await page.getByRole('button', { name: 'Explore', exact: true }).click();
-  assert(await page.locator('[data-map-sheet="explore"]').isVisible(), 'Explore must open on first click');
-  await page.getByRole('button', { name: 'Explore', exact: true }).click();
-  assert(await page.locator('[data-map-sheet="explore"]').isHidden(), 'Explore must close on second click');
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
-  assert(await page.locator('[data-map-sheet="plan"]').isVisible(), 'Plan must open on first click');
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
-  assert(await page.locator('[data-map-sheet="plan"]').isHidden(), 'Plan must close on second click');
+  const exploreButton = page.getByRole('button', { name: 'Explore', exact: true });
+  const planOpenButton = page.locator('.route-map-tools-desktop').getByRole('button', { name: 'Plan', exact: true });
+  assert.strictEqual(await exploreButton.isDisabled(), true, 'Explore must be disabled while informal trails are loading');
+  assert.strictEqual(await planOpenButton.isDisabled(), true, 'Plan must be disabled while informal trails are loading');
+  assert.strictEqual(await page.locator('[data-rrgh-route-map]').getAttribute('data-trail-planning-ready'), 'false');
+
+  releaseInformalCache();
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-trail-planning-ready') === 'true',
+    { timeout: 10000 }
+  );
+  assert.strictEqual(await exploreButton.isDisabled(), false, 'Explore must enable after trail data loads');
+  assert.strictEqual(await planOpenButton.isDisabled(), false, 'Plan must enable after trail data loads');
+
+  await exploreButton.click();
+  assert(await page.locator('[data-map-sheet="explore"]').isVisible(), 'Explore must open after trails are ready');
+  await exploreButton.click();
+  assert(await page.locator('[data-map-sheet="explore"]').isHidden(), 'Explore must close on second click after trails are ready');
+  await planOpenButton.click();
+  assert(await page.locator('[data-map-sheet="plan"]').isVisible(), 'Plan must open after trails are ready');
+  await planOpenButton.click();
+  assert(await page.locator('[data-map-sheet="plan"]').isHidden(), 'Plan must close on second click after trails are ready');
 
   await page.waitForFunction(() => {
     const map = document.querySelector('[data-rrgh-route-map]');
@@ -373,9 +395,9 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true);
-  assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '70');
+  assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '72');
   assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').inputValue(), '72');
-  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '45');
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '72');
   for (let i = 0; i < 10; i += 1) await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
   await page.waitForTimeout(150);
   assert((await page.locator('.leaflet-baseTopo-pane img.leaflet-tile').count()) > 0, 'Topo tiles should remain at close zoom above terrain relief');
@@ -393,6 +415,29 @@ async function fullMap(browser) {
   assert(Number(await mapContainer.getAttribute('data-informal-trail-count')) > 100, 'Cached community trail layer should contain substantial Gorge trail coverage');
   assert((await page.locator('.leaflet-informalTrails-pane canvas, .leaflet-informalTrails-pane path').count()) > 0);
   assert(Number(await mapContainer.getAttribute('data-planner-node-count')) > 1, 'Planner graph should include mapped trail/road network');
+  assert(!(await page.locator('.route-layer-panel').innerText()).includes('Always shown'));
+  assert((await page.locator('.route-static-legend-grid').innerText()).includes('County boundaries'));
+
+  const aerialToggle = page.locator('[data-map-layer="kyaerial-phase3"]');
+  const kyTopoToggle = page.locator('[data-map-layer="kytopo"]');
+  const usgsTopoToggle = page.locator('[data-map-layer="usgs-topo"]');
+  const lidarToggle = page.locator('[data-map-layer="ky-hillshade"]');
+
+  await aerialToggle.check();
+  assert.strictEqual(await aerialToggle.isChecked(), true);
+  assert.strictEqual(await kyTopoToggle.isChecked(), false);
+  assert.strictEqual(await usgsTopoToggle.isChecked(), false);
+  assert.strictEqual(await lidarToggle.isChecked(), false);
+
+  await kyTopoToggle.check();
+  assert.strictEqual(await aerialToggle.isChecked(), false, 'Selecting Kentucky Topo must turn Aerial off');
+
+  await aerialToggle.check();
+  assert.strictEqual(await kyTopoToggle.isChecked(), false, 'Selecting Aerial must turn Kentucky Topo off');
+  await usgsTopoToggle.check();
+  assert.strictEqual(await aerialToggle.isChecked(), false, 'Selecting USGS Topo must turn Aerial off');
+
+  await page.getByRole('button', { name: /^Hiking/ }).click();
 
   await page.getByRole('button', { name: 'Search map', exact: true }).click();
   await page.locator('[data-map-search]').fill('Trail 214');
@@ -426,12 +471,66 @@ async function fullMap(browser) {
   await mapContainer.click({ position: { x: box.width * 0.31, y: box.height * 0.26 } });
   await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Measured distance'), { timeout: 3000 });
 
+  await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
+  await page.getByRole('button', { name: 'Plan', exact: true }).click();
   await page.getByRole('button', { name: 'Build trail route', exact: true }).click();
-  await page.getByRole('button', { name: 'Off-trail straight line', exact: true }).click();
-  await mapContainer.click({ position: { x: box.width * 0.42, y: box.height * 0.38 } });
-  await mapContainer.click({ position: { x: box.width * 0.50, y: box.height * 0.42 } });
-  await page.waitForTimeout(100);
-  assert((await page.locator('[data-map-status]').innerText()).includes('off-trail segment'));
+  assert.strictEqual(await page.getByText('Next segment', { exact: true }).count(), 0);
+  assert.strictEqual(await page.getByRole('button', { name: 'Follow mapped trails & roads', exact: true }).count(), 0);
+  assert.strictEqual(await page.getByRole('button', { name: 'Off-trail straight line', exact: true }).count(), 0);
+
+  const projectLatLng = (lat, lng, zoom, mapBox) => {
+    const scale = 256 * Math.pow(2, zoom);
+    const project = (plat, plng) => {
+      const sin = Math.sin(plat * Math.PI / 180);
+      return {
+        x: (plng + 180) / 360 * scale,
+        y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale
+      };
+    };
+    const center = project(37.831, -83.615);
+    const point = project(lat, lng);
+    return {
+      x: mapBox.x + mapBox.width / 2 + (point.x - center.x),
+      y: mapBox.y + mapBox.height / 2 + (point.y - center.y)
+    };
+  };
+
+  const homeBox = await mapContainer.boundingBox();
+  assert(homeBox);
+  const homeZoom = Number(await mapContainer.getAttribute('data-current-zoom'));
+  assert.strictEqual(homeZoom, 13);
+
+  const trailA = projectLatLng(37.81765, -83.58262, homeZoom, homeBox);
+  const trailB = projectLatLng(37.81886, -83.57903, homeZoom, homeBox);
+  const offTrail = projectLatLng(37.80500, -83.63000, homeZoom, homeBox);
+
+  await page.mouse.click(trailA.x, trailA.y);
+  await page.mouse.click(trailB.x, trailB.y);
+  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('1 snapped segment'), { timeout: 3000 });
+
+  await page.mouse.click(offTrail.x, offTrail.y);
+  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('1 off-trail segment'), { timeout: 3000 });
+
+  // Drag the off-trail segment back to mapped trail geometry: it should become snapped/solid.
+  const offMid = { x: (trailB.x + offTrail.x) / 2, y: (trailB.y + offTrail.y) / 2 };
+  await page.mouse.move(offMid.x, offMid.y);
+  await page.mouse.down();
+  await page.mouse.move(trailA.x, trailA.y, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('2 snapped segment(s), 0 off-trail segment(s)'), { timeout: 3000 });
+
+  // Drag the same segment clearly off trail: it should become dashed/off-trail again.
+  const snappedMid = { x: (trailA.x + trailB.x) / 2, y: (trailA.y + trailB.y) / 2 };
+  await page.mouse.move(snappedMid.x, snappedMid.y);
+  await page.mouse.down();
+  await page.mouse.move(offTrail.x, offTrail.y, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('1 off-trail segment(s)'), { timeout: 3000 });
+
+  // Right-clicking the moved segment deletes that leg.
+  const movedMid = { x: (trailB.x + offTrail.x) / 2, y: (trailB.y + offTrail.y) / 2 };
+  await page.mouse.click(movedMid.x, movedMid.y, { button: 'right' });
+  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Planned segment deleted'), { timeout: 3000 });
 
   const undo = page.getByRole('button', { name: 'Undo', exact: true });
   const redo = page.getByRole('button', { name: 'Redo', exact: true });
@@ -439,6 +538,7 @@ async function fullMap(browser) {
   await undo.click();
   assert.strictEqual(await redo.isDisabled(), false);
   await redo.click();
+  await undo.click();
 
   const exportGpx = page.getByRole('button', { name: 'Export GPX', exact: true });
   assert.strictEqual(await exportGpx.isDisabled(), false);
@@ -524,6 +624,14 @@ async function legal(browser) {
     'route planner may snap to displayed community/informal paths',
     'Open Database License (ODbL)'
   ]) assert(body.includes(expected), expected);
+
+  response = await page.goto(MAIN + 'copyright-and-terms/#outdoor-safety-location-disclaimer', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(response && response.ok());
+  await page.waitForTimeout(250);
+  assert.strictEqual(await page.locator('#outdoor-safety-location-disclaimer').count(), 1);
+  assert.strictEqual(await page.locator('#outdoor-safety-location-disclaimer > h2').innerText(), 'Outdoor Safety and Location Disclaimer');
+  const anchorBox = await page.locator('#outdoor-safety-location-disclaimer > h2').boundingBox();
+  assert(anchorBox && anchorBox.y >= 90 && anchorBox.y <= 330, 'Disclaimer heading should land visibly below the sticky site header; y=' + (anchorBox && anchorBox.y));
 
   record('Map geolocation, OSM and legal-access disclosures', 'PASS');
   await context.close();
