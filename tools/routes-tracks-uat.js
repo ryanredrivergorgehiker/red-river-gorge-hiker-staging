@@ -262,11 +262,11 @@ async function routeDetailAndMap(browser) {
   }
 
   for (const preset of ['Simple', 'Advanced', 'Aerial']) {
-    assert.strictEqual(await page.getByRole('button', { name: new RegExp('^' + preset), exact: false }).count(), 1, preset);
+    assert.strictEqual(await page.getByRole('button', { name: new RegExp('^' + preset), exact: false }).count(), 0, preset);
   }
 
   for (const tripType of ['Day hikes', 'Backpacking', 'Multi-day']) {
-    assert.strictEqual(await page.getByLabel(tripType, { exact: true }).count(), 1, tripType);
+    assert.strictEqual(await page.getByLabel(tripType, { exact: true }).count(), 0, tripType);
   }
 
   const initialUrls = providerRequests.join('\n');
@@ -399,6 +399,13 @@ async function fullMapAndHeader(browser) {
   const layers = page.locator('[data-map-layer]');
   assert.strictEqual(await layers.count(), 9);
   assert.strictEqual(await page.locator('[data-opacity]').count(), 9);
+
+  for (const preset of ['Simple', 'Advanced', 'Aerial']) {
+    assert.strictEqual(await page.getByRole('button', { name: new RegExp('^' + preset), exact: false }).count(), 1, preset);
+  }
+  for (const tripType of ['Day hikes', 'Backpacking', 'Multi-day']) {
+    assert.strictEqual(await page.getByLabel(tripType, { exact: true }).count(), 1, tripType);
+  }
 
   const explore = page.locator('.desktop-nav .nav-details-explore');
   await explore.evaluate(element => { element.open = true; });
