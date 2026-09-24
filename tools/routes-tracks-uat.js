@@ -261,8 +261,12 @@ async function routeDetailAndMap(browser) {
     assert.strictEqual(await layerPanel.getByText(label, { exact: true }).count(), 1, label);
   }
 
-  for (const preset of ['Simple', 'Terrain', 'Route Planning', 'Land & Access', 'All Layers']) {
-    assert.strictEqual(await page.getByRole('button', { name: preset, exact: true }).count(), 0, preset);
+  for (const preset of ['Simple', 'Advanced', 'Aerial']) {
+    assert.strictEqual(await page.getByRole('button', { name: new RegExp('^' + preset), exact: false }).count(), 1, preset);
+  }
+
+  for (const tripType of ['Day hikes', 'Backpacking', 'Multi-day']) {
+    assert.strictEqual(await page.getByLabel(tripType, { exact: true }).count(), 1, tripType);
   }
 
   const initialUrls = providerRequests.join('\n');
@@ -281,9 +285,15 @@ async function routeDetailAndMap(browser) {
   }
 
   const aerial = page.locator('[data-map-layer="kyaerial-phase3"]');
+  const hillshade = page.locator('[data-map-layer="ky-hillshade"]');
   await aerial.check();
   await page.waitForTimeout(150);
   assert(providerRequests.some(url => url.includes('Ky_Imagery_Phase3_3IN_WGS84WM')));
+  assert.strictEqual(await hillshade.isChecked(), false, 'Aerial should turn LiDAR hillshade off.');
+
+  await hillshade.check();
+  await page.waitForTimeout(150);
+  assert.strictEqual(await aerial.isChecked(), false, 'LiDAR hillshade should turn aerial imagery off.');
 
   const usgs = page.locator('[data-map-layer="usgs-topo"]');
   await usgs.check();
@@ -295,24 +305,49 @@ async function routeDetailAndMap(browser) {
   const renderedOpacity = await page.locator('.leaflet-hillshade-pane .leaflet-layer').first().evaluate(element => getComputedStyle(element).opacity);
   assert(Math.abs(Number(renderedOpacity) - 0.55) < 0.02, 'Hillshade opacity did not update: ' + renderedOpacity);
 
-  await page.getByRole('button', { name: 'Measure', exact: true }).click();
+  await page.getByRole('button', { name: 'Straight-line measure', exact: true }).click();
   const mapBox = await page.locator('[data-rrgh-route-map]').boundingBox();
   assert(mapBox);
   await page.mouse.click(mapBox.x + mapBox.width * 0.34, mapBox.y + mapBox.height * 0.56);
   await page.mouse.click(mapBox.x + mapBox.width * 0.46, mapBox.y + mapBox.height * 0.56);
   await page.waitForTimeout(100);
   let status = await page.locator('[data-map-status]').innerText();
-  assert(/^Measure:/.test(status));
+  assert(/^Straight-line distance:/.test(status));
   assert(/mi|ft/.test(status));
 
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
-  await page.getByRole('button', { name: 'Measure', exact: true }).click();
   await page.getByRole('button', { name: 'Plan on trails', exact: true }).click();
   await page.mouse.click(mapBox.x + mapBox.width * 0.49, mapBox.y + mapBox.height * 0.50);
   await page.mouse.click(mapBox.x + mapBox.width * 0.56, mapBox.y + mapBox.height * 0.50);
   await page.waitForTimeout(150);
   status = await page.locator('[data-map-status]').innerText();
-  assert(/Trail-snapped plan|start snapped/.test(status), status);
+  assert(/Trail-following plan|Trail plan: start snapped/.test(status), status);
+  const savePlan = page.getByRole('button', { name: 'Save plan (.gpx)', exact: true });
+  assert.strictEqual(await savePlan.isDisabled(), false, 'Save plan should enable after a connected trail plan exists.');
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    savePlan.click()
+  ]);
+  assert(/^RRGH-planned-route-.*\.gpx$/.test(download.suggestedFilename()), download.suggestedFilename());
+
+  const routePathCountBefore = await page.locator('.leaflet-routes-pane path').count();
+  assert(routePathCountBefore > 0, 'Expected at least one RRGH route path before trip filtering.');
+  await page.getByLabel('Day hikes', { exact: true }).uncheck();
+  await page.waitForTimeout(100);
+  assert.strictEqual(await page.locator('.leaflet-routes-pane path').count(), 0, 'Day-hike filter should hide Skybridge Arch.');
+  await page.getByLabel('Day hikes', { exact: true }).check();
+  await page.waitForTimeout(100);
+  assert((await page.locator('.leaflet-routes-pane path').count()) > 0, 'Day-hike filter should restore Skybridge Arch.');
+
+  await page.getByRole('button', { name: /^Advanced/ }).click();
+  assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-map-layer="kyaerial-phase3"]').isChecked(), false);
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '58');
+
+  await page.getByRole('button', { name: /^Aerial/ }).click();
+  assert.strictEqual(await page.locator('[data-map-layer="kyaerial-phase3"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), false);
 
   const headerZ = await page.locator('.site-header').evaluate(element => Number(getComputedStyle(element).zIndex));
   assert(headerZ >= 4000, 'Header must outrank Leaflet panes/controls; z-index=' + headerZ);
@@ -355,7 +390,9 @@ async function fullMapAndHeader(browser) {
   const heading = await page.locator('h1').innerText();
   assert.strictEqual(heading, 'Interactive Hikes & Routes Map');
   const body = await page.locator('body').innerText();
-  assert(body.includes('stack topo, aerial, LiDAR, trails, roads, counties'));
+  assert(body.includes('Filter RRGH routes by trip type'));
+  assert(body.includes('measure direct point-to-point distance'));
+  assert(body.includes('save it as GPX'));
   assert(!body.includes('Only Lane 19-approved'));
   assert(!body.includes('Parcel/private-property boundaries are not enabled.'));
 

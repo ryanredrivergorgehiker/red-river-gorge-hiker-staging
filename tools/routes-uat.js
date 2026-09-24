@@ -249,8 +249,9 @@ async function mapControlsAndAccessibility(browser) {
 
   assert.strictEqual(await page.locator('[data-map-layer]').count(), 9);
   assert.strictEqual(await page.locator('[data-opacity]').count(), 9);
-  assert.strictEqual(await page.getByRole('button', { name: 'Measure', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Straight-line measure', exact: true }).count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Plan on trails', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Save plan (.gpx)', exact: true }).count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Clear', exact: true }).count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Load interactive map', exact: true }).count(), 0);
 
@@ -262,6 +263,7 @@ async function mapControlsAndAccessibility(browser) {
   assert.strictEqual(await overlook.getAttribute('tabindex'), '0');
 
   await page.locator('[data-map-layer="kyaerial-phase3"]').check();
+  assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), false, 'Aerial should turn LiDAR hillshade off.');
   await page.locator('[data-opacity="kyaerial-phase3"]').fill('42');
   const aerialOpacity = await page.locator('.leaflet-baseAerial-pane .leaflet-layer').first().evaluate(element => getComputedStyle(element).opacity);
   assert(Math.abs(Number(aerialOpacity) - 0.42) < 0.02);
