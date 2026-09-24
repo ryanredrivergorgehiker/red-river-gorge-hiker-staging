@@ -1,8 +1,8 @@
-7efcf0ecb68f6d3980f108e8ea5cec8e6f56aea6
-purpose=Routes map UAT refinement after Ryan review; reverse-corrected Home framing at zoom 13; County boundaries moved into the top legend with no Always shown label; Terrain preset equalizes Kentucky Topo, USGS Topo, and LiDAR opacity; map safety link lands at Outdoor Safety and Location Disclaimer; Explore/Plan stay disabled until Community / Informal trails load and then restore operating guidance; Aerial and topo/LiDAR are mutually exclusive; planner automatically snaps near mapped trails/roads or creates dashed off-trail segments, supports segment drag/resnap/off-trail conversion and right-click deletion; production unchanged
-source_ci=36059969930 SUCCESS
-routes_uat=36060104277 SUCCESS
-routes_tracks_uat=36060541533 SUCCESS
-analytics_uat=36060104609 SUCCESS
-brand_uat=36060104243 SUCCESS
-roku_uat=36060104179 SUCCESS
+9e4ab44a103b77825dc71f6ca4e37a854b59161f
+purpose=Routes map UAT refinement after Ryan review; Home/initial full-map framing anchored by approved northwest point 37.878846,-83.744659 at zoom 13; Wilderness remains default-on for Hiking and Terrain and uses a full-opacity checkbox instead of a fine-tune slider; Aerial disables Kentucky Topo, USGS Topo, and LiDAR opacity sliders; Aerial switches Wilderness, special-management, and National Forest land-unit linework/legend to brighter high-contrast colors and restores normal styling when Aerial is off; Build trail route includes an explicit Pan map/Resume route mode that pans without adding route points; production unchanged
+source_ci=36072661036 SUCCESS
+routes_uat=36072717577 SUCCESS
+routes_tracks_uat=36073346713 SUCCESS
+analytics_uat=36072717652 SUCCESS
+brand_uat=36072717519 SUCCESS
+roku_uat=36072717557 SUCCESS
