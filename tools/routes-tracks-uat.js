@@ -574,8 +574,11 @@ async function fullMap(browser) {
     await page.mouse.click(candidateB.x, candidateB.y);
     await page.keyboard.press('Escape');
     await page.waitForTimeout(100);
-    assert(page.url().includes('/routes/map/'), 'Planner coordinate probes must remain on the map page');
-    const statusText = await page.locator('[data-map-status]').innerText();
+    const currentPlannerUrl = page.url();
+    assert(/\/routes\/map\/?(?:[#?].*)?$/.test(new URL(currentPlannerUrl).pathname + new URL(currentPlannerUrl).search + new URL(currentPlannerUrl).hash), 'Planner coordinate probes must remain on the map page; url=' + currentPlannerUrl);
+    const statusLocator = page.locator('[data-map-status]');
+    assert.strictEqual(await statusLocator.count(), 1, 'Map status should remain present during planner coordinate probes; url=' + currentPlannerUrl);
+    const statusText = await statusLocator.innerText();
     if (statusText.includes('1 snapped segment')) {
       trailA = candidateA;
       trailB = candidateB;
