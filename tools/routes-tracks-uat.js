@@ -549,11 +549,21 @@ async function fullMap(browser) {
   }
   assert(offTrail, 'Planner should classify at least one clear map area as off-trail while preserving the baseline snapped leg');
 
-  const offMid = { x: (trailB.x + offTrail.x) / 2, y: (trailB.y + offTrail.y) / 2 };
+  const planHitPaths = page.locator('.leaflet-planning-pane path.leaflet-interactive');
+  assert.strictEqual(await planHitPaths.count(), 2, 'Two planned legs should expose two rendered segment hit paths');
 
-  // Prove the segment hit target itself works before testing drag: right-click deletes,
+  const secondSegmentCenter = async () => {
+    const count = await planHitPaths.count();
+    assert(count >= 2, 'Expected a second rendered plan segment');
+    const box = await planHitPaths.nth(1).boundingBox();
+    assert(box && box.width > 0 && box.height > 0, 'Second planned segment should have a rendered hit box');
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+
+  // Prove the actual rendered second segment hit target works: right-click deletes,
   // then Undo restores the same off-trail leg.
-  await page.mouse.click(offMid.x, offMid.y, { button: 'right' });
+  let segmentCenter = await secondSegmentCenter();
+  await page.mouse.click(segmentCenter.x, segmentCenter.y, { button: 'right' });
   await page.waitForTimeout(120);
   let editStatus = await page.locator('[data-map-status]').innerText();
   assert(
@@ -566,28 +576,31 @@ async function fullMap(browser) {
   editStatus = await page.locator('[data-map-status]').innerText();
   assert(editStatus.includes('1 off-trail segment'), 'Undo should restore the deleted off-trail segment; status=' + editStatus);
 
-  // Drag the restored off-trail segment back to mapped trail geometry: it should become snapped/solid.
-  await page.mouse.move(offMid.x, offMid.y);
+  // Drag the restored second segment to a distinct third point on Sky Bridge Road.
+  // This avoids overlapping/reversing the first segment and should resnap solid.
+  const trailC = projectLatLng(37.81750, -83.58280, homeZoom, homeBox);
+  segmentCenter = await secondSegmentCenter();
+  await page.mouse.move(segmentCenter.x, segmentCenter.y);
   await page.mouse.down();
-  await page.mouse.move(trailA.x, trailA.y, { steps: 8 });
+  await page.mouse.move(trailC.x, trailC.y, { steps: 10 });
   await page.mouse.up();
-  await page.waitForTimeout(220);
+  await page.waitForTimeout(250);
   editStatus = await page.locator('[data-map-status]').innerText();
   assert(editStatus.includes('2 snapped segment(s), 0 off-trail segment(s)'), 'Dragging an off-trail segment onto mapped network should resnap it solid; status=' + editStatus);
 
-  // Drag the same segment clearly off trail: it should become dashed/off-trail again.
-  const snappedMid = { x: (trailA.x + trailB.x) / 2, y: (trailA.y + trailB.y) / 2 };
-  await page.mouse.move(snappedMid.x, snappedMid.y);
+  // Drag that same rendered second segment clearly off network: it should become dashed/off-trail.
+  segmentCenter = await secondSegmentCenter();
+  await page.mouse.move(segmentCenter.x, segmentCenter.y);
   await page.mouse.down();
-  await page.mouse.move(offTrail.x, offTrail.y, { steps: 8 });
+  await page.mouse.move(offTrail.x, offTrail.y, { steps: 10 });
   await page.mouse.up();
-  await page.waitForTimeout(220);
+  await page.waitForTimeout(250);
   editStatus = await page.locator('[data-map-status]').innerText();
   assert(editStatus.includes('1 off-trail segment(s)'), 'Dragging a snapped segment clearly off network should make it dashed; status=' + editStatus);
 
-  // Right-clicking the moved segment deletes that leg.
-  const movedMid = { x: (trailB.x + offTrail.x) / 2, y: (trailB.y + offTrail.y) / 2 };
-  await page.mouse.click(movedMid.x, movedMid.y, { button: 'right' });
+  // Right-clicking the actual moved second segment deletes that leg.
+  segmentCenter = await secondSegmentCenter();
+  await page.mouse.click(segmentCenter.x, segmentCenter.y, { button: 'right' });
   await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Planned segment deleted'), { timeout: 3000 });
 
   assert.strictEqual(await undo.isDisabled(), false);
