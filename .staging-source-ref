@@ -1,8 +1,8 @@
-63118c52f5663f47a843133185f5bb3e7afa0f5f
-purpose=Routes & Tracks startup responsiveness hotfix after Ryan visual UAT; optional remote context layers no longer block map initialization; Search/Home/Layers/Explore/Plan/zoom/pan are wired before land-management and OSM requests begin; Community/Informal trails load in background; each Overpass endpoint has a 4-second AbortController timeout with failover; delayed informal data can expand the planner graph after load; source disclosure updated to explain background loading; production unchanged
-ci=36024350108 SUCCESS
-routes_uat=36024425582 SUCCESS
-routes_tracks_uat=36024425586 SUCCESS
-analytics_uat=36024425637 SUCCESS
-brand_uat=36024425685 SUCCESS
-roku_uat=36024425734 SUCCESS
+ae9d31475f8727024fba43126cc0a13d20a8fb8b
+purpose=Routes map visual UAT correction after Ryan review; core Gorge landing/Home zoom 13; top Search/My location/Home/zoom controls rendered as one connected toolbar; always-on hiking symbols presented as compact two-column legend without redundant labels; Explore and Plan are true click-to-open/click-to-close toggles; Community/Informal trails normally load from same-origin RRGH OpenStreetMap-derived cache rather than browser Overpass; cache contains 1102 Kentucky-area OSM path/footway features from the four-county bbox, classified as 13 explicit informal + 1089 community candidates after subtracting 116 official-like USDA Forest Service trail matches; live Overpass remains fallback only; privacy/source disclosure updated; production unchanged
+ci=36027873132 SUCCESS
+routes_uat=36028286818 SUCCESS
+routes_tracks_uat=36028574905 SUCCESS
+analytics_uat=36028286805 SUCCESS
+brand_uat=36028286739 SUCCESS
+roku_uat=36028286848 SUCCESS
