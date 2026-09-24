@@ -318,18 +318,21 @@ async function fullMap(browser) {
   await page.locator('.route-layer-panel > summary').click();
   await page.locator('[data-map-layer="ky-counties"]').check();
   await page.waitForTimeout(100);
-  assert((await page.locator('.leaflet-counties-pane path').count()) > 0, 'County boundary toggle should render boundaries');
+  assert(
+    (await page.locator('.leaflet-counties-pane canvas, .leaflet-counties-pane path').count()) > 0,
+    'County boundary toggle should render boundaries'
+  );
   await page.locator('[data-map-layer="usfs-wilderness"]').check();
   await page.waitForTimeout(100);
   assert(providerRequests.some(url => url.includes('EDW_Wilderness_01')));
-  assert((await page.locator('.leaflet-wilderness-pane path').count()) > 0);
+  assert((await page.locator('.leaflet-wilderness-pane canvas, .leaflet-wilderness-pane path').count()) > 0);
 
   const plannerBefore = await mapContainer.getAttribute('data-planner-node-count');
   assert(!providerRequests.some(url => url.includes('overpass-api.de')), 'Informal trails must not load before opt-in');
   await page.locator('[data-map-layer="osm-informal-trails"]').check();
   await page.waitForTimeout(120);
   assert(providerRequests.some(url => url.includes('overpass-api.de')));
-  assert((await page.locator('.leaflet-informalTrails-pane path').count()) > 0);
+  assert((await page.locator('.leaflet-informalTrails-pane canvas, .leaflet-informalTrails-pane path').count()) > 0);
   assert.strictEqual(await mapContainer.getAttribute('data-planner-node-count'), plannerBefore, 'Informal trails must not enter route-planner graph');
 
   await page.getByRole('button', { name: 'Search map', exact: true }).click();
