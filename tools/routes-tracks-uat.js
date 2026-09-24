@@ -79,16 +79,30 @@ const COUNTIES = {
     {
       type: 'Feature',
       properties: { NAME: 'Powell', ABBREVTN: 'POW' },
-      geometry: {
-        type: 'Polygon',
-        coordinates: [[
-          [-83.90, 37.70],
-          [-83.50, 37.70],
-          [-83.50, 38.00],
-          [-83.90, 38.00],
-          [-83.90, 37.70]
-        ]]
-      }
+      geometry: { type: 'Polygon', coordinates: [[
+        [-83.92, 37.72], [-83.55, 37.72], [-83.55, 38.02], [-83.92, 38.02], [-83.92, 37.72]
+      ]] }
+    },
+    {
+      type: 'Feature',
+      properties: { NAME: 'Menifee', ABBREVTN: 'MEN' },
+      geometry: { type: 'Polygon', coordinates: [[
+        [-83.61, 37.78], [-83.31, 37.78], [-83.31, 38.05], [-83.61, 38.05], [-83.61, 37.78]
+      ]] }
+    },
+    {
+      type: 'Feature',
+      properties: { NAME: 'Wolfe', ABBREVTN: 'WOL' },
+      geometry: { type: 'Polygon', coordinates: [[
+        [-83.76, 37.53], [-83.43, 37.53], [-83.43, 37.83], [-83.76, 37.83], [-83.76, 37.53]
+      ]] }
+    },
+    {
+      type: 'Feature',
+      properties: { NAME: 'Lee', ABBREVTN: 'LEE' },
+      geometry: { type: 'Polygon', coordinates: [[
+        [-83.70, 37.45], [-83.39, 37.45], [-83.39, 37.75], [-83.70, 37.75], [-83.70, 37.45]
+      ]] }
     }
   ]
 };
@@ -370,10 +384,15 @@ async function fullMapAndHeader(browser) {
 
   const heading = await page.locator('h1').innerText();
   assert.strictEqual(heading, 'Interactive Hikes & Routes Map');
+  const headingBox = await page.locator('h1').boundingBox();
+  const libraryBox = await page.locator('.route-map-page-library-link').boundingBox();
+  assert(headingBox && libraryBox);
+  assert(headingBox.x + headingBox.width < libraryBox.x || headingBox.y + headingBox.height <= libraryBox.y,
+    'Map heading and Browse route guides link should not overlap.');
   const body = await page.locator('body').innerText();
-  assert(body.includes('Filter RRGH routes by trip type'));
-  assert(body.includes('measure direct point-to-point distance'));
-  assert(body.includes('save it as GPX'));
+  assert(body.includes('Four-county planning view for Wolfe, Powell, Menifee, and Lee counties.'));
+  assert(body.includes('Straight-line measure'));
+  assert(body.includes('Save plan (.gpx)'));
   assert(!body.includes('Only Lane 19-approved'));
   assert(!body.includes('Parcel/private-property boundaries are not enabled.'));
 
@@ -389,7 +408,18 @@ async function fullMapAndHeader(browser) {
   }
 
   const mapContainer = page.locator('[data-rrgh-route-map]');
+  await page.waitForFunction(() => {
+    const map = document.querySelector('[data-rrgh-route-map]');
+    return map?.getAttribute('data-gorge-county-count') === '4'
+      && Number(map?.getAttribute('data-trail-feature-count') || 0) > 0
+      && Number(map?.getAttribute('data-road-feature-count') || 0) > 0
+      && Boolean(map?.getAttribute('data-gorge-overview-zoom'));
+  }, { timeout: 10000 });
+  assert.strictEqual(await mapContainer.getAttribute('data-gorge-county-count'), '4');
   assert.strictEqual(await mapContainer.getAttribute('data-visible-route-count'), '1', 'Skybridge Arch should be visible before trip filtering.');
+  assert.strictEqual(await page.locator('[data-opacity="usfs-trails"]').inputValue(), '45');
+  assert.strictEqual(await page.locator('[data-opacity="usfs-roads"]').inputValue(), '60');
+  assert.strictEqual(await page.locator('[data-opacity="ky-counties"]').inputValue(), '60');
   await page.getByLabel('Day hikes', { exact: true }).uncheck();
   await page.waitForTimeout(100);
   assert.strictEqual(await mapContainer.getAttribute('data-visible-route-count'), '0', 'Day-hike filter should hide Skybridge Arch.');
@@ -401,11 +431,23 @@ async function fullMapAndHeader(browser) {
   assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="kyaerial-phase3"]').isChecked(), false);
-  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '58');
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '45');
+  assert.strictEqual(await page.locator('[data-opacity="usfs-trails"]').inputValue(), '45');
+  assert.strictEqual(await page.locator('[data-opacity="usfs-roads"]').inputValue(), '60');
+  assert.strictEqual(await page.locator('[data-opacity="ky-counties"]').inputValue(), '60');
+
+  for (let i = 0; i < 9; i += 1) {
+    await page.locator('.leaflet-control-zoom-in').click();
+  }
+  await page.waitForTimeout(150);
+  assert((await page.locator('.leaflet-baseUsTopo-pane img.leaflet-tile').count()) > 0, 'USGS topo should remain visible when overzoomed above its native level.');
 
   await page.getByRole('button', { name: /^Aerial/ }).click();
   assert.strictEqual(await page.locator('[data-map-layer="kyaerial-phase3"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), false);
+  assert.strictEqual(await page.locator('[data-opacity="usfs-trails"]').inputValue(), '45');
+  assert.strictEqual(await page.locator('[data-opacity="usfs-roads"]').inputValue(), '60');
+  assert.strictEqual(await page.locator('[data-opacity="ky-counties"]').inputValue(), '60');
 
   const explore = page.locator('.desktop-nav .nav-details-explore');
   await explore.evaluate(element => { element.open = true; });
