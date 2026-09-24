@@ -1,8 +1,8 @@
-c8ffb6b43d041f7df68145c0bfaa4e5770d908e6
-purpose=PR #46 refined Routes & Tracks planning-map candidate after Ryan visual UAT feedback; full-width planning layout; Simple/Advanced/Aerial opacity presets; Day hike/Backpacking/Multi-day route filters; LiDAR below topo; Aerial and LiDAR mutually exclusive; tighter Gorge default extent; straight-line Measure separated from trail-following Plan; denser trail snap graph; client-side planned-route GPX save; live USDA Forest Service trails/roads + Kentucky county boundaries; production unchanged
-ci=35936522825 SUCCESS
-routes_uat=35936681517 SUCCESS
-routes_tracks_uat=35937105350 SUCCESS
-brand_uat=35936681481 SUCCESS
-analytics_uat=35936681516 SUCCESS
-roku_uat=35936681371 SUCCESS
+350774ddbeeeccc2b8a756426193acc9e0090402
+purpose=PR #46 refined Routes & Tracks planning-map candidate after Ryan visual UAT feedback; full-width planning layout; Simple/Advanced/Aerial opacity presets; Day hike/Backpacking/Multi-day route filters; LiDAR below topo with topo multiply blending; Aerial and LiDAR mutually exclusive; tighter Gorge default extent; straight-line measurement separated from trail-following planning; denser trail snap graph; client-side planned-route GPX save; live USDA Forest Service trails/roads + Kentucky county boundaries; production unchanged
+ci=35938623634 SUCCESS
+routes_uat=35938650550 SUCCESS
+routes_tracks_uat=35938794341 SUCCESS
+brand_uat=35938650594 SUCCESS
+analytics_uat=35938650557 SUCCESS
+roku_uat=35938650564 SUCCESS
