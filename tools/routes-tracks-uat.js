@@ -576,16 +576,25 @@ async function fullMap(browser) {
   editStatus = await page.locator('[data-map-status]').innerText();
   assert(editStatus.includes('1 off-trail segment'), 'Undo should restore the deleted off-trail segment; status=' + editStatus);
 
-  // Drag the restored second segment to a distinct third point on Sky Bridge Road.
-  // This avoids overlapping/reversing the first segment and should resnap solid.
-  const trailC = projectLatLng(37.81750, -83.58280, homeZoom, homeBox);
+  // Drag the restored second segment to the actual rendered start node of the
+  // already-snapped first segment. Using the SVG path endpoint avoids projection
+  // rounding and guarantees the drop target is a real planner graph node.
+  const snappedNodeTarget = await planHitPaths.nth(0).evaluate(path => {
+    const point = path.getPointAtLength(0);
+    const matrix = path.getScreenCTM();
+    if (!matrix) return null;
+    const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix);
+    return { x: screen.x, y: screen.y };
+  });
+  assert(snappedNodeTarget, 'First snapped segment should expose a screen-space graph endpoint');
+
   segmentCenter = await secondSegmentCenter();
   await page.mouse.move(segmentCenter.x, segmentCenter.y);
   await page.mouse.down();
   await page.waitForTimeout(60);
   const dragStarted = await mapContainer.getAttribute('data-plan-drag-segment');
   assert.strictEqual(dragStarted, '1', 'Second segment drag should start on mouse down; data-plan-drag-segment=' + dragStarted);
-  await page.mouse.move(trailC.x, trailC.y, { steps: 10 });
+  await page.mouse.move(snappedNodeTarget.x, snappedNodeTarget.y, { steps: 10 });
   await page.waitForTimeout(60);
   const dragStillActive = await mapContainer.getAttribute('data-plan-drag-segment');
   assert.strictEqual(dragStillActive, '1', 'Second segment drag should remain active while moving; data-plan-drag-segment=' + dragStillActive);
