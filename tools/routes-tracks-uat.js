@@ -472,7 +472,7 @@ async function fullMap(browser) {
   await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Measured distance'), { timeout: 3000 });
 
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  if (await page.locator('[data-map-sheet="plan"]').isHidden()) await planOpenButton.click();
   await page.getByRole('button', { name: 'Build trail route', exact: true }).click();
   assert.strictEqual(await page.getByText('Next segment', { exact: true }).count(), 0);
   assert.strictEqual(await page.getByRole('button', { name: 'Follow mapped trails & roads', exact: true }).count(), 0);
