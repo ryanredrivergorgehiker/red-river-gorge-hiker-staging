@@ -544,7 +544,17 @@ async function fullMap(browser) {
     '.leaflet-tooltip-pane{pointer-events:none!important}',
     '.leaflet-roads-pane{pointer-events:none!important}',
     '.leaflet-trails-pane{pointer-events:none!important}',
-    '.leaflet-informalTrails-pane{pointer-events:none!important}'
+    '.leaflet-informalTrails-pane{pointer-events:none!important}',
+    '.leaflet-routes-pane{pointer-events:none!important}',
+    '.leaflet-recreation-pane{pointer-events:none!important}',
+    '.leaflet-routeStarts-pane{pointer-events:none!important}',
+    '.leaflet-landmarks-pane{pointer-events:none!important}',
+    '.leaflet-counties-pane{pointer-events:none!important}',
+    '.leaflet-wilderness-pane{pointer-events:none!important}',
+    '.leaflet-specialManagement-pane{pointer-events:none!important}',
+    '.leaflet-landUnits-pane{pointer-events:none!important}',
+    '.leaflet-trailLabels-pane{pointer-events:none!important}',
+    '.leaflet-countyLabels-pane{pointer-events:none!important}'
   ].join('') });
 
   // The road layer may be Canvas-rendered, so derive approximate screen points from
