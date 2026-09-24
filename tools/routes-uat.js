@@ -261,9 +261,11 @@ async function mapControlsAndAccessibility(browser) {
   assert.strictEqual(await page.locator('[data-opacity]').count(), 15);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.getByRole('button', { name: 'Explore', exact: true }).count(), 1);
-  assert.strictEqual(await page.getByRole('button', { name: 'Measure distance', exact: true }).count(), 2);
-  assert.strictEqual(await page.getByRole('button', { name: 'Build trail route', exact: true }).count(), 2);
-  assert.strictEqual(await page.getByRole('button', { name: 'Export GPX', exact: true }).count(), 1);
+  assert.strictEqual(await page.locator('[data-map-tool="measure"]').count(), 2);
+  assert.strictEqual(await page.locator('[data-map-tool="plan"]').count(), 2);
+  assert.strictEqual(await page.locator('[data-map-tool="save"]').count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Measure distance', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Build trail route', exact: true }).count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Search map', exact: true }).count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Show my location', exact: true }).count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Reset map view', exact: true }).count(), 1);

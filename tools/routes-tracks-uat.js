@@ -296,7 +296,11 @@ async function fullMap(browser) {
 
   const startZoom = Number(await mapContainer.getAttribute('data-current-zoom'));
   await page.locator('.leaflet-control-zoom-out').click({ force: true });
-  await page.waitForTimeout(120);
+  await page.waitForFunction(
+    expected => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-current-zoom')) < expected,
+    startZoom,
+    { timeout: 3000 }
+  );
   const zoomedOut = Number(await mapContainer.getAttribute('data-current-zoom'));
   assert(zoomedOut < startZoom, 'Desktop minus control must zoom out');
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
