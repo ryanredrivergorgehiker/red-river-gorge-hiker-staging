@@ -540,13 +540,27 @@ async function fullMap(browser) {
   }
   assert(offTrail, 'Planner should classify at least one clear map area as off-trail rather than snapping everything within the viewport');
 
-  // Drag the off-trail segment back to mapped trail geometry: it should become snapped/solid.
   const offMid = { x: (trailB.x + offTrail.x) / 2, y: (trailB.y + offTrail.y) / 2 };
+
+  // Prove the segment hit target itself works before testing drag: right-click deletes,
+  // then Undo restores the same off-trail leg.
+  await page.mouse.click(offMid.x, offMid.y, { button: 'right' });
+  await page.waitForTimeout(120);
+  let editStatus = await page.locator('[data-map-status]').innerText();
+  assert(editStatus.includes('Planned segment deleted'), 'Right-click should delete the selected segment; status=' + editStatus);
+  await undo.click();
+  await page.waitForTimeout(120);
+  editStatus = await page.locator('[data-map-status]').innerText();
+  assert(editStatus.includes('1 off-trail segment'), 'Undo should restore the deleted off-trail segment; status=' + editStatus);
+
+  // Drag the restored off-trail segment back to mapped trail geometry: it should become snapped/solid.
   await page.mouse.move(offMid.x, offMid.y);
   await page.mouse.down();
   await page.mouse.move(trailA.x, trailA.y, { steps: 8 });
   await page.mouse.up();
-  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('2 snapped segment(s), 0 off-trail segment(s)'), { timeout: 3000 });
+  await page.waitForTimeout(220);
+  editStatus = await page.locator('[data-map-status]').innerText();
+  assert(editStatus.includes('2 snapped segment(s), 0 off-trail segment(s)'), 'Dragging an off-trail segment onto mapped network should resnap it solid; status=' + editStatus);
 
   // Drag the same segment clearly off trail: it should become dashed/off-trail again.
   const snappedMid = { x: (trailA.x + trailB.x) / 2, y: (trailA.y + trailB.y) / 2 };
@@ -554,7 +568,9 @@ async function fullMap(browser) {
   await page.mouse.down();
   await page.mouse.move(offTrail.x, offTrail.y, { steps: 8 });
   await page.mouse.up();
-  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('1 off-trail segment(s)'), { timeout: 3000 });
+  await page.waitForTimeout(220);
+  editStatus = await page.locator('[data-map-status]').innerText();
+  assert(editStatus.includes('1 off-trail segment(s)'), 'Dragging a snapped segment clearly off network should make it dashed; status=' + editStatus);
 
   // Right-clicking the moved segment deletes that leg.
   const movedMid = { x: (trailB.x + offTrail.x) / 2, y: (trailB.y + offTrail.y) / 2 };
