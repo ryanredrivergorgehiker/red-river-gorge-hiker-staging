@@ -502,21 +502,24 @@ async function fullMap(browser) {
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   if (await page.locator('[data-map-sheet="plan"]').isHidden()) await planOpenButton.click();
   await page.getByRole('button', { name: 'Build trail route', exact: true }).click();
-  const panMapButton = page.getByRole('button', { name: '✥ Pan map', exact: true });
+  const panMapButton = page.locator('[data-plan-pan]');
   assert.strictEqual(await panMapButton.count(), 1);
   assert.strictEqual(await panMapButton.isVisible(), true);
+  assert.strictEqual((await panMapButton.innerText()).trim(), '✥ Pan map');
   await panMapButton.click();
   assert.strictEqual(await page.locator('.route-map-stage').getAttribute('data-plan-pan-mode'), 'true');
   assert.strictEqual(await panMapButton.getAttribute('aria-pressed'), 'true');
+  assert.strictEqual((await panMapButton.innerText()).trim(), '✥ Resume route');
   const panBox = await mapContainer.boundingBox();
   assert(panBox);
   await page.mouse.move(panBox.x + panBox.width * 0.55, panBox.y + panBox.height * 0.50);
   await page.mouse.down();
   await page.mouse.move(panBox.x + panBox.width * 0.47, panBox.y + panBox.height * 0.58, { steps: 8 });
   await page.mouse.up();
-  await page.getByRole('button', { name: '✥ Resume route', exact: true }).click();
+  await panMapButton.click();
   assert.strictEqual(await page.locator('.route-map-stage').getAttribute('data-plan-pan-mode'), 'false');
-  assert.strictEqual(await page.getByRole('button', { name: '✥ Pan map', exact: true }).getAttribute('aria-pressed'), 'false');
+  assert.strictEqual(await panMapButton.getAttribute('aria-pressed'), 'false');
+  assert.strictEqual((await panMapButton.innerText()).trim(), '✥ Pan map');
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
 
   assert.strictEqual(await page.getByText('Next segment', { exact: true }).count(), 0);
