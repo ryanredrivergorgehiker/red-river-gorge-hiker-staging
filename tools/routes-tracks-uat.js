@@ -549,7 +549,7 @@ async function fullMap(browser) {
   }
   assert(offTrail, 'Planner should classify at least one clear map area as off-trail while preserving the baseline snapped leg');
 
-  const planHitPaths = page.locator('.leaflet-planning-pane path.leaflet-interactive');
+  const planHitPaths = page.locator('.rrgh-plan-segment-hit');
   assert.strictEqual(await planHitPaths.count(), 2, 'Two planned legs should expose two rendered segment hit paths');
 
   const secondSegmentCenter = async () => {
