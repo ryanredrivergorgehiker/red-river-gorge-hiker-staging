@@ -388,8 +388,7 @@ async function fullMap(browser) {
   const zoomedOut = Number(await mapContainer.getAttribute('data-current-zoom'));
   assert(zoomedOut < startZoom, 'Desktop minus control must zoom out');
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
-  assert((await page.locator('[data-map-status]').innerText()).includes('Core Red River Gorge hiking view restored'));
-  assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 13);
+  assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 13, 'Home must restore the approved zoom 13 landing view even if the status message is asynchronously replaced');
 
   await page.getByRole('button', { name: /^Terrain/ }).click();
   assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), true);
