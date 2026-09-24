@@ -284,8 +284,8 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.locator('[data-map-layer="ky-counties"]').isChecked(), false);
   assert.strictEqual(await page.locator('.leaflet-control-scale').count(), 1);
-  assert.strictEqual(await page.locator('.leaflet-control-zoom-in').count(), 1);
-  assert.strictEqual(await page.locator('.leaflet-control-zoom-out').count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Zoom in', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Zoom out', exact: true }).count(), 1);
 
   for (const preset of ['Hiking','Terrain','Aerial']) {
     assert.strictEqual(await page.getByRole('button', { name: new RegExp('^' + preset) }).count(), 1, preset);
@@ -295,14 +295,14 @@ async function fullMap(browser) {
   }
 
   const startZoom = Number(await mapContainer.getAttribute('data-current-zoom'));
-  const zoomOutControl = page.locator('.leaflet-control-zoom-out');
-  const zoomOutClassBefore = await zoomOutControl.getAttribute('class');
-  await zoomOutControl.click({ force: true });
-  await page.waitForTimeout(650);
+  await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
+  await page.waitForFunction(
+    expected => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-current-zoom')) < expected,
+    startZoom,
+    { timeout: 3000 }
+  );
   const zoomedOut = Number(await mapContainer.getAttribute('data-current-zoom'));
-  const zoomOutClassAfter = await zoomOutControl.getAttribute('class');
-  console.log('[ZOOM DEBUG]', JSON.stringify({ startZoom, zoomedOut, zoomOutClassBefore, zoomOutClassAfter }));
-  assert(zoomedOut < startZoom, 'Desktop minus control must zoom out: ' + JSON.stringify({ startZoom, zoomedOut, zoomOutClassBefore, zoomOutClassAfter }));
+  assert(zoomedOut < startZoom, 'Desktop minus control must zoom out');
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   assert((await page.locator('[data-map-status]').innerText()).includes('overview restored'));
 
@@ -311,7 +311,7 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '70');
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '45');
-  for (let i = 0; i < 10; i += 1) await page.locator('.leaflet-control-zoom-in').click({ force: true });
+  for (let i = 0; i < 10; i += 1) await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
   await page.waitForTimeout(150);
   assert((await page.locator('.leaflet-baseTopo-pane img.leaflet-tile').count()) > 0, 'Topo tiles should remain at close zoom above terrain relief');
 
@@ -416,8 +416,8 @@ async function mobile(browser) {
   const after = Number(await map.getAttribute('data-current-zoom'));
   assert(after > before, 'Mobile double tap should zoom in; before=' + before + ' after=' + after);
 
-  assert.strictEqual(await page.locator('.leaflet-control-zoom-in').count(), 1);
-  assert.strictEqual(await page.locator('.leaflet-control-zoom-out').count(), 1);
+  assert.strictEqual(await page.locator('.route-map-desktop-zoom').count(), 2);
+  assert.strictEqual(await page.locator('.route-map-desktop-zoom:visible').count(), 0);
   await shot(page, 'mobile-full-map-hiker-first');
   record('Mobile map controls and double-tap zoom', 'PASS', { before, after });
   await context.close();
