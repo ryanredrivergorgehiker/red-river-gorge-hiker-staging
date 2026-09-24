@@ -349,6 +349,12 @@ async function fullMap(browser) {
     assert.strictEqual(await page.getByLabel(status, { exact: true }).count(), 1, status);
   }
 
+  assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), true, 'Hiking should start with Kentucky Topo on');
+  assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true, 'Hiking should start with USGS Topo on');
+  const safetyLink = page.getByRole('link', { name: /^Outdoor safety and location disclaimer/ });
+  assert.strictEqual(await safetyLink.count(), 1, 'Every RouteMap should expose the outdoor safety/location disclaimer link');
+  assert((await safetyLink.getAttribute('href')).endsWith('/copyright-and-terms/#outdoor-safety-location-disclaimer'));
+
   const startZoom = Number(await mapContainer.getAttribute('data-current-zoom'));
   assert.strictEqual(startZoom, 13, 'Core Gorge landing view should start at zoom 13');
   await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
@@ -365,8 +371,10 @@ async function fullMap(browser) {
 
   await page.getByRole('button', { name: /^Terrain/ }).click();
   assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '70');
+  assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').inputValue(), '72');
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '45');
   for (let i = 0; i < 10; i += 1) await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
   await page.waitForTimeout(150);
@@ -509,6 +517,7 @@ async function legal(browser) {
   assert(response && response.ok());
   body = await page.locator('body').innerText();
   for (const expected of [
+    'Outdoor Safety and Location Disclaimer',
     'GPS and device-location estimates can be inaccurate',
     'Property and parcel boundaries are not displayed',
     'Community / Informal Trails',
