@@ -336,10 +336,12 @@ async function fullMap(browser) {
   assert(body.includes('Map data:'));
 
   assert.strictEqual(await page.locator('[data-map-layer]').count(), 10);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 10);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 9);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-wilderness"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-opacity="usfs-wilderness"]').count(), 0);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-special-management"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-land-units"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-opacity="usfs-trails"]').inputValue(), '100');
@@ -390,7 +392,11 @@ async function fullMap(browser) {
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 13, 'Home must restore the approved zoom 13 landing view even if the status message is asynchronously replaced');
 
+  await page.locator('[data-context-full-opacity="usfs-wilderness"]').uncheck();
+  await page.locator('[data-map-layer="usfs-wilderness"]').uncheck();
   await page.getByRole('button', { name: /^Terrain/ }).click();
+  assert.strictEqual(await page.locator('[data-map-layer="usfs-wilderness"]').isChecked(), true, 'Terrain preset should restore Wilderness');
+  assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').isChecked(), true, 'Terrain preset should restore Wilderness full opacity');
   assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true);
@@ -427,8 +433,25 @@ async function fullMap(browser) {
   assert.strictEqual(await kyTopoToggle.isChecked(), false);
   assert.strictEqual(await usgsTopoToggle.isChecked(), false);
   assert.strictEqual(await lidarToggle.isChecked(), false);
+  assert.strictEqual(await page.locator('[data-opacity="kytopo"]').isDisabled(), true);
+  assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').isDisabled(), true);
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true);
+  assert.strictEqual(await page.locator('[data-route-map-shell]').getAttribute('data-aerial-active'), 'true');
+  const aerialLegendColors = await page.evaluate(() => {
+    const color = selector => getComputedStyle(document.querySelector(selector), '::before').borderColor;
+    return {
+      wilderness: color('.swatch-wilderness'),
+      management: color('.swatch-management'),
+      land: color('.swatch-land-unit')
+    };
+  });
+  assert.notStrictEqual(aerialLegendColors.wilderness, aerialLegendColors.management);
+  assert.notStrictEqual(aerialLegendColors.management, aerialLegendColors.land);
 
   await kyTopoToggle.check();
+  assert.strictEqual(await page.locator('[data-opacity="kytopo"]').isDisabled(), false);
+  assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').isDisabled(), false);
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), false);
   assert.strictEqual(await aerialToggle.isChecked(), false, 'Selecting Kentucky Topo must turn Aerial off');
 
   await aerialToggle.check();
@@ -473,6 +496,23 @@ async function fullMap(browser) {
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   if (await page.locator('[data-map-sheet="plan"]').isHidden()) await planOpenButton.click();
   await page.getByRole('button', { name: 'Build trail route', exact: true }).click();
+  const panMapButton = page.getByRole('button', { name: '✥ Pan map', exact: true });
+  assert.strictEqual(await panMapButton.count(), 1);
+  assert.strictEqual(await panMapButton.isVisible(), true);
+  await panMapButton.click();
+  assert.strictEqual(await page.locator('.route-map-stage').getAttribute('data-plan-pan-mode'), 'true');
+  assert.strictEqual(await panMapButton.getAttribute('aria-pressed'), 'true');
+  const panBox = await mapContainer.boundingBox();
+  assert(panBox);
+  await page.mouse.move(panBox.x + panBox.width * 0.55, panBox.y + panBox.height * 0.50);
+  await page.mouse.down();
+  await page.mouse.move(panBox.x + panBox.width * 0.47, panBox.y + panBox.height * 0.58, { steps: 8 });
+  await page.mouse.up();
+  await page.getByRole('button', { name: '✥ Resume route', exact: true }).click();
+  assert.strictEqual(await page.locator('.route-map-stage').getAttribute('data-plan-pan-mode'), 'false');
+  assert.strictEqual(await page.getByRole('button', { name: '✥ Pan map', exact: true }).getAttribute('aria-pressed'), 'false');
+  await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
+
   assert.strictEqual(await page.getByText('Next segment', { exact: true }).count(), 0);
   assert.strictEqual(await page.getByRole('button', { name: 'Follow mapped trails & roads', exact: true }).count(), 0);
   assert.strictEqual(await page.getByRole('button', { name: 'Off-trail straight line', exact: true }).count(), 0);
@@ -486,11 +526,11 @@ async function fullMap(browser) {
         y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale
       };
     };
-    const center = project(37.831, -83.615);
+    const northWest = project(37.878846, -83.744659);
     const point = project(lat, lng);
     return {
-      x: mapBox.x + mapBox.width / 2 + (point.x - center.x),
-      y: mapBox.y + mapBox.height / 2 + (point.y - center.y)
+      x: mapBox.x + (point.x - northWest.x),
+      y: mapBox.y + (point.y - northWest.y)
     };
   };
 
