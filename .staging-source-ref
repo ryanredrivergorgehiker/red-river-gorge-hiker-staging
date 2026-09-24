@@ -1,8 +1,8 @@
-17470ea4f5bef51c544a16d22fae9e2c93b67e41
-purpose=PR #46 four-county Routes & Tracks map refinement after Ryan visual UAT feedback; cleaner full-map header; planning extent and pan/zoom constrained to Wolfe/Powell/Menifee/Lee county union; wheel zoom disabled to prevent trackpad zoom/pan confusion; Forest Service trails reduced to 45% and recolored muted blue-violet; Forest Service roads fixed at 60% with stronger brown styling; county boundaries fixed at 60%; map presets now change base/terrain imagery only and leave trail/road/county context unchanged; USGS and Kentucky topo overzoom supported so topo remains present at close zoom; production unchanged
-ci=35941147840 SUCCESS
-routes_uat=35941218900 SUCCESS
-routes_tracks_uat=35941378975 SUCCESS
-brand_uat=35941218901 SUCCESS
-analytics_uat=35941218870 SUCCESS
-roku_uat=35941218898 SUCCESS
+8ea9cf9fd3c381d2d3b570aa376631d82e960c20
+purpose=PR #46 hiker-first Routes & Tracks map redesign after Ryan review; visual legend embedded in Layers; Hiking/Terrain/Aerial presets; Layers closed by default with Fine tune opacity disclosure; clickable RRGH route cards with guide and GPX links; route-start, parking/trailhead, landmark/viewpoint and verified Forest Service recreation-site markers; Search/My Location/Home controls; feet+miles and metric scale bar; county boundaries off by default and visually quieter; authoritative Forest Service wilderness/special-management/NFS land-unit context available on demand; property/legal-access warning and before-you-go link; 30-second map-reading guide plus Map nerd details; Terrain relief (LiDAR) naming; Explore/Measure/Build trail route hierarchy; decimal-degree + UTM coordinate display/copy; route filters restore Official/Mixed/Off-trail concept; optional OpenStreetMap Community / Informal Trails layer loads only on user opt-in, is visually distinct, carries attribution/access warnings, and is excluded from trail-route planner graph; explicit desktop zoom range restored; mobile double-tap zoom regression gate; production unchanged
+ci=35945908221 SUCCESS
+routes_uat=35945978951 SUCCESS
+routes_tracks_uat=35947154055 SUCCESS
+brand_uat=35945978910 SUCCESS
+analytics_uat=35945979196 SUCCESS
+roku_uat=35945978938 SUCCESS
