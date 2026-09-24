@@ -391,6 +391,11 @@ async function fullMap(browser) {
   assert(zoomedOut < startZoom, 'Desktop minus control must zoom out');
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 13, 'Home must restore the approved zoom 13 landing view even if the status message is asynchronously replaced');
+  await page.waitForFunction(() => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-north-west'), { timeout: 3000 });
+  const homeNorthWestValue = await mapContainer.getAttribute('data-map-north-west');
+  const [homeNorthWestLat, homeNorthWestLng] = homeNorthWestValue.split(',').map(Number);
+  assert(Math.abs(homeNorthWestLat - 37.878846) <= 0.00025, 'Home northwest latitude should match Ryan’s approved anchor; actual=' + homeNorthWestLat);
+  assert(Math.abs(homeNorthWestLng - (-83.744659)) <= 0.00025, 'Home northwest longitude should match Ryan’s approved anchor; actual=' + homeNorthWestLng);
 
   await page.locator('[data-context-full-opacity="usfs-wilderness"]').evaluate(input => {
     input.checked = false;
@@ -548,7 +553,7 @@ async function fullMap(browser) {
         y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale
       };
     };
-    const northWest = project(37.878846, -83.744659);
+    const northWest = project(homeNorthWestLat, homeNorthWestLng);
     const point = project(lat, lng);
     return {
       x: homeBox.x + (point.x - northWest.x),
