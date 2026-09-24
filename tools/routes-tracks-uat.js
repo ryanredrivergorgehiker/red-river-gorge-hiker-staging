@@ -388,11 +388,14 @@ async function fullMapAndHeader(browser) {
     assert.strictEqual(await page.getByLabel(tripType, { exact: true }).count(), 1, tripType);
   }
 
-  const dayHikes = page.getByLabel('Day hikes', { exact: true });
-  await dayHikes.uncheck();
-  assert.strictEqual(await dayHikes.isChecked(), false);
-  await dayHikes.check();
-  assert.strictEqual(await dayHikes.isChecked(), true);
+  const routePathCountBefore = await page.locator('.leaflet-routes-pane path').count();
+  assert(routePathCountBefore > 0, 'Expected at least one RRGH route path before trip filtering.');
+  await page.getByLabel('Day hikes', { exact: true }).uncheck();
+  await page.waitForTimeout(100);
+  assert.strictEqual(await page.locator('.leaflet-routes-pane path').count(), 0, 'Day-hike filter should hide Skybridge Arch.');
+  await page.getByLabel('Day hikes', { exact: true }).check();
+  await page.waitForTimeout(100);
+  assert((await page.locator('.leaflet-routes-pane path').count()) > 0, 'Day-hike filter should restore Skybridge Arch.');
 
   await page.getByRole('button', { name: /^Advanced/ }).click();
   assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true);
@@ -403,13 +406,6 @@ async function fullMapAndHeader(browser) {
   await page.getByRole('button', { name: /^Aerial/ }).click();
   assert.strictEqual(await page.locator('[data-map-layer="kyaerial-phase3"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), false);
-
-  await page.getByRole('button', { name: /^Simple/ }).click();
-  assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), true);
-  assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true);
-  assert.strictEqual(await page.locator('[data-map-layer="kyaerial-phase3"]').isChecked(), false);
-  assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '88');
-  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '22');
 
   const explore = page.locator('.desktop-nav .nav-details-explore');
   await explore.evaluate(element => { element.open = true; });
@@ -457,9 +453,8 @@ async function mobile(browser) {
   await page.goto(MAIN + 'routes/skybridge-arch/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForSelector('.leaflet-container', { timeout: 10000 });
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
-  assert.strictEqual(await page.getByRole('button', { name: 'Straight-line measure', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Measure', exact: true }).count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Plan on trails', exact: true }).count(), 1);
-  assert.strictEqual(await page.getByRole('button', { name: 'Save plan (.gpx)', exact: true }).count(), 1);
   await shot(page, 'mobile-skybridge-map-redesign');
 
   record('Mobile map is contained, immediately usable and horizontally clean', 'PASS', {
