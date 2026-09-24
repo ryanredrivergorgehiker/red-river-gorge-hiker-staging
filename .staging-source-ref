@@ -1,8 +1,8 @@
-f7e06b303fa99ff7c2d580d4bf5adc70f70612ba
-purpose=Routes map corrective visual/data pass after Ryan review; core Gorge landing/Home zoom 13; top Search/My location/Home/zoom controls unified as one connected toolbar; hiking legend uses compact two-column symbol presentation without Always shown clutter; Explore and Plan are true press-again-to-close toggles; Community/Informal trails load from same-origin cached OpenStreetMap-derived GeoJSON; cache contains 1112 geographically bounded Kentucky OSM path/footway candidates (13 explicit informal + 1099 community candidates) after subtracting 117 official-like USDA Forest Service matches; public Overpass services are fallback only; cache-builder rejects out-of-region responses and preserves validated cache on incomplete refresh; production unchanged
-source_ci_parent=36030690403 SUCCESS
-routes_uat=36032511050 SUCCESS
-routes_tracks_uat=36032511051 SUCCESS
-analytics_uat=36032511087 SUCCESS
-brand_uat=36032511084 SUCCESS
-roku_uat=36032511089 SUCCESS
+859cfe711635700c820c95c339a62625ba069161
+purpose=Routes map visual-UAT refinement after Ryan review; Hiking and Terrain now default to both Kentucky Topo and USGS Topo; supporting travel geometry uses separate high-visibility utility colors (cyan Forest Service trails, lime dashed Community/Informal trails, bright yellow Forest Service roads) while the multicolor RRGH route palette remains unchanged; full-map Home/initial center shifted slightly east and south at zoom 13 to bring Rock Bridge inward while keeping Natural Bridge in the lower-left planning frame; every RouteMap now links to Copyright & Terms #outdoor-safety-location-disclaimer; production unchanged
+source_ci=36036186785 SUCCESS
+routes_uat=36036483836 SUCCESS
+routes_tracks_uat=36036484019 SUCCESS
+analytics_uat=36036483783 SUCCESS
+brand_uat=36036483860 SUCCESS
+roku_uat=36036484083 SUCCESS
