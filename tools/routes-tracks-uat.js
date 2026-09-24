@@ -471,6 +471,10 @@ async function fullMap(browser) {
   assert.strictEqual(await aerialToggle.isChecked(), false, 'Selecting USGS Topo must turn Aerial off');
 
   await page.getByRole('button', { name: /^Hiking/ }).click();
+  if ((await page.locator('.route-layer-panel').getAttribute('open')) !== null) {
+    await page.locator('.route-layer-panel > summary').click();
+  }
+  assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null, 'Layers panel should be closed before map interaction UAT');
 
   await page.getByRole('button', { name: 'Search map', exact: true }).click();
   await page.locator('[data-map-search]').fill('Trail 214');
