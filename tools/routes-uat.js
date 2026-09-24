@@ -36,12 +36,20 @@ const ROADS = {
 };
 const COUNTIES = {
   type: 'FeatureCollection',
+  features: [
+    { type: 'Feature', properties: { NAME: 'Powell' }, geometry: { type: 'Polygon', coordinates: [[[-83.92,37.72],[-83.55,37.72],[-83.55,38.02],[-83.92,38.02],[-83.92,37.72]]] } },
+    { type: 'Feature', properties: { NAME: 'Menifee' }, geometry: { type: 'Polygon', coordinates: [[[-83.61,37.78],[-83.31,37.78],[-83.31,38.05],[-83.61,38.05],[-83.61,37.78]]] } },
+    { type: 'Feature', properties: { NAME: 'Wolfe' }, geometry: { type: 'Polygon', coordinates: [[[-83.76,37.53],[-83.43,37.53],[-83.43,37.83],[-83.76,37.83],[-83.76,37.53]]] } },
+    { type: 'Feature', properties: { NAME: 'Lee' }, geometry: { type: 'Polygon', coordinates: [[[-83.70,37.45],[-83.39,37.45],[-83.39,37.75],[-83.70,37.75],[-83.70,37.45]]] } }
+  ]
+};
+
+const RECREATION = {
+  type: 'FeatureCollection',
   features: [{
     type: 'Feature',
-    properties: { NAME: 'Powell' },
-    geometry: { type: 'Polygon', coordinates: [[
-      [-83.90, 37.70], [-83.50, 37.70], [-83.50, 38.00], [-83.90, 38.00], [-83.90, 37.70]
-    ]] }
+    properties: { site_name: 'Sky Bridge Trailhead', public_site_name: 'Sky Bridge Trailhead', site_type: 'TRAILHEAD', seasonal_operational_status: 'OPEN' },
+    geometry: { type: 'Point', coordinates: [-83.5827, 37.8176] }
   }]
 };
 
@@ -91,8 +99,10 @@ async function installStubs(page) {
       await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(TRAILS) });
     } else if (url.includes('EDW_RoadBasic_01')) {
       await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(ROADS) });
+    } else if (url.includes('EDW_RecInfraRecreationSites_02')) {
+      await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(RECREATION) });
     } else {
-      await route.abort();
+      await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify({ type: 'FeatureCollection', features: [] }) });
     }
   });
 }
@@ -247,12 +257,16 @@ async function mapControlsAndAccessibility(browser) {
     return button && !button.disabled;
   }, { timeout: 10000 });
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 9);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 9);
-  assert.strictEqual(await page.getByRole('button', { name: 'Straight-line measure', exact: true }).count(), 1);
-  assert.strictEqual(await page.getByRole('button', { name: 'Plan on trails', exact: true }).count(), 1);
-  assert.strictEqual(await page.getByRole('button', { name: 'Save plan (.gpx)', exact: true }).count(), 1);
-  assert.strictEqual(await page.getByRole('button', { name: 'Clear', exact: true }).count(), 1);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 15);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 15);
+  assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
+  assert.strictEqual(await page.getByRole('button', { name: 'Explore', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Measure distance', exact: true }).count(), 2);
+  assert.strictEqual(await page.getByRole('button', { name: 'Build trail route', exact: true }).count(), 2);
+  assert.strictEqual(await page.getByRole('button', { name: 'Export GPX', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Search map', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Show my location', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Reset map view', exact: true }).count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Load interactive map', exact: true }).count(), 0);
 
   const arch = page.locator('.leaflet-marker-icon[title="Skybridge Arch"]');
@@ -262,6 +276,7 @@ async function mapControlsAndAccessibility(browser) {
   assert.strictEqual(await arch.getAttribute('tabindex'), '0');
   assert.strictEqual(await overlook.getAttribute('tabindex'), '0');
 
+  await page.locator('.route-layer-panel > summary').click();
   await page.locator('[data-map-layer="kyaerial-phase3"]').check();
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), false, 'Aerial should turn LiDAR hillshade off.');
   await page.locator('[data-opacity="kyaerial-phase3"]').fill('42');
@@ -293,6 +308,8 @@ async function legalExploreAndMobile(browser) {
   assert(body.includes('Interactive Maps and Map-Data Services'));
   assert(body.includes('default map layers begin loading immediately'));
   assert(body.includes('USDA Forest Service Enterprise Data Warehouse'));
+  assert(body.includes('public Overpass API'));
+  assert(body.includes('If you choose “My location,”'));
 
   await page.goto(MAIN + 'copyright-and-terms/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   body = await page.locator('body').innerText();
@@ -301,7 +318,9 @@ async function legalExploreAndMobile(browser) {
     'Outdoor and Backcountry Risk; User Responsibility',
     'Property, Boundaries, and Access',
     'GPX Download License',
-    'Map, Data, and Third-Party Sources'
+    'Map, Data, and Third-Party Sources',
+    'Community / Informal Trails',
+    'Property and parcel boundaries are not displayed'
   ]) assert(body.includes(expected), expected);
 
   await page.goto(MAIN + 'guides/kentucky-lidar/', { waitUntil: 'domcontentloaded', timeout: 60000 });
