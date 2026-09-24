@@ -457,8 +457,9 @@ async function mobile(browser) {
   await page.goto(MAIN + 'routes/skybridge-arch/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForSelector('.leaflet-container', { timeout: 10000 });
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
-  assert.strictEqual(await page.getByRole('button', { name: 'Measure', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Straight-line measure', exact: true }).count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Plan on trails', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Save plan (.gpx)', exact: true }).count(), 1);
   await shot(page, 'mobile-skybridge-map-redesign');
 
   record('Mobile map is contained, immediately usable and horizontally clean', 'PASS', {
