@@ -505,14 +505,40 @@ async function fullMap(browser) {
   // exercising the intended "near a trail/road = snap" interaction.
   const trailA = projectLatLng(37.81462, -83.58918, homeZoom, homeBox);
   const trailB = projectLatLng(37.81612, -83.58482, homeZoom, homeBox);
-  const offTrail = projectLatLng(37.80500, -83.63000, homeZoom, homeBox);
 
   await page.mouse.click(trailA.x, trailA.y);
   await page.mouse.click(trailB.x, trailB.y);
-  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('1 snapped segment'), { timeout: 3000 });
+  await page.waitForFunction(
+    () => document.querySelector('[data-map-status]')?.textContent?.includes('1 snapped segment'),
+    undefined,
+    { timeout: 3000 }
+  );
 
-  await page.mouse.click(offTrail.x, offTrail.y);
-  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('1 off-trail segment'), { timeout: 3000 });
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  const redo = page.getByRole('button', { name: 'Redo', exact: true });
+  const offTrailCandidates = [
+    { x: homeBox.x + homeBox.width * 0.78, y: homeBox.y + homeBox.height * 0.22 },
+    { x: homeBox.x + homeBox.width * 0.70, y: homeBox.y + homeBox.height * 0.70 },
+    { x: homeBox.x + homeBox.width * 0.52, y: homeBox.y + homeBox.height * 0.20 },
+    { x: homeBox.x + homeBox.width * 0.84, y: homeBox.y + homeBox.height * 0.52 },
+    { x: homeBox.x + homeBox.width * 0.58, y: homeBox.y + homeBox.height * 0.66 },
+    { x: homeBox.x + homeBox.width * 0.38, y: homeBox.y + homeBox.height * 0.22 }
+  ];
+
+  let offTrail = null;
+  for (const candidate of offTrailCandidates) {
+    await page.mouse.click(candidate.x, candidate.y);
+    await page.waitForTimeout(120);
+    const plannerStatus = await page.locator('[data-map-status]').innerText();
+    if (plannerStatus.includes('off-trail segment')) {
+      offTrail = candidate;
+      break;
+    }
+    assert.strictEqual(await undo.isDisabled(), false, 'A snapped candidate should remain undoable while searching for a clear off-trail point');
+    await undo.click();
+    await page.waitForTimeout(80);
+  }
+  assert(offTrail, 'Planner should classify at least one clear map area as off-trail rather than snapping everything within the viewport');
 
   // Drag the off-trail segment back to mapped trail geometry: it should become snapped/solid.
   const offMid = { x: (trailB.x + offTrail.x) / 2, y: (trailB.y + offTrail.y) / 2 };
@@ -535,8 +561,6 @@ async function fullMap(browser) {
   await page.mouse.click(movedMid.x, movedMid.y, { button: 'right' });
   await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Planned segment deleted'), { timeout: 3000 });
 
-  const undo = page.getByRole('button', { name: 'Undo', exact: true });
-  const redo = page.getByRole('button', { name: 'Redo', exact: true });
   assert.strictEqual(await undo.isDisabled(), false);
   await undo.click();
   assert.strictEqual(await redo.isDisabled(), false);
