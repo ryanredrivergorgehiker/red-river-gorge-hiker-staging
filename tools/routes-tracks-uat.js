@@ -539,7 +539,13 @@ async function fullMap(browser) {
   // Planner click classification is the behavior under test below. Make popups
   // non-interactive for this section so a coordinate probe cannot accidentally
   // activate a route-card link and navigate away from the map.
-  await page.addStyleTag({ content: '.leaflet-popup-pane{pointer-events:none!important}.leaflet-tooltip-pane{pointer-events:none!important}' });
+  await page.addStyleTag({ content: [
+    '.leaflet-popup-pane{pointer-events:none!important}',
+    '.leaflet-tooltip-pane{pointer-events:none!important}',
+    '.leaflet-roads-pane{pointer-events:none!important}',
+    '.leaflet-trails-pane{pointer-events:none!important}',
+    '.leaflet-informalTrails-pane{pointer-events:none!important}'
+  ].join('') });
 
   // The road layer may be Canvas-rendered, so derive approximate screen points from
   // the approved Home NW anchor and try small shared offsets until the planner itself
@@ -564,8 +570,8 @@ async function fullMap(browser) {
   const trailABase = projectFromHomeNorthWest(37.81462, -83.58918);
   const trailBBase = projectFromHomeNorthWest(37.81612, -83.58482);
   const snapOffsets = [
-    [0,0],[18,0],[-18,0],[0,18],[0,-18],[18,18],[-18,-18],[18,-18],[-18,18],
-    [36,0],[-36,0],[0,36],[0,-36],[36,18],[-36,-18]
+    [0,0],[3,0],[-3,0],[0,3],[0,-3],[4,4],[-4,-4],[4,-4],[-4,4],
+    [6,0],[-6,0],[0,6],[0,-6]
   ];
 
   let trailA = null;
