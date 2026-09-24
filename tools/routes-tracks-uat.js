@@ -524,23 +524,30 @@ async function fullMap(browser) {
     { x: homeBox.x + homeBox.width * 0.38, y: homeBox.y + homeBox.height * 0.22 }
   ];
 
+  const plannerCounts = statusText => {
+    const match = statusText.match(/(\d+) snapped segment\(s\), (\d+) off-trail segment\(s\)/);
+    return match ? { snapped: Number(match[1]), offTrail: Number(match[2]) } : null;
+  };
+
   let offTrail = null;
   for (const candidate of offTrailCandidates) {
-    const beforeCandidate = await page.locator('[data-map-status]').innerText();
     await page.mouse.click(candidate.x, candidate.y);
     await page.waitForTimeout(120);
     const plannerStatus = await page.locator('[data-map-status]').innerText();
-    if (plannerStatus.includes('off-trail segment')) {
+    const counts = plannerCounts(plannerStatus);
+
+    if (counts && counts.snapped >= 1 && counts.offTrail >= 1) {
       offTrail = candidate;
       break;
     }
-    if (plannerStatus !== beforeCandidate) {
+
+    if (counts && counts.snapped + counts.offTrail > 1) {
       assert.strictEqual(await undo.isDisabled(), false, 'A snapped candidate should remain undoable while searching for a clear off-trail point');
       await undo.click();
       await page.waitForTimeout(80);
     }
   }
-  assert(offTrail, 'Planner should classify at least one clear map area as off-trail rather than snapping everything within the viewport');
+  assert(offTrail, 'Planner should classify at least one clear map area as off-trail while preserving the baseline snapped leg');
 
   const offMid = { x: (trailB.x + offTrail.x) / 2, y: (trailB.y + offTrail.y) / 2 };
 
