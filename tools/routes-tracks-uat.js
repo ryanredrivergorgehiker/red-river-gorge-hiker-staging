@@ -500,8 +500,10 @@ async function fullMap(browser) {
   const homeZoom = Number(await mapContainer.getAttribute('data-current-zoom'));
   assert.strictEqual(homeZoom, 13);
 
-  const trailA = projectLatLng(37.81765, -83.58262, homeZoom, homeBox);
-  const trailB = projectLatLng(37.81886, -83.57903, homeZoom, homeBox);
+  // Use unmarked points on the stubbed Trail 214 line so trailhead/waypoint
+  // markers do not consume the click before Leaflet's map planner handler.
+  const trailA = projectLatLng(37.81796, -83.58140, homeZoom, homeBox);
+  const trailB = projectLatLng(37.81832, -83.58010, homeZoom, homeBox);
   const offTrail = projectLatLng(37.80500, -83.63000, homeZoom, homeBox);
 
   await page.mouse.click(trailA.x, trailA.y);
