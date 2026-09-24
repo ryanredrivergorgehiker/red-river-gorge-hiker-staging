@@ -485,7 +485,7 @@ async function legal(browser) {
   for (const expected of [
     'Interactive Maps and Map-Data Services',
     'Community / Informal Trails',
-    'public Overpass API service',
+    'RRGH-hosted cache derived from OpenStreetMap data',
     'If you choose “My location,”',
     'does not intentionally transmit or store the precise device coordinates',
     'does not send the search text to a general-purpose external geocoding service'
