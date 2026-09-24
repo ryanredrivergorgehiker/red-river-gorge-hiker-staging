@@ -257,15 +257,16 @@ async function mapControlsAndAccessibility(browser) {
     return button && !button.disabled;
   }, { timeout: 10000 });
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 15);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 15);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 10);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 10);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.getByRole('button', { name: 'Explore', exact: true }).count(), 1);
-  assert.strictEqual(await page.locator('[data-map-tool="measure"]').count(), 2);
-  assert.strictEqual(await page.locator('[data-map-tool="plan"]').count(), 2);
+  assert.strictEqual(await page.getByRole('button', { name: 'Plan', exact: true }).count(), 1);
+  assert.strictEqual(await page.locator('[data-map-tool="measure"]').count(), 1);
+  assert.strictEqual(await page.locator('[data-map-tool="plan"]').count(), 1);
   assert.strictEqual(await page.locator('[data-map-tool="save"]').count(), 1);
-  assert.strictEqual(await page.getByRole('button', { name: 'Measure distance', exact: true }).count(), 1);
-  assert.strictEqual(await page.getByRole('button', { name: 'Build trail route', exact: true }).count(), 1);
+  assert.strictEqual(await page.locator('[data-plan-action="undo"]').count(), 1);
+  assert.strictEqual(await page.locator('[data-plan-action="redo"]').count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Search map', exact: true }).count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Show my location', exact: true }).count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Reset map view', exact: true }).count(), 1);
@@ -311,7 +312,7 @@ async function legalExploreAndMobile(browser) {
   assert(body.includes('Interactive Maps and Map-Data Services'));
   assert(body.includes('default map layers begin loading immediately'));
   assert(body.includes('USDA Forest Service Enterprise Data Warehouse'));
-  assert(body.includes('public Overpass API'));
+  assert(body.includes('public Overpass API service'));
   assert(body.includes('If you choose “My location,”'));
 
   await page.goto(MAIN + 'copyright-and-terms/', { waitUntil: 'domcontentloaded', timeout: 60000 });
