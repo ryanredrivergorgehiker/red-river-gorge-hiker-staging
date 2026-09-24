@@ -582,9 +582,17 @@ async function fullMap(browser) {
   segmentCenter = await secondSegmentCenter();
   await page.mouse.move(segmentCenter.x, segmentCenter.y);
   await page.mouse.down();
+  await page.waitForTimeout(60);
+  const dragStarted = await mapContainer.getAttribute('data-plan-drag-segment');
+  assert.strictEqual(dragStarted, '1', 'Second segment drag should start on mouse down; data-plan-drag-segment=' + dragStarted);
   await page.mouse.move(trailC.x, trailC.y, { steps: 10 });
+  await page.waitForTimeout(60);
+  const dragStillActive = await mapContainer.getAttribute('data-plan-drag-segment');
+  assert.strictEqual(dragStillActive, '1', 'Second segment drag should remain active while moving; data-plan-drag-segment=' + dragStillActive);
   await page.mouse.up();
   await page.waitForTimeout(250);
+  const dragEnded = await mapContainer.getAttribute('data-plan-drag-segment');
+  assert.strictEqual(dragEnded, null, 'Second segment drag should end on mouse up; data-plan-drag-segment=' + dragEnded);
   editStatus = await page.locator('[data-map-status]').innerText();
   assert(editStatus.includes('2 snapped segment(s), 0 off-trail segment(s)'), 'Dragging an off-trail segment onto mapped network should resnap it solid; status=' + editStatus);
 
