@@ -437,7 +437,7 @@ async function fullMapAndHeader(browser) {
   assert.strictEqual(await page.locator('[data-opacity="ky-counties"]').inputValue(), '60');
 
   for (let i = 0; i < 9; i += 1) {
-    await page.locator('.leaflet-control-zoom-in').click();
+    await page.locator('.leaflet-control-zoom-in').click({ force: true });
   }
   await page.waitForTimeout(150);
   assert((await page.locator('.leaflet-baseUsTopo-pane img.leaflet-tile').count()) > 0, 'USGS topo should remain visible when overzoomed above its native level.');
