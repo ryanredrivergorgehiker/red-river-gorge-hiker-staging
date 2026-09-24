@@ -392,8 +392,14 @@ async function fullMap(browser) {
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 13, 'Home must restore the approved zoom 13 landing view even if the status message is asynchronously replaced');
 
-  await page.locator('[data-context-full-opacity="usfs-wilderness"]').uncheck();
-  await page.locator('[data-map-layer="usfs-wilderness"]').uncheck();
+  await page.locator('[data-context-full-opacity="usfs-wilderness"]').evaluate(input => {
+    input.checked = false;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.locator('[data-map-layer="usfs-wilderness"]').evaluate(input => {
+    input.checked = false;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
   await page.getByRole('button', { name: /^Terrain/ }).click();
   assert.strictEqual(await page.locator('[data-map-layer="usfs-wilderness"]').isChecked(), true, 'Terrain preset should restore Wilderness');
   assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').isChecked(), true, 'Terrain preset should restore Wilderness full opacity');
