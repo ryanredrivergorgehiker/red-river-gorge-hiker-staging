@@ -531,6 +531,11 @@ async function fullMap(browser) {
   const homeZoom = Number(await mapContainer.getAttribute('data-current-zoom'));
   assert.strictEqual(homeZoom, 13);
 
+  // Planner click classification is the behavior under test below. Make popups
+  // non-interactive for this section so a coordinate probe cannot accidentally
+  // activate a route-card link and navigate away from the map.
+  await page.addStyleTag({ content: '.leaflet-popup-pane{pointer-events:none!important}.leaflet-tooltip-pane{pointer-events:none!important}' });
+
   // The road layer may be Canvas-rendered, so derive approximate screen points from
   // the approved Home NW anchor and try small shared offsets until the planner itself
   // confirms a snapped leg. This validates near-road tolerance without assuming SVG.
@@ -565,8 +570,11 @@ async function fullMap(browser) {
     const candidateA = { x: trailABase.x + dx, y: trailABase.y + dy };
     const candidateB = { x: trailBBase.x + dx, y: trailBBase.y + dy };
     await page.mouse.click(candidateA.x, candidateA.y);
+    await page.keyboard.press('Escape');
     await page.mouse.click(candidateB.x, candidateB.y);
+    await page.keyboard.press('Escape');
     await page.waitForTimeout(100);
+    assert(page.url().includes('/routes/map/'), 'Planner coordinate probes must remain on the map page');
     const statusText = await page.locator('[data-map-status]').innerText();
     if (statusText.includes('1 snapped segment')) {
       trailA = candidateA;
