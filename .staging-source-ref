@@ -1,8 +1,8 @@
-8ea9cf9fd3c381d2d3b570aa376631d82e960c20
-purpose=PR #46 hiker-first Routes & Tracks map redesign after Ryan review; visual legend embedded in Layers; Hiking/Terrain/Aerial presets; Layers closed by default with Fine tune opacity disclosure; clickable RRGH route cards with guide and GPX links; route-start, parking/trailhead, landmark/viewpoint and verified Forest Service recreation-site markers; Search/My Location/Home controls; feet+miles and metric scale bar; county boundaries off by default and visually quieter; authoritative Forest Service wilderness/special-management/NFS land-unit context available on demand; property/legal-access warning and before-you-go link; 30-second map-reading guide plus Map nerd details; Terrain relief (LiDAR) naming; Explore/Measure/Build trail route hierarchy; decimal-degree + UTM coordinate display/copy; route filters restore Official/Mixed/Off-trail concept; optional OpenStreetMap Community / Informal Trails layer loads only on user opt-in, is visually distinct, carries attribution/access warnings, and is excluded from trail-route planner graph; explicit desktop zoom range restored; mobile double-tap zoom regression gate; production unchanged
-ci=35945908221 SUCCESS
-routes_uat=35945978951 SUCCESS
-routes_tracks_uat=35947154055 SUCCESS
-brand_uat=35945978910 SUCCESS
-analytics_uat=35945979196 SUCCESS
-roku_uat=35945978938 SUCCESS
+acef8c05d673f07cd603b738e2ce5b5985236d54
+purpose=PR #46 Routes & Tracks refinement after Ryan visual UAT; core Gorge landing/Home view fixed at center 37.825,-83.605 zoom 12; top and bottom map controls de-overlapped and normalized; RRGH routes use deterministic multicolor palette with multicolor legend swatch; RRGH routes/starts/trailheads/facilities/landmarks are always shown and no longer toggleable; Forest Service trails, Community/Informal trails and Forest Service roads default to 100% opacity; Community/Informal trails default on with Overpass public-endpoint failover (private.coffee -> overpass-api.de -> maps.mail.ru); non-private/no-access informal trails enter the planner network; Forest Service roads also enter planner snapping graph; county boundaries are fixed always-on context in a pane above basemap/trail context and below RRGH routes; Wilderness/Special Management/National Forest land units default on but remain toggleable; desktop controls reduced to Explore + Plan; Explore opens a scrollable RRGH route browser with hover highlight and click-to-center; Plan supports Measure Distance or Build Trail Route, snapped mapped-trail/road segments, straight off-trail segments within one GPX, Undo, Redo, Export GPX and Clear; Terms/Privacy reconciled; production unchanged
+ci=36021308575 SUCCESS
+routes_uat=36021602539 SUCCESS
+routes_tracks_uat=36021443899 SUCCESS
+brand_uat=36021443843 SUCCESS
+analytics_uat=36021444062 SUCCESS
+roku_uat=36021443866 SUCCESS
