@@ -225,7 +225,7 @@ async function routeDetail(browser) {
     assert.strictEqual(await page.locator('.' + swatch).count(), 1, swatch);
   }
   assert.strictEqual(await page.locator('.route-static-legend-grid .route-layer-static-row').count(), 5);
-  assert((await page.locator('.route-static-legend-grid').innerText()).includes('County boundaries'));
+  assert((await page.locator('.route-static-legend-grid').textContent()).includes('County boundaries'));
   assert.strictEqual(await page.getByText('Always shown', { exact: true }).count(), 0, 'County boundaries belong in the top symbol legend without an Always shown label');
   assert.strictEqual(await page.locator('.route-waypoint-icon').count(), 2);
   assert((await page.locator('.route-start-icon').count()) >= 1);
