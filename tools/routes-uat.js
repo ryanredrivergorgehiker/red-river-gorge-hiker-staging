@@ -281,6 +281,7 @@ async function mapControlsAndAccessibility(browser) {
   await page.locator('.route-layer-panel > summary').click();
   await page.locator('[data-map-layer="kyaerial-phase3"]').check();
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), false, 'Aerial should turn LiDAR hillshade off.');
+  await page.getByText('Fine tune layers', { exact: true }).click();
   await page.locator('[data-opacity="kyaerial-phase3"]').fill('42');
   const aerialOpacity = await page.locator('.leaflet-baseAerial-pane .leaflet-layer').first().evaluate(element => getComputedStyle(element).opacity);
   assert(Math.abs(Number(aerialOpacity) - 0.42) < 0.02);
