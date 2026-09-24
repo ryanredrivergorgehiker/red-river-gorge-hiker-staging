@@ -356,9 +356,12 @@ async function fullMap(browser) {
   assert((await page.locator('[data-coordinate-utm]').innerText()).includes('UTM'));
 
   await page.getByRole('button', { name: 'Measure distance', exact: true }).first().click();
-  await page.mouse.click(box.x + box.width * 0.40, box.y + box.height * 0.48);
-  await page.mouse.click(box.x + box.width * 0.46, box.y + box.height * 0.48);
-  await page.waitForTimeout(80);
+  await mapContainer.click({ position: { x: box.width * 0.22, y: box.height * 0.26 } });
+  await mapContainer.click({ position: { x: box.width * 0.31, y: box.height * 0.26 } });
+  await page.waitForFunction(
+    () => document.querySelector('[data-map-status]')?.textContent?.includes('Measured distance'),
+    { timeout: 3000 }
+  );
   assert((await page.locator('[data-map-status]').innerText()).includes('Measured distance'));
 
   await page.getByRole('button', { name: 'Build trail route', exact: true }).first().click();
