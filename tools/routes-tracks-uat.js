@@ -589,6 +589,10 @@ async function fullMap(browser) {
   await page.waitForTimeout(60);
   const dragStillActive = await mapContainer.getAttribute('data-plan-drag-segment');
   assert.strictEqual(dragStillActive, '1', 'Second segment drag should remain active while moving; data-plan-drag-segment=' + dragStillActive);
+  const dragMoved = await mapContainer.getAttribute('data-plan-drag-moved');
+  assert.strictEqual(dragMoved, 'true', 'Second segment drag should receive movement events; data-plan-drag-moved=' + dragMoved);
+  const previewMode = await mapContainer.getAttribute('data-plan-drag-preview-mode');
+  assert.strictEqual(previewMode, 'snap', 'Dragging to the mapped road target should preview as snapped; data-plan-drag-preview-mode=' + previewMode);
   await page.mouse.up();
   await page.waitForTimeout(250);
   const dragEnded = await mapContainer.getAttribute('data-plan-drag-segment');
