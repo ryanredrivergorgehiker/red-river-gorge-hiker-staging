@@ -53,6 +53,21 @@ const RECREATION = {
   }]
 };
 
+const OSM = {
+  version: 0.6,
+  generator: 'Overpass API',
+  elements: [{
+    type: 'way',
+    id: 123456,
+    tags: { highway: 'path', informal: 'yes', name: 'Community Path', trail_visibility: 'intermediate' },
+    geometry: [
+      { lat: 37.8181, lon: -83.5834 },
+      { lat: 37.8185, lon: -83.5828 },
+      { lat: 37.8189, lon: -83.5821 }
+    ]
+  }]
+};
+
 fs.mkdirSync(EVIDENCE, { recursive: true });
 const results = [];
 
@@ -105,6 +120,15 @@ async function installStubs(page) {
       await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify({ type: 'FeatureCollection', features: [] }) });
     }
   });
+  await page.route('https://overpass.private.coffee/**', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(OSM) })
+  );
+  await page.route('https://overpass-api.de/**', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(OSM) })
+  );
+  await page.route('https://maps.mail.ru/**', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(OSM) })
+  );
 }
 
 async function fetchBytes(page, url) {
