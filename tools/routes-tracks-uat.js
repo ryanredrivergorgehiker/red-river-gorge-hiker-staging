@@ -388,16 +388,14 @@ async function fullMapAndHeader(browser) {
     assert.strictEqual(await page.getByLabel(tripType, { exact: true }).count(), 1, tripType);
   }
 
-  const vectorPathCountBefore = await page.locator('.leaflet-map-pane svg path').count();
-  assert(vectorPathCountBefore > 0, 'Expected rendered vector paths before trip filtering.');
+  const mapContainer = page.locator('[data-rrgh-route-map]');
+  assert.strictEqual(await mapContainer.getAttribute('data-visible-route-count'), '1', 'Skybridge Arch should be visible before trip filtering.');
   await page.getByLabel('Day hikes', { exact: true }).uncheck();
   await page.waitForTimeout(100);
-  const vectorPathCountHidden = await page.locator('.leaflet-map-pane svg path').count();
-  assert(vectorPathCountHidden < vectorPathCountBefore, 'Day-hike filter should remove the Skybridge Arch route line.');
+  assert.strictEqual(await mapContainer.getAttribute('data-visible-route-count'), '0', 'Day-hike filter should hide Skybridge Arch.');
   await page.getByLabel('Day hikes', { exact: true }).check();
   await page.waitForTimeout(100);
-  const vectorPathCountRestored = await page.locator('.leaflet-map-pane svg path').count();
-  assert(vectorPathCountRestored >= vectorPathCountBefore, 'Day-hike filter should restore the Skybridge Arch route line.');
+  assert.strictEqual(await mapContainer.getAttribute('data-visible-route-count'), '1', 'Day-hike filter should restore Skybridge Arch.');
 
   await page.getByRole('button', { name: /^Advanced/ }).click();
   assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true);
