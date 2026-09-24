@@ -135,7 +135,7 @@ async function preparedContext(browser, options = {}) {
   return context;
 }
 
-async function installProviderStubs(page, providerRequests) {
+async function installProviderStubs(page, providerRequests, slowPrimaryOverpass = false) {
   page.on('request', request => {
     const url = new URL(request.url());
     if (PROVIDERS.has(url.hostname)) providerRequests.push(request.url());
@@ -176,9 +176,16 @@ async function installProviderStubs(page, providerRequests) {
     return route.abort();
   });
 
-  await page.route('https://overpass.private.coffee/**', route =>
-    route.fulfill({ status: 503, contentType: 'text/plain', body: 'temporary test outage' })
-  );
+  await page.route('https://overpass.private.coffee/**', async route => {
+    if (slowPrimaryOverpass) {
+      await new Promise(resolve => setTimeout(resolve, 6500));
+    }
+    try {
+      await route.fulfill({ status: 503, contentType: 'text/plain', body: 'temporary test outage' });
+    } catch {
+      // Expected when the application aborts the deliberately slow request.
+    }
+  });
   await page.route('https://overpass-api.de/**', route =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(OSM) })
   );
@@ -273,11 +280,26 @@ async function fullMap(browser) {
   const providerRequests = [];
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(String(error)));
-  await installProviderStubs(page, providerRequests);
+  await installProviderStubs(page, providerRequests, true);
 
   const response = await page.goto(MAIN + 'routes/map/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(response && response.ok());
   await page.waitForSelector('.leaflet-container', { timeout: 10000 });
+
+  // Regression gate: a slow optional OSM request must never block core map controls.
+  await page.waitForFunction(
+    () => document.querySelector('[data-map-status]')?.textContent?.includes('Map ready · loading Community / Informal trails'),
+    { timeout: 5000 }
+  );
+  await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-map-status]')?.textContent?.includes('Core Red River Gorge hiking view restored'),
+    { timeout: 1200 }
+  );
+  await page.getByRole('button', { name: 'Explore', exact: true }).click();
+  assert(await page.locator('[data-map-sheet="explore"]').isVisible(), 'Explore must work while OSM is still loading');
+  await page.locator('[data-map-sheet="explore"] [data-sheet-close]').click();
+
   await page.waitForFunction(() => {
     const map = document.querySelector('[data-rrgh-route-map]');
     return map?.getAttribute('data-gorge-county-count') === '4'
@@ -339,7 +361,10 @@ async function fullMap(browser) {
   assert((await page.locator('.leaflet-baseTopo-pane img.leaflet-tile').count()) > 0, 'Topo tiles should remain at close zoom above terrain relief');
 
   await page.locator('.route-layer-panel > summary').click();
-  await page.waitForTimeout(120);
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-informal-trail-source') === 'overpass-api.de',
+    { timeout: 8000 }
+  );
   assert((await page.locator('.leaflet-counties-pane canvas, .leaflet-counties-pane path').count()) > 0, 'County boundaries should always render above the basemap');
   assert(providerRequests.some(url => url.includes('EDW_Wilderness_01')));
   assert((await page.locator('.leaflet-wilderness-pane canvas, .leaflet-wilderness-pane path').count()) > 0);
