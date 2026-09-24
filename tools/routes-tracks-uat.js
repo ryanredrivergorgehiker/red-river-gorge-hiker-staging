@@ -405,7 +405,7 @@ async function mobile(browser) {
 
   await page.locator('.route-map-mobile-bar').getByRole('button', { name: 'Layers', exact: true }).click();
   assert(await page.locator('.route-layer-panel').isVisible());
-  assert(await page.getByText('Fine tune layers', { exact: true }).isVisible());
+  assert(await page.locator('.route-layer-fine-tune > summary').isVisible());
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert(overflow <= 2, 'Mobile horizontal overflow: ' + overflow);
