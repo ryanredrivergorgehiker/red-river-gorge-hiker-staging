@@ -292,7 +292,9 @@ async function mapControlsAndAccessibility(browser) {
   }, { timeout: 10000 });
 
   assert.strictEqual(await page.locator('[data-map-layer]').count(), 10);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 10);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 9);
+  assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 1);
+  assert.strictEqual(await page.locator('[data-plan-pan]').count(), 1);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.getByRole('button', { name: 'Explore', exact: true }).count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Plan', exact: true }).count(), 1);
