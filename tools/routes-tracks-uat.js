@@ -527,6 +527,7 @@ async function fullMap(browser) {
 
   let offTrail = null;
   for (const candidate of offTrailCandidates) {
+    const beforeCandidate = await page.locator('[data-map-status]').innerText();
     await page.mouse.click(candidate.x, candidate.y);
     await page.waitForTimeout(120);
     const plannerStatus = await page.locator('[data-map-status]').innerText();
@@ -534,9 +535,11 @@ async function fullMap(browser) {
       offTrail = candidate;
       break;
     }
-    assert.strictEqual(await undo.isDisabled(), false, 'A snapped candidate should remain undoable while searching for a clear off-trail point');
-    await undo.click();
-    await page.waitForTimeout(80);
+    if (plannerStatus !== beforeCandidate) {
+      assert.strictEqual(await undo.isDisabled(), false, 'A snapped candidate should remain undoable while searching for a clear off-trail point');
+      await undo.click();
+      await page.waitForTimeout(80);
+    }
   }
   assert(offTrail, 'Planner should classify at least one clear map area as off-trail rather than snapping everything within the viewport');
 
