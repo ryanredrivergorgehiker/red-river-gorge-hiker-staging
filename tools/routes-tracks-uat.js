@@ -716,7 +716,9 @@ async function legal(browser) {
   ]) assert(body.includes(expected), expected);
 
   response = await page.goto(MAIN + 'copyright-and-terms/#outdoor-safety-location-disclaimer', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  assert(response && response.ok());
+  // A hash-only navigation on the page already loaded above is a same-document
+  // navigation, so Playwright may correctly return null instead of an HTTP response.
+  assert(!response || response.ok());
   await page.waitForTimeout(250);
   assert.strictEqual(await page.locator('#outdoor-safety-location-disclaimer').count(), 1);
   assert.strictEqual(await page.locator('#outdoor-safety-location-disclaimer > h2').innerText(), 'Outdoor Safety and Location Disclaimer');
