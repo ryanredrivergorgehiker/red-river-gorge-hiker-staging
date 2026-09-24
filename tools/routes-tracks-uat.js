@@ -295,14 +295,14 @@ async function fullMap(browser) {
   }
 
   const startZoom = Number(await mapContainer.getAttribute('data-current-zoom'));
-  await page.locator('.leaflet-control-zoom-out').click({ force: true });
-  await page.waitForFunction(
-    expected => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-current-zoom')) < expected,
-    startZoom,
-    { timeout: 3000 }
-  );
+  const zoomOutControl = page.locator('.leaflet-control-zoom-out');
+  const zoomOutClassBefore = await zoomOutControl.getAttribute('class');
+  await zoomOutControl.click({ force: true });
+  await page.waitForTimeout(650);
   const zoomedOut = Number(await mapContainer.getAttribute('data-current-zoom'));
-  assert(zoomedOut < startZoom, 'Desktop minus control must zoom out');
+  const zoomOutClassAfter = await zoomOutControl.getAttribute('class');
+  console.log('[ZOOM DEBUG]', JSON.stringify({ startZoom, zoomedOut, zoomOutClassBefore, zoomOutClassAfter }));
+  assert(zoomedOut < startZoom, 'Desktop minus control must zoom out: ' + JSON.stringify({ startZoom, zoomedOut, zoomOutClassBefore, zoomOutClassAfter }));
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   assert((await page.locator('[data-map-status]').innerText()).includes('overview restored'));
 
