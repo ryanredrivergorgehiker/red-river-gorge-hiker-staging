@@ -269,7 +269,7 @@ async function routeDetail(browser) {
 }
 
 async function fullMap(browser) {
-  const context = await preparedContext(browser, { viewport: { width: 1440, height: 1000 } });
+  const context = await preparedContext(browser, { viewport: { width: 1440, height: 1300 } });
   await context.grantPermissions(['geolocation'], { origin: 'https://redrivergorgehiker.com:8443' });
   await context.setGeolocation({ latitude: 37.81886, longitude: -83.57903, accuracy: 18 });
 
@@ -569,6 +569,10 @@ async function fullMap(browser) {
     await page.getByRole('button', { name: 'Clear', exact: true }).click();
     const candidateA = { x: trailABase.x + dx, y: trailABase.y + dy };
     const candidateB = { x: trailBBase.x + dx, y: trailBBase.y + dy };
+    const insideMap = point =>
+      point.x >= homeBox.x + 4 && point.x <= homeBox.x + homeBox.width - 4
+      && point.y >= homeBox.y + 4 && point.y <= homeBox.y + homeBox.height - 4;
+    if (!insideMap(candidateA) || !insideMap(candidateB)) continue;
     await page.mouse.click(candidateA.x, candidateA.y);
     await page.keyboard.press('Escape');
     await page.mouse.click(candidateB.x, candidateB.y);
