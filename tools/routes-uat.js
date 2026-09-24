@@ -249,6 +249,16 @@ async function routeArtifactsAndContent(browser) {
   assert(dataset.distribution.contentUrl.endsWith('/downloads/routes/Skybridge_Arch_APPROVED_v1.gpx'));
   assert(dataset.license.endsWith('/copyright-and-terms/#gpx-download-license'));
 
+  const osmCache = JSON.parse(await fetchText(page, MAIN + 'data/map/osm-informal-trails.geojson'));
+  assert.strictEqual(osmCache.type, 'FeatureCollection');
+  assert(osmCache.features.length > 100, 'OSM cache should contain substantial community trail coverage');
+  assert(osmCache.features.every(feature => {
+    const coords = feature.geometry && feature.geometry.coordinates;
+    if (!Array.isArray(coords) || !coords.length) return false;
+    const [lon, lat] = coords[0];
+    return lat >= 37.3 && lat <= 38.2 && lon >= -84.1 && lon <= -83.1;
+  }), 'OSM cache should contain Kentucky-area geometry only');
+
   const sitemapIndex = await fetchText(page, MAIN + 'sitemap-index.xml');
   assert(sitemapIndex.includes('sitemap-0.xml'));
   const sitemap = await fetchText(page, MAIN + 'sitemap-0.xml');
@@ -336,7 +346,7 @@ async function legalExploreAndMobile(browser) {
   assert(body.includes('Interactive Maps and Map-Data Services'));
   assert(body.includes('default map layers begin loading immediately'));
   assert(body.includes('USDA Forest Service Enterprise Data Warehouse'));
-  assert(body.includes('public Overpass API service'));
+  assert(body.includes('RRGH-hosted cache derived from OpenStreetMap data'));
   assert(body.includes('If you choose “My location,”'));
 
   await page.goto(MAIN + 'copyright-and-terms/', { waitUntil: 'domcontentloaded', timeout: 60000 });

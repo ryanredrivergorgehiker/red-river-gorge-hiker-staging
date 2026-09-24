@@ -10,7 +10,7 @@ const SHARED = 'rrgh-analytics-consent-v1';
 const REGION = 'rrgh-region-country-v1';
 const GPX_SHA = '2469c85ebaddd3e701ba6dc8eea3664d90a0667dcd86f2aab43ae1445986830d';
 const GEO_SHA = '123fdb57e1142299f86c714367cc466b70f18fa90cfbaabb92b0d9ced157dc66';
-const PROVIDERS = new Set(['kygisserver.ky.gov', 'basemap.nationalmap.gov', 'apps.fs.usda.gov', 'overpass.private.coffee', 'overpass-api.de', 'maps.mail.ru']);
+const PROVIDERS = new Set(['kygisserver.ky.gov', 'basemap.nationalmap.gov', 'apps.fs.usda.gov', 'overpass.maprva.org', 'overpass.private.coffee', 'overpass-api.de', 'maps.mail.ru']);
 
 const TRANSPARENT_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X3JmAAAAAElFTkSuQmCC',
@@ -176,22 +176,14 @@ async function installProviderStubs(page, providerRequests, slowPrimaryOverpass 
     return route.abort();
   });
 
-  await page.route('https://overpass.private.coffee/**', async route => {
-    if (slowPrimaryOverpass) {
-      await new Promise(resolve => setTimeout(resolve, 6500));
-    }
-    try {
-      await route.fulfill({ status: 503, contentType: 'text/plain', body: 'temporary test outage' });
-    } catch {
-      // Expected when the application aborts the deliberately slow request.
-    }
-  });
-  await page.route('https://overpass-api.de/**', route =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(OSM) })
-  );
-  await page.route('https://maps.mail.ru/**', route =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(OSM) })
-  );
+  for (const host of [
+    'https://overpass.maprva.org/**',
+    'https://overpass.private.coffee/**',
+    'https://overpass-api.de/**',
+    'https://maps.mail.ru/**'
+  ]) {
+    await page.route(host, route => route.abort('failed'));
+  }
 }
 
 async function fetchBytes(page, url) {
@@ -232,6 +224,8 @@ async function routeDetail(browser) {
   for (const swatch of ['swatch-route','swatch-usfs-trail','swatch-usfs-road','swatch-county','swatch-landmark','swatch-start','swatch-trailhead','swatch-informal']) {
     assert.strictEqual(await page.locator('.' + swatch).count(), 1, swatch);
   }
+  assert.strictEqual(await page.locator('.route-static-legend-grid .route-layer-static-row').count(), 4);
+  assert.strictEqual(await page.getByText('Always shown', { exact: true }).count(), 1, 'Only county context may retain the Always shown note');
   assert.strictEqual(await page.locator('.route-waypoint-icon').count(), 2);
   assert((await page.locator('.route-start-icon').count()) >= 1);
   assert((await page.locator('.route-parking-icon').count()) >= 1);
@@ -260,7 +254,9 @@ async function routeDetail(browser) {
   const utilityButtons = await page.locator('.route-map-utility-tools button').evaluateAll(nodes => nodes.map(node => {
     const r = node.getBoundingClientRect(); return { left:r.left, right:r.right, top:r.top, bottom:r.bottom };
   }));
-  for (let i = 1; i < utilityButtons.length; i += 1) assert(utilityButtons[i].left >= utilityButtons[i-1].right - 1, 'Top utility buttons should not overlap');
+  for (let i = 1; i < utilityButtons.length; i += 1) {
+    assert(Math.abs(utilityButtons[i].left - utilityButtons[i-1].right) <= 2, 'Top utilities should form one connected control bar');
+  }
   const toolsBox = await page.locator('.route-map-tools-desktop').boundingBox();
   const statusBox = await page.locator('[data-map-status]').boundingBox();
   assert(toolsBox && statusBox && statusBox.y + statusBox.height <= toolsBox.y + 2, 'Bottom status should sit above Explore/Plan controls');
@@ -286,19 +282,21 @@ async function fullMap(browser) {
   assert(response && response.ok());
   await page.waitForSelector('.leaflet-container', { timeout: 10000 });
 
-  // Regression gate: a slow optional OSM request must never block core map controls.
-  await page.waitForFunction(
-    () => document.querySelector('[data-map-status]')?.textContent?.includes('Map ready · loading Community / Informal trails'),
-    { timeout: 5000 }
-  );
+  // Regression gate: core controls work immediately and the same-origin OSM cache
+  // succeeds even when every public Overpass endpoint is unavailable.
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   await page.waitForFunction(
     () => document.querySelector('[data-map-status]')?.textContent?.includes('Core Red River Gorge hiking view restored'),
-    { timeout: 1200 }
+    { timeout: 1500 }
   );
   await page.getByRole('button', { name: 'Explore', exact: true }).click();
-  assert(await page.locator('[data-map-sheet="explore"]').isVisible(), 'Explore must work while OSM is still loading');
-  await page.locator('[data-map-sheet="explore"] [data-sheet-close]').click();
+  assert(await page.locator('[data-map-sheet="explore"]').isVisible(), 'Explore must open on first click');
+  await page.getByRole('button', { name: 'Explore', exact: true }).click();
+  assert(await page.locator('[data-map-sheet="explore"]').isHidden(), 'Explore must close on second click');
+  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  assert(await page.locator('[data-map-sheet="plan"]').isVisible(), 'Plan must open on first click');
+  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  assert(await page.locator('[data-map-sheet="plan"]').isHidden(), 'Plan must close on second click');
 
   await page.waitForFunction(() => {
     const map = document.querySelector('[data-rrgh-route-map]');
@@ -338,7 +336,7 @@ async function fullMap(browser) {
   }
 
   const startZoom = Number(await mapContainer.getAttribute('data-current-zoom'));
-  assert.strictEqual(startZoom, 12, 'Core Gorge landing view should start at zoom 12');
+  assert.strictEqual(startZoom, 13, 'Core Gorge landing view should start at zoom 13');
   await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
   await page.waitForFunction(
     expected => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-current-zoom')) < expected,
@@ -349,7 +347,7 @@ async function fullMap(browser) {
   assert(zoomedOut < startZoom, 'Desktop minus control must zoom out');
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   assert((await page.locator('[data-map-status]').innerText()).includes('Core Red River Gorge hiking view restored'));
-  assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 12);
+  assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 13);
 
   await page.getByRole('button', { name: /^Terrain/ }).click();
   assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), true);
@@ -362,15 +360,15 @@ async function fullMap(browser) {
 
   await page.locator('.route-layer-panel > summary').click();
   await page.waitForFunction(
-    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-informal-trail-source') === 'overpass-api.de',
-    { timeout: 8000 }
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-informal-trail-source') === 'rrgh-cache',
+    { timeout: 10000 }
   );
   assert((await page.locator('.leaflet-counties-pane canvas, .leaflet-counties-pane path').count()) > 0, 'County boundaries should always render above the basemap');
   assert(providerRequests.some(url => url.includes('EDW_Wilderness_01')));
   assert((await page.locator('.leaflet-wilderness-pane canvas, .leaflet-wilderness-pane path').count()) > 0);
-  assert(providerRequests.some(url => url.includes('overpass.private.coffee')), 'Primary Overpass endpoint should be attempted');
-  assert(providerRequests.some(url => url.includes('overpass-api.de')), 'Fallback Overpass endpoint should be used after simulated primary failure');
-  assert.strictEqual(await mapContainer.getAttribute('data-informal-trail-source'), 'overpass-api.de');
+  assert(!providerRequests.some(url => /overpass/i.test(url)), 'Normal informal-trail loading must use the RRGH cache, not live Overpass');
+  assert.strictEqual(await mapContainer.getAttribute('data-informal-trail-source'), 'rrgh-cache');
+  assert(Number(await mapContainer.getAttribute('data-informal-trail-count')) > 100, 'Cached community trail layer should contain substantial Gorge trail coverage');
   assert((await page.locator('.leaflet-informalTrails-pane canvas, .leaflet-informalTrails-pane path').count()) > 0);
   assert(Number(await mapContainer.getAttribute('data-planner-node-count')) > 1, 'Planner graph should include mapped trail/road network');
 
