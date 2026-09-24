@@ -547,7 +547,10 @@ async function fullMap(browser) {
   await page.mouse.click(offMid.x, offMid.y, { button: 'right' });
   await page.waitForTimeout(120);
   let editStatus = await page.locator('[data-map-status]').innerText();
-  assert(editStatus.includes('Planned segment deleted'), 'Right-click should delete the selected segment; status=' + editStatus);
+  assert(
+    editStatus.includes('1 snapped segment(s), 0 off-trail segment(s)'),
+    'Right-click should remove the selected off-trail leg and leave the original snapped leg; status=' + editStatus
+  );
   await undo.click();
   await page.waitForTimeout(120);
   editStatus = await page.locator('[data-map-status]').innerText();
