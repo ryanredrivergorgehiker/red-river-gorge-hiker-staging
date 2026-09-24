@@ -325,6 +325,20 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-opacity="usfs-roads"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-map-layer="ky-counties"]').count(), 0);
   assert.strictEqual(await page.locator('.leaflet-control-scale').count(), 1);
+
+  const cacheData = await page.evaluate(async () => {
+    const response = await fetch('/data/map/osm-informal-trails.geojson', { cache: 'no-cache' });
+    if (!response.ok) throw new Error('OSM cache HTTP ' + response.status);
+    return response.json();
+  });
+  assert(cacheData.features.length > 100, 'RRGH OSM cache should contain substantial community trail coverage');
+  const [south, west, north, east] = cacheData.rrgh_cache.bbox;
+  for (const feature of cacheData.features) {
+    for (const [lon, lat] of feature.geometry.coordinates) {
+      assert(lat >= south && lat <= north && lon >= west && lon <= east, 'Cached OSM geometry must remain inside the Gorge cache bounds');
+    }
+  }
+
   assert.strictEqual(await page.getByRole('button', { name: 'Zoom in', exact: true }).count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Zoom out', exact: true }).count(), 1);
 
@@ -498,7 +512,7 @@ async function legal(browser) {
     'GPS and device-location estimates can be inaccurate',
     'Property and parcel boundaries are not displayed',
     'Community / Informal Trails',
-    'route planner may snap to displayed informal paths',
+    'route planner may snap to displayed community/informal paths',
     'Open Database License (ODbL)'
   ]) assert(body.includes(expected), expected);
 
