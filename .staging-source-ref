@@ -1,8 +1,8 @@
-cbcf2813bacd05817ec358151c56556ed2cbc053
-purpose=PR #46 redesigned Routes & Tracks staging candidate after Ryan visual-UAT rejection; immediate interactive map; stackable topo/aerial/USGS/LiDAR layers with per-layer opacity; live USDA Forest Service trails + roads; Kentucky county boundaries; RRGH routes + public landmarks/viewpoints; measurement + trail-snap planning; public-facing workflow/admin language removed; header stacking fixed; parcel/private-property disabled; production unchanged
-ci=35935149281 SUCCESS
-routes_uat=35935297529 SUCCESS
-routes_tracks_uat=35935416701 SUCCESS
-brand_uat=35935297442 SUCCESS
-analytics_uat=35935297362 SUCCESS
-roku_uat=35935297378 SUCCESS
+c8ffb6b43d041f7df68145c0bfaa4e5770d908e6
+purpose=PR #46 refined Routes & Tracks planning-map candidate after Ryan visual UAT feedback; full-width planning layout; Simple/Advanced/Aerial opacity presets; Day hike/Backpacking/Multi-day route filters; LiDAR below topo; Aerial and LiDAR mutually exclusive; tighter Gorge default extent; straight-line Measure separated from trail-following Plan; denser trail snap graph; client-side planned-route GPX save; live USDA Forest Service trails/roads + Kentucky county boundaries; production unchanged
+ci=35936522825 SUCCESS
+routes_uat=35936681517 SUCCESS
+routes_tracks_uat=35937105350 SUCCESS
+brand_uat=35936681481 SUCCESS
+analytics_uat=35936681516 SUCCESS
+roku_uat=35936681371 SUCCESS
