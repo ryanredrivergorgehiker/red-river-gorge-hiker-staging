@@ -526,33 +526,28 @@ async function fullMap(browser) {
   assert.strictEqual(await page.getByRole('button', { name: 'Follow mapped trails & roads', exact: true }).count(), 0);
   assert.strictEqual(await page.getByRole('button', { name: 'Off-trail straight line', exact: true }).count(), 0);
 
-  const projectLatLng = (lat, lng, zoom, mapBox) => {
-    const scale = 256 * Math.pow(2, zoom);
-    const project = (plat, plng) => {
-      const sin = Math.sin(plat * Math.PI / 180);
-      return {
-        x: (plng + 180) / 360 * scale,
-        y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale
-      };
-    };
-    const northWest = project(37.878846, -83.744659);
-    const point = project(lat, lng);
-    return {
-      x: mapBox.x + (point.x - northWest.x),
-      y: mapBox.y + (point.y - northWest.y)
-    };
-  };
-
   const homeBox = await mapContainer.boundingBox();
   assert(homeBox);
   const homeZoom = Number(await mapContainer.getAttribute('data-current-zoom'));
   assert.strictEqual(homeZoom, 13);
 
-  // Click near, not directly on, the stubbed Forest Service road. These
-  // points are inside the planner's snap tolerance but avoid popup-bearing linework,
-  // exercising the intended "near a trail/road = snap" interaction.
-  const trailA = projectLatLng(37.81462, -83.58918, homeZoom, homeBox);
-  const trailB = projectLatLng(37.81612, -83.58482, homeZoom, homeBox);
+  // Derive screen points from the actual rendered Forest Service road, then offset
+  // slightly beside the line. This exercises the requested near-road snap tolerance
+  // without relying on a stale hard-coded map-center projection.
+  const roadPath = page.locator('.leaflet-roads-pane path').first();
+  assert.strictEqual(await roadPath.count(), 1, 'Stubbed Forest Service road should render as an SVG path');
+  const roadScreenPoint = async fraction => roadPath.evaluate((path, fraction) => {
+    const length = path.getTotalLength();
+    const point = path.getPointAtLength(length * fraction);
+    const matrix = path.getScreenCTM();
+    if (!matrix) return null;
+    const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix);
+    return { x: screen.x + 7, y: screen.y + 7 };
+  }, fraction);
+
+  const trailA = await roadScreenPoint(0.18);
+  const trailB = await roadScreenPoint(0.62);
+  assert(trailA && trailB);
 
   await page.mouse.click(trailA.x, trailA.y);
   await page.mouse.click(trailB.x, trailB.y);
