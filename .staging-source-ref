@@ -1,8 +1,9 @@
-76129e3050ce536d5ea84344387877c8cefab9bd
-purpose=Routes map visual/navigation refinement after Ryan staging review; Forest Service trails and roads now use rounded pill-style dashed rendering with a shared dark casing while retaining existing cyan/yellow center colors; RRGH routes remain solid; Before-you-go link targets Current Conditions and the Search & Rescue page actively realigns that deep link after late layout/font shifts so Plan before you go / Current conditions are part of the route stays in view; production unchanged
-source_ci=36168704555 SUCCESS attempt 2 after transient USGS 3DEP 502 on attempt 1
-routes_uat=36168895191 SUCCESS
-routes_tracks_uat=36169176728 SUCCESS
-analytics_uat=36168895252 SUCCESS
-brand_uat=36168895193 SUCCESS
-roku_uat=36168895259 SUCCESS
+3858f80b35518843027f59696fe1b50a0d2cf351
+purpose=Add optional RRGH-hosted Sunrise / Sunset potential overlay derived from USGS 3DEP bare-earth terrain; coral sunrise and indigo sunset seasonal potential; off by default; local static asset; share-state compatible; disclosures updated; production unchanged
+source_ci=36194143125 SUCCESS
+routes_uat=36200982225 SUCCESS
+routes_tracks_uat=36201261903 SUCCESS
+analytics_uat=36200802017 SUCCESS
+brand_uat=36200802015 SUCCESS
+roku_uat=36200802018 SUCCESS
+generator=36193535145 SUCCESS
