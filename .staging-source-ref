@@ -6,3 +6,4 @@ routes_tracks_uat=36166305809 SUCCESS
 analytics_uat=36166305885 SUCCESS
 brand_uat=36166305949 SUCCESS
 roku_uat=36166305843 SUCCESS
+deploy_retry_reason=prior deploy 36166627256 hit transient USGS 3DEP HTTP 502; retrying same exact source
