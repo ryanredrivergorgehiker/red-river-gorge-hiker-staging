@@ -100,29 +100,71 @@ async function desktopExplore(browser) {
 
   const panel = menu.locator('.nav-panel-explore');
   const sections = panel.locator('.nav-explore-section');
-  assert.strictEqual(await sections.count(), 8);
+  assert.strictEqual(await sections.count(), 7);
   assert.strictEqual(await panel.locator('.nav-explore-title').count(), 0);
 
-  const stories = sections.filter({ hasText: 'Stories' }).first();
+  const trailsAndGuides = panel.locator('.nav-explore-section-trails-and-guides');
+  const camping = panel.locator('.nav-explore-section-camping');
+  const currentConditions = panel.locator('.nav-explore-section-current-conditions');
+  const landforms = panel.locator('.nav-explore-section-landforms');
+  const stories = panel.locator('.nav-explore-section-stories');
+  const sarSection = panel.locator('.nav-explore-section-search-and-rescue');
+  const hikingSafety = panel.locator('.nav-explore-section-hiking-safety');
+
+  for (const section of [trailsAndGuides, camping, currentConditions, landforms, stories, sarSection, hikingSafety]) {
+    assert.strictEqual(await section.count(), 1);
+  }
+  assert.strictEqual(await trailsAndGuides.getByText('Trails and Guides', { exact: true }).count(), 1);
+  assert.strictEqual(await panel.getByText('Trails', { exact: true }).count(), 0);
+  assert.strictEqual(await panel.getByText('Maps & Guides', { exact: true }).count(), 0);
+
+  const layout = await page.evaluate(() => {
+    const read = (selector) => {
+      const element = document.querySelector(selector);
+      if (!element) return null;
+      const style = getComputedStyle(element);
+      return {
+        columnStart: style.gridColumnStart,
+        rowStart: style.gridRowStart,
+        rowEnd: style.gridRowEnd
+      };
+    };
+    return {
+      trails: read('.desktop-nav .nav-explore-section-trails-and-guides'),
+      camping: read('.desktop-nav .nav-explore-section-camping'),
+      current: read('.desktop-nav .nav-explore-section-current-conditions'),
+      landforms: read('.desktop-nav .nav-explore-section-landforms'),
+      stories: read('.desktop-nav .nav-explore-section-stories'),
+      sar: read('.desktop-nav .nav-explore-section-search-and-rescue'),
+      safety: read('.desktop-nav .nav-explore-section-hiking-safety')
+    };
+  });
+  assert.deepStrictEqual(
+    [layout.trails?.columnStart, layout.camping?.columnStart, layout.current?.columnStart, layout.landforms?.columnStart, layout.stories?.columnStart, layout.sar?.columnStart, layout.safety?.columnStart],
+    ['1', '2', '2', '3', '3', '4', '4']
+  );
+  assert.deepStrictEqual(
+    [layout.trails?.rowStart, layout.camping?.rowStart, layout.current?.rowStart, layout.landforms?.rowStart, layout.stories?.rowStart, layout.sar?.rowStart, layout.safety?.rowStart],
+    ['1', '1', '2', '1', '2', '1', '2']
+  );
+  assert(['span 2', '3'].includes(layout.trails?.rowEnd), `Trails and Guides does not span two rows: ${layout.trails?.rowEnd}`);
+
   const storyLinks = stories.locator('a');
   assert.strictEqual(await storyLinks.count(), 6);
   assert((await storyLinks.first().getAttribute('href')).includes('/stories/lilis-leap/'));
   assert.strictEqual(await stories.getByText('View All Stories', { exact: true }).count(), 0);
 
-  const sarSection = sections.filter({ hasText: 'Search & Rescue' }).first();
   assert.strictEqual(await sarSection.locator('a[href*="kyem.ky.gov"]').count(), 0);
   assert(await sarSection.locator('a[href="https://www.pocosar.org/"]').count() === 1);
 
-  const trailsSection = sections.filter({ hasText: 'Trails' }).first();
-  const exploreAll = panel.getByRole('link', { name: 'EXPLORE ALL', exact: true });
-  const trailsBox = await trailsSection.boundingBox();
+  const exploreAll = trailsAndGuides.getByRole('link', { name: 'EXPLORE ALL', exact: true });
+  assert.strictEqual(await exploreAll.count(), 1);
+  assert.strictEqual(await panel.getByRole('link', { name: 'EXPLORE ALL', exact: true }).count(), 1);
+  const lastTrailsLinkBox = await trailsAndGuides.locator('.nav-explore-links a').last().boundingBox();
   const exploreAllBox = await exploreAll.boundingBox();
-  const panelBox = await panel.boundingBox();
-  assert(trailsBox && exploreAllBox && panelBox);
-  const trailsToExploreAllGap = exploreAllBox.y - (trailsBox.y + trailsBox.height);
-  const exploreAllBottomGap = (panelBox.y + panelBox.height) - (exploreAllBox.y + exploreAllBox.height);
-  assert(trailsToExploreAllGap >= 0 && trailsToExploreAllGap <= 42, `desktop Explore All gap after Trails is too large: ${trailsToExploreAllGap}`);
-  assert(exploreAllBottomGap >= 12 && exploreAllBottomGap <= 28, `desktop Explore All bottom gap unexpected: ${exploreAllBottomGap}`);
+  assert(lastTrailsLinkBox && exploreAllBox);
+  const linkToExploreAllGap = exploreAllBox.y - (lastTrailsLinkBox.y + lastTrailsLinkBox.height);
+  assert(linkToExploreAllGap >= 8 && linkToExploreAllGap <= 36, `desktop Explore All gap after Trails and Guides links is unexpected: ${linkToExploreAllGap}`);
 
   const shopMenu = page.locator('.desktop-nav .nav-details-shop');
   await shopMenu.locator(':scope > summary').hover();
@@ -132,7 +174,6 @@ async function desktopExplore(browser) {
   assert.strictEqual(await shopMenu.getByText('Baby One-Pieces', { exact: true }).count(), 0);
   assert.strictEqual(await shopMenu.getByText("Kid's T-Shirts", { exact: true }).count(), 0);
 
-  const landforms = sections.filter({ hasText: 'Landforms' }).first();
   const ext = landforms.locator('a[href="https://redrivergorgearches.com/"]');
   assert.strictEqual(await ext.getAttribute('target'), '_blank');
   assert((await ext.getAttribute('rel') || '').includes('noopener'));
