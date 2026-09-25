@@ -1,8 +1,8 @@
-6f95f65b4f9974ba1ee61134af0829931297ef9b
-purpose=Routes map refinement after Ryan visual review; community/informal trails use a neutral light dashed center with dark casing instead of wilderness-magenta; planner adds Kentucky 911 road centerlines to the existing Forest Service/trail graph so hiking routes can follow mapped state/local roads such as KY 715 while excluding limited-access road classes; Wilderness label is National Forest Wilderness; coordinates are deliberate via desktop right-click or mobile press-and-hold with an explicit dismiss control; production unchanged
-source_ci=36158659811 SUCCESS
-routes_uat=36158705326 SUCCESS
-routes_tracks_uat=36163279859 SUCCESS
-analytics_uat=36158705355 SUCCESS
-brand_uat=36158705337 SUCCESS
-roku_uat=36158705385 SUCCESS
+3b943e4f9380492f14e578c558267231fd3c2e99
+purpose=Routes map visual/navigation refinement; Forest Service trails remain cyan but use dashed 8/5 styling; Forest Service roads remain yellow but use dashed 12/6 styling; coordinate Copy/X actions stay on one row with X immediately to the right and the action cluster left-aligned; Before-you-go link targets Search & Rescue Current Conditions section; production unchanged
+source_ci=36166182692 SUCCESS
+routes_uat=36166305914 SUCCESS
+routes_tracks_uat=36166305809 SUCCESS
+analytics_uat=36166305885 SUCCESS
+brand_uat=36166305949 SUCCESS
+roku_uat=36166305843 SUCCESS
