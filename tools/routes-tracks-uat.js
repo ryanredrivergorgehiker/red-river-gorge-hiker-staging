@@ -826,6 +826,7 @@ async function fullMap(browser) {
     input.checked = false;
     input.dispatchEvent(new Event('change', { bubbles: true }));
   });
+  await kyTopoToggle.check();
   await page.locator('[data-opacity="kytopo"]').evaluate(input => {
     input.value = '73';
     input.dispatchEvent(new Event('input', { bubbles: true }));
