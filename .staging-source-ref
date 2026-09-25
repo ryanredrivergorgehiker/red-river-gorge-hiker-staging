@@ -1,7 +1,8 @@
-204928cee18683741193c394048c1b9d6db65e4d
-purpose=Routes map Share refinement and Explore menu reflow; combine Trails and Maps & Guides into Trails and Guides with approved four-column desktop order; add stateful map Share control beside Plan on desktop and mobile; rename Map nerd details to Advanced Map Details; preserve selected route, map center/zoom, preset/custom layer state, route filters, and selected route in shareable permalink; production unchanged
-routes_uat=36088124366 SUCCESS
-routes_tracks_uat=36088307413 SUCCESS
-analytics_uat=36088124302 SUCCESS
-brand_uat=36088161532 SUCCESS
-roku_uat=36088124275 SUCCESS
+fc4fa59ba623c5f5d148387475d540b5949c3ace
+purpose=Routes map planning refinement; Hiking defaults to USGS Topo only among base/terrain layers; adaptive map scale under utility controls; planner snapping strengthened across Forest Service roads plus official and community/informal trails; community/informal trail dash changed to high-contrast magenta; Measure and Build Plan show on-map segment distances plus live distance/elevation stats from USGS 3DEP; Privacy updated for planning elevation requests; production unchanged
+source_ci=36152105513 SUCCESS
+routes_uat=36152386040 SUCCESS
+routes_tracks_uat=36153119783 SUCCESS
+analytics_uat=36152386067 SUCCESS
+brand_uat=36152385969 SUCCESS
+roku_uat=36152386125 SUCCESS
