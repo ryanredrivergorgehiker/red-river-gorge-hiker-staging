@@ -1,9 +1,8 @@
-3b943e4f9380492f14e578c558267231fd3c2e99
-purpose=Routes map visual/navigation refinement; Forest Service trails remain cyan but use dashed 8/5 styling; Forest Service roads remain yellow but use dashed 12/6 styling; coordinate Copy/X actions stay on one row with X immediately to the right and the action cluster left-aligned; Before-you-go link targets Search & Rescue Current Conditions section; production unchanged
-source_ci=36166182692 SUCCESS
-routes_uat=36166305914 SUCCESS
-routes_tracks_uat=36166305809 SUCCESS
-analytics_uat=36166305885 SUCCESS
-brand_uat=36166305949 SUCCESS
-roku_uat=36166305843 SUCCESS
-deploy_retry_reason=prior deploy 36166627256 hit transient USGS 3DEP HTTP 502; retrying same exact source
+76129e3050ce536d5ea84344387877c8cefab9bd
+purpose=Routes map visual/navigation refinement after Ryan staging review; Forest Service trails and roads now use rounded pill-style dashed rendering with a shared dark casing while retaining existing cyan/yellow center colors; RRGH routes remain solid; Before-you-go link targets Current Conditions and the Search & Rescue page actively realigns that deep link after late layout/font shifts so Plan before you go / Current conditions are part of the route stays in view; production unchanged
+source_ci=36168704555 SUCCESS attempt 2 after transient USGS 3DEP 502 on attempt 1
+routes_uat=36168895191 SUCCESS
+routes_tracks_uat=36169176728 SUCCESS
+analytics_uat=36168895252 SUCCESS
+brand_uat=36168895193 SUCCESS
+roku_uat=36168895259 SUCCESS
