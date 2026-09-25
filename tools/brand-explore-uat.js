@@ -437,7 +437,9 @@ async function exploreVisual(browser) {
       assert(overflow <= 2, `${spec[0]} horizontal overflow on ${route}: ${overflow}`);
     }
     await page.goto(MAIN + 'explore/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-    assert.strictEqual(await page.locator('.explore-card').count(), 8);
+    assert.strictEqual(await page.locator('.explore-card').count(), 7);
+    assert.strictEqual(await page.getByText('Trails and Guides', { exact: true }).count(), 1);
+    assert.strictEqual(await page.getByText('Maps & Guides', { exact: true }).count(), 0);
     await shot(page, `${spec[0]}-explore-hub`);
     await page.goto(MAIN + 'search-and-rescue/', { waitUntil: 'domcontentloaded', timeout: 60000 });
     await shot(page, `${spec[0]}-sar-leg-dec-0027`);
