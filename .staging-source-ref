@@ -1,8 +1,8 @@
-9e4ab44a103b77825dc71f6ca4e37a854b59161f
-purpose=Routes map UAT refinement after Ryan review; Home/initial full-map framing anchored by approved northwest point 37.878846,-83.744659 at zoom 13; Wilderness remains default-on for Hiking and Terrain and uses a full-opacity checkbox instead of a fine-tune slider; Aerial disables Kentucky Topo, USGS Topo, and LiDAR opacity sliders; Aerial switches Wilderness, special-management, and National Forest land-unit linework/legend to brighter high-contrast colors and restores normal styling when Aerial is off; Build trail route includes an explicit Pan map/Resume route mode that pans without adding route points; production unchanged
-source_ci=36072661036 SUCCESS
-routes_uat=36072717577 SUCCESS
-routes_tracks_uat=36073346713 SUCCESS
-analytics_uat=36072717652 SUCCESS
-brand_uat=36072717519 SUCCESS
-roku_uat=36072717557 SUCCESS
+65c23bb9b12660b5bd86672a173c8f87bde5fe05
+purpose=Routes map UAT refinement after Ryan review; remove redundant Wilderness full-opacity control while keeping Wilderness boundaries default-on; remove planner Pan map/Resume route toggle; show a four-arrow pan pad directly under Search only while Build trail route is active so arrow panning does not interrupt route building; add temporary nonproduction-only Copy current map view control that copies center, zoom, northwest, southeast, and viewport dimensions for exact Home framing approval; preserve prior aerial slider-disable/high-contrast context behavior; production unchanged
+source_ci=36079109394 SUCCESS
+routes_uat=36079177129 SUCCESS
+routes_tracks_uat=36079398698 SUCCESS
+analytics_uat=36079177153 SUCCESS
+brand_uat=36079177097 SUCCESS
+roku_uat=36079177137 SUCCESS
