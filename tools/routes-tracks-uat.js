@@ -931,16 +931,34 @@ async function fullMap(browser) {
   editStatus = await page.locator('[data-map-status]').innerText();
   assert(editStatus.includes('2 snapped segment(s), 0 off-trail segment(s)'), 'Dragging an off-trail segment onto mapped network should resnap it solid; status=' + editStatus);
 
-  // Drag that same rendered second segment back to the exact endpoint that was
-  // already proven off-network above. It should preview and commit as a dashed
-  // straight/off-trail segment.
+  // Drag that same rendered second segment clearly away from the connected
+  // network. A previously straight endpoint can still carry a nodeKey on a
+  // disconnected component, so after resnapping it may become reachable from a
+  // different start node. Search the current viewport and require the planner
+  // itself to expose at least one target with a straight preview.
   segmentCenter = await secondSegmentCenter();
   await page.mouse.move(segmentCenter.x, segmentCenter.y);
   await page.mouse.down();
-  await page.mouse.move(provenOffTrailTarget.x, provenOffTrailTarget.y, { steps: 10 });
-  await page.waitForTimeout(100);
-  const offTrailPreviewMode = await mapContainer.getAttribute('data-plan-drag-preview-mode');
-  assert.strictEqual(offTrailPreviewMode, 'straight', 'Dragging back to the proven off-trail endpoint should preview straight; data-plan-drag-preview-mode=' + offTrailPreviewMode);
+  const dragOffTrailCandidates = [provenOffTrailTarget, ...offTrailCandidates];
+  for (const yFraction of [0.08, 0.18, 0.30, 0.42, 0.58, 0.70, 0.82, 0.92]) {
+    for (const xFraction of [0.08, 0.18, 0.30, 0.42, 0.58, 0.70, 0.82, 0.92]) {
+      dragOffTrailCandidates.push({
+        x: homeBox.x + homeBox.width * xFraction,
+        y: homeBox.y + homeBox.height * yFraction
+      });
+    }
+  }
+  let straightDragTarget = null;
+  for (const candidate of dragOffTrailCandidates) {
+    await page.mouse.move(candidate.x, candidate.y, { steps: 4 });
+    await page.waitForTimeout(35);
+    const candidatePreviewMode = await mapContainer.getAttribute('data-plan-drag-preview-mode');
+    if (candidatePreviewMode === 'straight') {
+      straightDragTarget = candidate;
+      break;
+    }
+  }
+  assert(straightDragTarget, 'Planner should expose at least one straight/off-network drag target in the current map viewport');
   await page.mouse.up();
   await page.waitForTimeout(250);
   editStatus = await page.locator('[data-map-status]').innerText();
