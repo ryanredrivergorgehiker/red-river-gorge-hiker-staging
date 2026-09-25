@@ -729,9 +729,16 @@ async function fullMap(browser) {
   const secondSegmentCenter = async () => {
     const count = await planHitPaths.count();
     assert(count >= 2, 'Expected a second rendered plan segment');
-    const box = await planHitPaths.nth(1).boundingBox();
-    assert(box && box.width > 0 && box.height > 0, 'Second planned segment should have a rendered hit box');
-    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    const center = await planHitPaths.nth(1).evaluate(path => {
+      const length = path.getTotalLength();
+      const point = path.getPointAtLength(length / 2);
+      const matrix = path.getScreenCTM();
+      if (!matrix || !Number.isFinite(length) || length <= 0) return null;
+      const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix);
+      return { x: screen.x, y: screen.y };
+    });
+    assert(center, 'Second planned segment should expose a usable SVG midpoint');
+    return center;
   };
 
   // Prove the actual rendered second segment hit target works: right-click deletes,
