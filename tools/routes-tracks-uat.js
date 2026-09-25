@@ -364,8 +364,16 @@ async function fullMap(browser) {
 
   const page = await context.newPage();
   const providerRequests = [];
+  const sunAssetRequests = [];
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(String(error)));
+  page.on('request', request => {
+    try {
+      if (new URL(request.url()).pathname.endsWith('/data/map/sunrise-sunset-potential.svg')) {
+        sunAssetRequests.push(request.url());
+      }
+    } catch {}
+  });
   await installProviderStubs(page, providerRequests, true);
 
   let releaseInformalCache;
@@ -428,8 +436,8 @@ async function fullMap(browser) {
   assert(body.includes('How to read this map — 30-second guide'));
   assert(body.includes('Map data:'));
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 10);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 9);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 11);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 10);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0, 'Temporary exact-view copier should be removed after Home approval');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
@@ -551,6 +559,38 @@ async function fullMap(browser) {
   const kyTopoToggle = page.locator('[data-map-layer="kytopo"]');
   const usgsTopoToggle = page.locator('[data-map-layer="usgs-topo"]');
   const lidarToggle = page.locator('[data-map-layer="ky-hillshade"]');
+  const sunToggle = page.locator('[data-map-layer="sunrise-sunset-potential"]');
+  const sunOpacity = page.locator('[data-opacity="sunrise-sunset-potential"]');
+
+  assert.strictEqual(await sunToggle.isChecked(), false, 'Sunrise / Sunset potential must be off by default');
+  assert.strictEqual(await sunOpacity.inputValue(), '68');
+  assert.strictEqual(await page.locator('.swatch-sun-potential').count(), 1);
+  const elevationBeforeSun = providerRequests.filter(url => url.includes('elevation.nationalmap.gov')).length;
+  const sunRequest = page.waitForRequest(
+    request => new URL(request.url()).pathname.endsWith('/data/map/sunrise-sunset-potential.svg'),
+    { timeout: 10000 }
+  );
+  await sunToggle.evaluate(input => {
+    input.checked = true;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await sunRequest;
+  await page.waitForSelector('.leaflet-sunPotential-pane img.rrgh-sun-potential-overlay', { timeout: 10000 });
+  assert.strictEqual(await sunToggle.isChecked(), true);
+  assert(sunAssetRequests.length >= 1, 'Enabling Sun potential should request the local derived SVG');
+  assert.strictEqual(
+    providerRequests.filter(url => url.includes('elevation.nationalmap.gov')).length,
+    elevationBeforeSun,
+    'Viewing the precomputed Sun potential layer must not contact USGS 3DEP'
+  );
+  await sunOpacity.evaluate(input => {
+    input.value = '57';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  assert.strictEqual(await sunOpacity.inputValue(), '57');
+  const renderedSunOpacity = Number(await page.locator('.rrgh-sun-potential-overlay').evaluate(node => getComputedStyle(node).opacity));
+  assert(Math.abs(renderedSunOpacity - 0.57) < 0.02, 'Sun potential opacity should follow Fine tune layers');
 
   await aerialToggle.check();
   assert.strictEqual(await aerialToggle.isChecked(), true);
@@ -588,6 +628,7 @@ async function fullMap(browser) {
   assert.strictEqual(await usgsTopoToggle.isChecked(), true, 'Hiking preset should leave only USGS Topo on among base/terrain layers');
   assert.strictEqual(await lidarToggle.isChecked(), false, 'Hiking preset should turn Terrain relief off');
   assert.strictEqual(await aerialToggle.isChecked(), false, 'Hiking preset should turn Aerial off');
+  assert.strictEqual(await sunToggle.isChecked(), true, 'Map presets must not silently disable the independent Sun potential layer');
   if ((await page.locator('.route-layer-panel').getAttribute('open')) !== null) {
     await page.locator('.route-layer-panel > summary').click();
   }
@@ -959,6 +1000,7 @@ async function fullMap(browser) {
   assert(shared.searchParams.get('rrghMap'), 'Shared link should include center and zoom');
   assert(shared.searchParams.get('rrghLayers')?.includes('usfs-special-management:0:'), 'Shared link should preserve disabled Special management');
   assert(shared.searchParams.get('rrghLayers')?.includes('kytopo:1:73'), 'Shared link should preserve Kentucky Topo opacity');
+  assert(shared.searchParams.get('rrghLayers')?.includes('sunrise-sunset-potential:1:57'), 'Shared link should preserve Sun potential enabled state and opacity');
   assert(shared.searchParams.has('rrghTrips'));
   assert(shared.searchParams.has('rrghStatus'));
   assert.strictEqual(shared.searchParams.has('rrghLocation'), false, 'Share URL must not add a live-location parameter');
@@ -984,6 +1026,9 @@ async function fullMap(browser) {
   assert.strictEqual(restoredZoom, shareZoom, 'Shared zoom should restore exactly');
   assert.strictEqual(await page.locator('[data-map-layer="usfs-special-management"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '73');
+  assert.strictEqual(await page.locator('[data-map-layer="sunrise-sunset-potential"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-opacity="sunrise-sunset-potential"]').inputValue(), '57');
+  assert.strictEqual(await page.locator('.leaflet-sunPotential-pane img.rrgh-sun-potential-overlay').count(), 1);
   await page.waitForFunction(
     () => document.querySelector('.leaflet-popup-content')?.textContent?.includes('Skybridge Arch'),
     { timeout: 5000 }
@@ -1097,7 +1142,9 @@ async function legal(browser) {
     'does not automatically send your device’s precise “My location” coordinates',
     'If you choose “My location,”',
     'does not intentionally transmit or store the precise device coordinates',
-    'does not send the search text to a general-purpose external geocoding service'
+    'does not send the search text to a general-purpose external geocoding service',
+    'Sunrise / Sunset potential',
+    'does not send the visitor’s map position, device location, or other coordinates to USGS'
   ]) assert(body.includes(expected), expected);
 
   response = await page.goto(MAIN + 'search-and-rescue/#current-conditions', { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -1126,7 +1173,9 @@ async function legal(browser) {
     'Community / Informal Trails',
     'route planner may snap to displayed community/informal paths',
     'snap to mapped road-centerline geometry from USDA Forest Service and Kentucky public road datasets',
-    'Open Database License (ODbL)'
+    'Open Database License (ODbL)',
+    'generalized, bare-earth terrain model intended as a photography-planning aid',
+    'do not guarantee that the sun will be visible'
   ]) assert(body.includes(expected), expected);
 
   response = await page.goto(MAIN + 'copyright-and-terms/#outdoor-safety-location-disclaimer', { waitUntil: 'domcontentloaded', timeout: 60000 });
