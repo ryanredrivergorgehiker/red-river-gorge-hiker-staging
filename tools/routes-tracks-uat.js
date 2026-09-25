@@ -279,6 +279,22 @@ async function routeDetail(browser) {
   });
   assert.notStrictEqual(informalSwatchColors.casing, informalSwatchColors.center, 'Informal trails should use a two-tone dashed treatment');
   assert(!/255, 79, 216/.test(informalSwatchColors.casing + informalSwatchColors.center), 'Informal trails must not reuse aerial Wilderness magenta');
+  const networkSwatches = await page.evaluate(() => {
+    const trail = document.querySelector('.swatch-usfs-trail');
+    const road = document.querySelector('.swatch-usfs-road');
+    const trailStyle = getComputedStyle(trail, '::before');
+    const roadStyle = getComputedStyle(road, '::before');
+    return {
+      trailStyle: trailStyle.borderTopStyle,
+      trailColor: trailStyle.borderTopColor,
+      roadStyle: roadStyle.borderTopStyle,
+      roadColor: roadStyle.borderTopColor
+    };
+  });
+  assert.strictEqual(networkSwatches.trailStyle, 'dashed', 'Forest Service trail legend should be dashed');
+  assert.strictEqual(networkSwatches.roadStyle, 'dashed', 'Forest Service road legend should be dashed');
+  assert(/0, 200, 255/.test(networkSwatches.trailColor), 'Forest Service trail should retain cyan');
+  assert(/255, 207, 51/.test(networkSwatches.roadColor), 'Forest Service road should retain yellow');
   await page.locator('.route-layer-panel > summary').click();
   assert.strictEqual(await page.getByText('Always shown', { exact: true }).count(), 0, 'County boundaries belong in the top symbol legend without an Always shown label');
   assert.strictEqual(await page.locator('.route-waypoint-icon').count(), 2);
@@ -386,6 +402,10 @@ async function fullMap(browser) {
   const body = await page.locator('body').innerText();
   assert(body.includes('Property boundaries are not shown; this map does not establish legal access.'));
   assert(body.includes('Before you go: check closures, road access & conditions'));
+  const beforeYouGo = page.locator('.route-map-context-strip').getByRole('link', { name: /Before you go: check closures/ });
+  assert.strictEqual(await beforeYouGo.count(), 1);
+  const beforeYouGoHref = await beforeYouGo.getAttribute('href');
+  assert(beforeYouGoHref.endsWith('/search-and-rescue/#current-conditions'), 'Before-you-go link should target Current Conditions; href=' + beforeYouGoHref);
   assert(body.includes('How to read this map — 30-second guide'));
   assert(body.includes('Map data:'));
 
@@ -581,6 +601,11 @@ async function fullMap(browser) {
   assert(await page.locator('[data-coordinate-card]').isVisible(), 'Desktop right-click should open coordinates');
   assert(/-83\./.test(await page.locator('[data-coordinate-dd]').innerText()));
   assert((await page.locator('[data-coordinate-utm]').innerText()).includes('UTM'));
+  const copyBox = await page.locator('[data-coordinate-copy]').boundingBox();
+  const closeBox = await page.locator('[data-coordinate-close]').boundingBox();
+  assert(copyBox && closeBox);
+  assert(closeBox.x > copyBox.x + copyBox.width - 1, 'Coordinate × should sit to the right of Copy coordinates');
+  assert(Math.abs((closeBox.y + closeBox.height / 2) - (copyBox.y + copyBox.height / 2)) <= 5, 'Coordinate actions should remain on one row');
   await page.locator('[data-coordinate-close]').click();
   assert(await page.locator('[data-coordinate-card]').isHidden(), 'Coordinate card × should dismiss the card');
 
@@ -1011,6 +1036,11 @@ async function mobile(browser) {
       changedTouches: [touch]
     }));
   }, coordinateTarget);
+  const mobileCopyBox = await page.locator('[data-coordinate-copy]').boundingBox();
+  const mobileCloseBox = await page.locator('[data-coordinate-close]').boundingBox();
+  assert(mobileCopyBox && mobileCloseBox);
+  assert(mobileCloseBox.x > mobileCopyBox.x + mobileCopyBox.width - 1, 'Mobile coordinate × should sit to the right of Copy coordinates');
+  assert(Math.abs((mobileCloseBox.y + mobileCloseBox.height / 2) - (mobileCopyBox.y + mobileCopyBox.height / 2)) <= 5, 'Mobile coordinate actions should remain on one row');
   await page.locator('[data-coordinate-close]').click();
   assert(await page.locator('[data-coordinate-card]').isHidden(), 'Mobile coordinate card should have a working × dismiss control');
 
@@ -1050,6 +1080,12 @@ async function legal(browser) {
     'does not intentionally transmit or store the precise device coordinates',
     'does not send the search text to a general-purpose external geocoding service'
   ]) assert(body.includes(expected), expected);
+
+  response = await page.goto(MAIN + 'search-and-rescue/#current-conditions', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(response && response.ok());
+  await page.waitForSelector('#current-conditions', { timeout: 5000 });
+  assert(await page.getByRole('heading', { name: 'Current conditions are part of the route', exact: true }).isVisible());
+  assert.strictEqual(await page.locator('#current-conditions').count(), 1);
 
   response = await page.goto(MAIN + 'copyright-and-terms/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(response && response.ok());
