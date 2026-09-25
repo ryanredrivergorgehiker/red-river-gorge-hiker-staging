@@ -282,19 +282,57 @@ async function routeDetail(browser) {
   const networkSwatches = await page.evaluate(() => {
     const trail = document.querySelector('.swatch-usfs-trail');
     const road = document.querySelector('.swatch-usfs-road');
-    const trailStyle = getComputedStyle(trail, '::before');
-    const roadStyle = getComputedStyle(road, '::before');
+    const trailCasing = getComputedStyle(trail, '::before');
+    const trailCenter = getComputedStyle(trail, '::after');
+    const roadCasing = getComputedStyle(road, '::before');
+    const roadCenter = getComputedStyle(road, '::after');
     return {
-      trailStyle: trailStyle.borderTopStyle,
-      trailColor: trailStyle.borderTopColor,
-      roadStyle: roadStyle.borderTopStyle,
-      roadColor: roadStyle.borderTopColor
+      trailCasingStyle: trailCasing.borderTopStyle,
+      trailCasingColor: trailCasing.borderTopColor,
+      trailCasingWidth: trailCasing.borderTopWidth,
+      trailCenterStyle: trailCenter.borderTopStyle,
+      trailCenterColor: trailCenter.borderTopColor,
+      trailCenterWidth: trailCenter.borderTopWidth,
+      roadCasingStyle: roadCasing.borderTopStyle,
+      roadCasingColor: roadCasing.borderTopColor,
+      roadCasingWidth: roadCasing.borderTopWidth,
+      roadCenterStyle: roadCenter.borderTopStyle,
+      roadCenterColor: roadCenter.borderTopColor,
+      roadCenterWidth: roadCenter.borderTopWidth
     };
   });
-  assert.strictEqual(networkSwatches.trailStyle, 'dashed', 'Forest Service trail legend should be dashed');
-  assert.strictEqual(networkSwatches.roadStyle, 'dashed', 'Forest Service road legend should be dashed');
-  assert(/0, 200, 255/.test(networkSwatches.trailColor), 'Forest Service trail should retain cyan');
-  assert(/255, 207, 51/.test(networkSwatches.roadColor), 'Forest Service road should retain yellow');
+  assert.strictEqual(networkSwatches.trailCasingStyle, 'dashed', 'Forest Service trail casing should be dashed');
+  assert.strictEqual(networkSwatches.trailCenterStyle, 'dashed', 'Forest Service trail center should be dashed');
+  assert.strictEqual(networkSwatches.roadCasingStyle, 'dashed', 'Forest Service road casing should be dashed');
+  assert.strictEqual(networkSwatches.roadCenterStyle, 'dashed', 'Forest Service road center should be dashed');
+  assert(/34, 49, 58/.test(networkSwatches.trailCasingColor), 'Forest Service trail should use the shared dark network casing');
+  assert(/34, 49, 58/.test(networkSwatches.roadCasingColor), 'Forest Service road should use the shared dark network casing');
+  assert(/0, 200, 255/.test(networkSwatches.trailCenterColor), 'Forest Service trail should retain cyan');
+  assert(/255, 207, 51/.test(networkSwatches.roadCenterColor), 'Forest Service road should retain yellow');
+  assert(parseFloat(networkSwatches.trailCasingWidth) > parseFloat(networkSwatches.trailCenterWidth), 'Trail casing must be wider than its colored center');
+  assert(parseFloat(networkSwatches.roadCasingWidth) > parseFloat(networkSwatches.roadCenterWidth), 'Road casing must be wider than its colored center');
+
+  const networkPathStyles = await page.evaluate(() => {
+    const read = (selector) => Array.from(document.querySelectorAll(selector)).map(path => {
+      const style = getComputedStyle(path);
+      return {
+        stroke: style.stroke,
+        dash: style.strokeDasharray,
+        linecap: style.strokeLinecap,
+        width: style.strokeWidth
+      };
+    });
+    return {
+      trails: read('.leaflet-trails-pane path'),
+      roads: read('.leaflet-roads-pane path')
+    };
+  });
+  assert(networkPathStyles.trails.some(style => /0, 200, 255/.test(style.stroke)), 'Rendered Forest Service trails should retain cyan centers');
+  assert(networkPathStyles.trails.some(style => /34, 49, 58/.test(style.stroke)), 'Rendered Forest Service trails should have dark casings');
+  assert(networkPathStyles.roads.some(style => /255, 207, 51/.test(style.stroke)), 'Rendered Forest Service roads should retain yellow centers');
+  assert(networkPathStyles.roads.some(style => /34, 49, 58/.test(style.stroke)), 'Rendered Forest Service roads should have dark casings');
+  assert(networkPathStyles.trails.filter(style => style.dash !== 'none').every(style => style.linecap === 'round'), 'Trail dashes should have rounded pill ends');
+  assert(networkPathStyles.roads.filter(style => style.dash !== 'none').every(style => style.linecap === 'round'), 'Road dashes should have rounded pill ends');
   await page.locator('.route-layer-panel > summary').click();
   assert.strictEqual(await page.getByText('Always shown', { exact: true }).count(), 0, 'County boundaries belong in the top symbol legend without an Always shown label');
   assert.strictEqual(await page.locator('.route-waypoint-icon').count(), 2);
@@ -1084,8 +1122,18 @@ async function legal(browser) {
   response = await page.goto(MAIN + 'search-and-rescue/#current-conditions', { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(response && response.ok());
   await page.waitForSelector('#current-conditions', { timeout: 5000 });
+  await page.waitForTimeout(450);
+  assert(await page.getByText('Plan before you go', { exact: true }).isVisible());
   assert(await page.getByRole('heading', { name: 'Current conditions are part of the route', exact: true }).isVisible());
   assert.strictEqual(await page.locator('#current-conditions').count(), 1);
+  assert.strictEqual(await page.evaluate(() => window.location.hash), '#current-conditions');
+  const conditionsBox = await page.locator('#current-conditions').boundingBox();
+  const conditionsHeadingBox = await page.getByRole('heading', { name: 'Current conditions are part of the route', exact: true }).boundingBox();
+  const educationHeadingBox = await page.getByRole('heading', { name: 'Make yourself easier to help', exact: true }).boundingBox();
+  assert(conditionsBox && conditionsHeadingBox && educationHeadingBox);
+  assert(conditionsBox.y >= 100 && conditionsBox.y <= 300, 'Current Conditions section should land below the persistent page chrome; y=' + conditionsBox.y);
+  assert(conditionsHeadingBox.y < page.viewportSize().height * 0.55, 'Current Conditions heading should be visibly in the upper half of the viewport');
+  assert(educationHeadingBox.y > conditionsHeadingBox.y + 250, 'Search & Rescue Education must remain below the Current Conditions landing target');
 
   response = await page.goto(MAIN + 'copyright-and-terms/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(response && response.ok());
