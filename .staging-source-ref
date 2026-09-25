@@ -1,8 +1,7 @@
-81ab0274ea43e91cb6a117d2587ca977aab90ca1
-purpose=Routes map Home-framing approval pass; replace inferred northwest-anchor Home logic with Ryan-approved exact Leaflet center 37.8196836,-83.6396027 at zoom 13 for both initial load and Home; remove the temporary Copy current map view diagnostic now that the approved view is captured; retain prior Wilderness simplification, aerial control behavior, and route-building arrow-pad panning; production unchanged
-source_ci=36079991139 SUCCESS
-routes_uat=36080099052 SUCCESS
-routes_tracks_uat=36080099055 SUCCESS
-analytics_uat=36080099160 SUCCESS
-brand_uat=36080099054 SUCCESS
-roku_uat=36080099224 SUCCESS
+204928cee18683741193c394048c1b9d6db65e4d
+purpose=Routes map Share refinement and Explore menu reflow; combine Trails and Maps & Guides into Trails and Guides with approved four-column desktop order; add stateful map Share control beside Plan on desktop and mobile; rename Map nerd details to Advanced Map Details; preserve selected route, map center/zoom, preset/custom layer state, route filters, and selected route in shareable permalink; production unchanged
+routes_uat=36088124366 SUCCESS
+routes_tracks_uat=36088307413 SUCCESS
+analytics_uat=36088124302 SUCCESS
+brand_uat=36088161532 SUCCESS
+roku_uat=36088124275 SUCCESS
