@@ -10,7 +10,7 @@ const SHARED = 'rrgh-analytics-consent-v1';
 const REGION = 'rrgh-region-country-v1';
 const GPX_SHA = '2469c85ebaddd3e701ba6dc8eea3664d90a0667dcd86f2aab43ae1445986830d';
 const GEO_SHA = '123fdb57e1142299f86c714367cc466b70f18fa90cfbaabb92b0d9ced157dc66';
-const PROVIDERS = new Set(['kygisserver.ky.gov', 'basemap.nationalmap.gov', 'apps.fs.usda.gov', 'overpass.maprva.org', 'overpass.private.coffee', 'overpass-api.de', 'maps.mail.ru']);
+const PROVIDERS = new Set(['kygisserver.ky.gov', 'basemap.nationalmap.gov', 'elevation.nationalmap.gov', 'apps.fs.usda.gov', 'overpass.maprva.org', 'overpass.private.coffee', 'overpass-api.de', 'maps.mail.ru']);
 
 const TRANSPARENT_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X3JmAAAAAElFTkSuQmCC',
@@ -152,6 +152,24 @@ async function installProviderStubs(page, providerRequests, slowPrimaryOverpass 
   await page.route('https://basemap.nationalmap.gov/**', route =>
     route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG })
   );
+
+  await page.route('https://elevation.nationalmap.gov/**', async route => {
+    const requestUrl = new URL(route.request().url());
+    if (!requestUrl.pathname.includes('/3DEPElevation/ImageServer/getSamples')) return route.abort();
+    let points = [];
+    try {
+      points = JSON.parse(requestUrl.searchParams.get('geometry') || '{}').points || [];
+    } catch {}
+    const samples = points.map((point, index) => ({
+      location: { x: point[0], y: point[1], spatialReference: { wkid: 4326 } },
+      value: 305 + index * 2.5
+    }));
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ samples })
+    });
+  });
 
   await page.route('https://apps.fs.usda.gov/**', async route => {
     const url = route.request().url();
@@ -375,8 +393,19 @@ async function fullMap(browser) {
     assert.strictEqual(await page.getByLabel(status, { exact: true }).count(), 1, status);
   }
 
-  assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), true, 'Hiking should start with Kentucky Topo on');
+  assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), false, 'Hiking should start with Kentucky Topo off');
   assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true, 'Hiking should start with USGS Topo on');
+  assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), false, 'Hiking should start with Terrain relief off');
+  assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').inputValue(), '100', 'Hiking should use full USGS Topo opacity');
+
+  const utilityBox = await page.locator('.route-map-utility-tools').boundingBox();
+  const scaleControl = page.locator('.leaflet-control-scale');
+  const scaleBox = await scaleControl.boundingBox();
+  assert(utilityBox && scaleBox, 'Map utility bar and scale should both render');
+  assert(scaleBox.y >= utilityBox.y + utilityBox.height - 2, 'Adaptive map scale should sit beneath Search / My location / Home controls');
+  const initialScaleText = (await scaleControl.innerText()).trim();
+  const initialScaleWidth = (await scaleControl.boundingBox()).width;
+
   const safetyLink = page.getByRole('link', { name: /^Outdoor safety and location disclaimer/ });
   assert.strictEqual(await safetyLink.count(), 1, 'Every RouteMap should expose the outdoor safety/location disclaimer link');
   assert((await safetyLink.getAttribute('href')).endsWith('/copyright-and-terms/#outdoor-safety-location-disclaimer'));
@@ -391,6 +420,13 @@ async function fullMap(browser) {
   );
   const zoomedOut = Number(await mapContainer.getAttribute('data-current-zoom'));
   assert(zoomedOut < startZoom, 'Desktop minus control must zoom out');
+  await page.waitForTimeout(120);
+  const zoomedOutScaleText = (await scaleControl.innerText()).trim();
+  const zoomedOutScaleWidth = (await scaleControl.boundingBox()).width;
+  assert(
+    zoomedOutScaleText !== initialScaleText || Math.abs(zoomedOutScaleWidth - initialScaleWidth) > 1,
+    'Adaptive map scale should change when zoom changes'
+  );
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 13, 'Home must restore the approved zoom 13 landing view even if the status message is asynchronously replaced');
   await page.waitForFunction(() => {
@@ -473,6 +509,10 @@ async function fullMap(browser) {
   assert.strictEqual(await aerialToggle.isChecked(), false, 'Selecting USGS Topo must turn Aerial off');
 
   await page.getByRole('button', { name: /^Hiking/ }).click();
+  assert.strictEqual(await kyTopoToggle.isChecked(), false, 'Hiking preset should turn Kentucky Topo off');
+  assert.strictEqual(await usgsTopoToggle.isChecked(), true, 'Hiking preset should leave only USGS Topo on among base/terrain layers');
+  assert.strictEqual(await lidarToggle.isChecked(), false, 'Hiking preset should turn Terrain relief off');
+  assert.strictEqual(await aerialToggle.isChecked(), false, 'Hiking preset should turn Aerial off');
   if ((await page.locator('.route-layer-panel').getAttribute('open')) !== null) {
     await page.locator('.route-layer-panel > summary').click();
   }
@@ -509,6 +549,18 @@ async function fullMap(browser) {
   await mapContainer.click({ position: { x: box.width * 0.22, y: box.height * 0.26 } });
   await mapContainer.click({ position: { x: box.width * 0.31, y: box.height * 0.26 } });
   await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Measured distance'), { timeout: 3000 });
+  assert((await page.locator('.rrgh-planning-distance-label.is-measure-segment').count()) >= 1, 'Measure should put segment distance directly on the map');
+  assert((await page.locator('[data-plan-stats-distance]').innerText()).trim() !== '—', 'Measure should show a live total distance');
+  await page.waitForFunction(
+    () => {
+      const gain = document.querySelector('[data-plan-stats-gain]')?.textContent?.trim();
+      const range = document.querySelector('[data-plan-stats-range]')?.textContent?.trim();
+      return Boolean(gain && gain !== '—' && range && range !== '—');
+    },
+    { timeout: 5000 }
+  );
+  assert(providerRequests.some(url => url.includes('elevation.nationalmap.gov') && url.includes('/getSamples?')), 'Measure should request USGS 3DEP elevation samples');
+  assert((await page.locator('.rrgh-planning-distance-label.is-measure-segment').first().innerText()).includes('ft'), 'Measure segment label should include elevation change after 3DEP returns');
 
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   if (await page.locator('[data-map-sheet="plan"]').isHidden()) await planOpenButton.click();
@@ -619,6 +671,19 @@ async function fullMap(browser) {
     }
   }
   assert(trailA && trailB, 'Planner should snap a near-road click pair around the stubbed Sky Bridge Road geometry');
+  assert((await page.locator('.rrgh-planning-distance-label.is-plan-segment').count()) >= 1, 'Snapped road/trail planning should show segment distance on the map');
+  assert((await page.locator('[data-plan-stats-distance]').innerText()).trim() !== '—', 'Planned route should show live total distance');
+  await page.waitForFunction(
+    () => {
+      const gain = document.querySelector('[data-plan-stats-gain]')?.textContent?.trim();
+      const loss = document.querySelector('[data-plan-stats-loss]')?.textContent?.trim();
+      const range = document.querySelector('[data-plan-stats-range]')?.textContent?.trim();
+      return Boolean(gain && gain !== '—' && loss && loss !== '—' && range && range !== '—');
+    },
+    { timeout: 5000 }
+  );
+  assert(providerRequests.some(url => url.includes('elevation.nationalmap.gov') && url.includes('/getSamples?')), 'Build trail route should request USGS 3DEP elevation samples');
+  const initialPlanDistance = (await page.locator('[data-plan-stats-distance]').innerText()).trim();
 
   const undo = page.getByRole('button', { name: 'Undo', exact: true });
   const redo = page.getByRole('button', { name: 'Redo', exact: true });
@@ -655,6 +720,8 @@ async function fullMap(browser) {
     }
   }
   assert(offTrail, 'Planner should classify at least one clear map area as off-trail while preserving the baseline snapped leg');
+  const extendedPlanDistance = (await page.locator('[data-plan-stats-distance]').innerText()).trim();
+  assert.notStrictEqual(extendedPlanDistance, initialPlanDistance, 'Planned distance should update when another point/segment is added');
 
   const planHitPaths = page.locator('.rrgh-plan-segment-hit');
   assert.strictEqual(await planHitPaths.count(), 2, 'Two planned legs should expose two rendered segment hit paths');
@@ -874,6 +941,10 @@ async function legal(browser) {
     'Interactive Maps and Map-Data Services',
     'Community / Informal Trails',
     'RRGH-hosted cache derived from OpenStreetMap data',
+    'Last updated: September 25, 2026',
+    'Measure distance',
+    'USGS 3D Elevation Program (3DEP)',
+    'does not automatically send your device’s precise “My location” coordinates',
     'If you choose “My location,”',
     'does not intentionally transmit or store the precise device coordinates',
     'does not send the search text to a general-purpose external geocoding service'
