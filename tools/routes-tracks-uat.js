@@ -338,9 +338,7 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-map-layer]').count(), 10);
   assert.strictEqual(await page.locator('[data-opacity]').count(), 9);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
-  const stagingViewCopy = page.locator('[data-staging-copy-map-view]');
-  assert.strictEqual(await stagingViewCopy.count(), 1);
-  assert.strictEqual(await stagingViewCopy.isHidden(), true, 'Exact-source UAT uses the production hostname, so the staging-only view copier must stay hidden here');
+  assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0, 'Temporary exact-view copier should be removed after Home approval');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-wilderness"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 0);
@@ -395,11 +393,16 @@ async function fullMap(browser) {
   assert(zoomedOut < startZoom, 'Desktop minus control must zoom out');
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 13, 'Home must restore the approved zoom 13 landing view even if the status message is asynchronously replaced');
-  await page.waitForFunction(() => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-north-west'), { timeout: 3000 });
+  await page.waitForFunction(() => {
+    const map = document.querySelector('[data-rrgh-route-map]');
+    return map?.getAttribute('data-map-center') && map?.getAttribute('data-map-north-west');
+  }, { timeout: 3000 });
+  const homeCenterValue = await mapContainer.getAttribute('data-map-center');
+  const [homeCenterLat, homeCenterLng] = homeCenterValue.split(',').map(Number);
+  assert(Math.abs(homeCenterLat - 37.8196836) <= 0.0000002, 'Home center latitude should match Ryan’s copied approved view; actual=' + homeCenterLat);
+  assert(Math.abs(homeCenterLng - (-83.6396027)) <= 0.0000002, 'Home center longitude should match Ryan’s copied approved view; actual=' + homeCenterLng);
   const homeNorthWestValue = await mapContainer.getAttribute('data-map-north-west');
   const [homeNorthWestLat, homeNorthWestLng] = homeNorthWestValue.split(',').map(Number);
-  assert(Math.abs(homeNorthWestLat - 37.878846) <= 0.00025, 'Home northwest latitude should match Ryan’s approved anchor; actual=' + homeNorthWestLat);
-  assert(Math.abs(homeNorthWestLng - (-83.744659)) <= 0.00025, 'Home northwest longitude should match Ryan’s approved anchor; actual=' + homeNorthWestLng);
 
   await page.locator('[data-map-layer="usfs-wilderness"]').evaluate(input => {
     input.checked = false;
