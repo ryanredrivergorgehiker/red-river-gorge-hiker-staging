@@ -438,9 +438,9 @@ async function exploreVisual(browser) {
     }
     await page.goto(MAIN + 'explore/', { waitUntil: 'domcontentloaded', timeout: 60000 });
     assert.strictEqual(await page.locator('.explore-card').count(), 7);
-    const exploreCards = page.locator('main .explore-card');
-    assert.strictEqual(await exploreCards.filter({ hasText: 'Trails and Guides' }).count(), 1);
-    assert.strictEqual(await exploreCards.filter({ hasText: 'Maps & Guides' }).count(), 0);
+    const exploreHeadings = page.locator('main .explore-card h2');
+    assert.strictEqual(await exploreHeadings.filter({ hasText: /^Trails and Guides$/ }).count(), 1);
+    assert.strictEqual(await exploreHeadings.filter({ hasText: /^Maps & Guides$/ }).count(), 0);
     await shot(page, `${spec[0]}-explore-hub`);
     await page.goto(MAIN + 'search-and-rescue/', { waitUntil: 'domcontentloaded', timeout: 60000 });
     await shot(page, `${spec[0]}-sar-leg-dec-0027`);
