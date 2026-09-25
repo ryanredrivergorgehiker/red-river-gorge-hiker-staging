@@ -834,10 +834,24 @@ async function fullMap(browser) {
   assert(editStatus.includes('2 snapped segment(s), 0 off-trail segment(s)'), 'Dragging an off-trail segment onto mapped network should resnap it solid; status=' + editStatus);
 
   // Drag that same rendered second segment clearly off network: it should become dashed/off-trail.
+  // With the broader Kentucky road graph, a point that was off-network from the original
+  // endpoint may be near a different road after the segment has been resnapped. Probe the
+  // existing candidate set while the drag is active and accept only a planner-previewed
+  // straight target.
   segmentCenter = await secondSegmentCenter();
   await page.mouse.move(segmentCenter.x, segmentCenter.y);
   await page.mouse.down();
-  await page.mouse.move(offTrail.x, offTrail.y, { steps: 10 });
+  let straightDragTarget = null;
+  for (const candidate of offTrailCandidates) {
+    await page.mouse.move(candidate.x, candidate.y, { steps: 8 });
+    await page.waitForTimeout(70);
+    const candidatePreviewMode = await mapContainer.getAttribute('data-plan-drag-preview-mode');
+    if (candidatePreviewMode === 'straight') {
+      straightDragTarget = candidate;
+      break;
+    }
+  }
+  assert(straightDragTarget, 'Planner should expose at least one clearly off-network drag target');
   await page.mouse.up();
   await page.waitForTimeout(250);
   editStatus = await page.locator('[data-map-status]').innerText();
