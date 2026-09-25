@@ -338,9 +338,17 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-map-layer]').count(), 10);
   assert.strictEqual(await page.locator('[data-opacity]').count(), 9);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
+  const stagingViewCopy = page.locator('[data-staging-copy-map-view]');
+  assert.strictEqual(await stagingViewCopy.count(), 1);
+  await page.waitForFunction(() => {
+    const button = document.querySelector('[data-staging-copy-map-view]');
+    return button && !button.hidden;
+  }, { timeout: 3000 });
+  assert.strictEqual(await stagingViewCopy.isVisible(), true, 'Temporary exact-view copier should be visible on noindex staging');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-wilderness"]').isChecked(), true);
-  assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 0);
+  assert.strictEqual(await page.getByText('Wilderness full opacity (100%)', { exact: true }).count(), 0);
   assert.strictEqual(await page.locator('[data-opacity="usfs-wilderness"]').count(), 0);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-special-management"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-land-units"]').isChecked(), true);
@@ -397,17 +405,12 @@ async function fullMap(browser) {
   assert(Math.abs(homeNorthWestLat - 37.878846) <= 0.00025, 'Home northwest latitude should match Ryan’s approved anchor; actual=' + homeNorthWestLat);
   assert(Math.abs(homeNorthWestLng - (-83.744659)) <= 0.00025, 'Home northwest longitude should match Ryan’s approved anchor; actual=' + homeNorthWestLng);
 
-  await page.locator('[data-context-full-opacity="usfs-wilderness"]').evaluate(input => {
-    input.checked = false;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
   await page.locator('[data-map-layer="usfs-wilderness"]').evaluate(input => {
     input.checked = false;
     input.dispatchEvent(new Event('change', { bubbles: true }));
   });
   await page.getByRole('button', { name: /^Terrain/ }).click();
   assert.strictEqual(await page.locator('[data-map-layer="usfs-wilderness"]').isChecked(), true, 'Terrain preset should restore Wilderness');
-  assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').isChecked(), true, 'Terrain preset should restore Wilderness full opacity');
   assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true);
@@ -510,25 +513,27 @@ async function fullMap(browser) {
 
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   if (await page.locator('[data-map-sheet="plan"]').isHidden()) await planOpenButton.click();
+  assert.strictEqual(await page.locator('[data-plan-pan-pad]').isHidden(), true);
   await page.getByRole('button', { name: 'Build trail route', exact: true }).click();
-  const panMapButton = page.locator('[data-plan-pan]');
-  assert.strictEqual(await panMapButton.count(), 1);
-  assert.strictEqual(await panMapButton.isVisible(), true);
-  assert.strictEqual((await panMapButton.innerText()).trim(), '✥ Pan map');
-  await panMapButton.click();
-  assert.strictEqual(await page.locator('.route-map-stage').getAttribute('data-plan-pan-mode'), 'true');
-  assert.strictEqual(await panMapButton.getAttribute('aria-pressed'), 'true');
-  assert.strictEqual((await panMapButton.innerText()).trim(), '✥ Resume route');
-  const panBox = await mapContainer.boundingBox();
-  assert(panBox);
-  await page.mouse.move(panBox.x + panBox.width * 0.55, panBox.y + panBox.height * 0.50);
-  await page.mouse.down();
-  await page.mouse.move(panBox.x + panBox.width * 0.47, panBox.y + panBox.height * 0.58, { steps: 8 });
-  await page.mouse.up();
-  await panMapButton.click();
-  assert.strictEqual(await page.locator('.route-map-stage').getAttribute('data-plan-pan-mode'), 'false');
-  assert.strictEqual(await panMapButton.getAttribute('aria-pressed'), 'false');
-  assert.strictEqual((await panMapButton.innerText()).trim(), '✥ Pan map');
+  const panPad = page.locator('[data-plan-pan-pad]');
+  assert.strictEqual(await panPad.count(), 1);
+  assert.strictEqual(await panPad.isVisible(), true);
+  assert.strictEqual(await page.locator('[data-plan-pan]').count(), 0);
+  assert.strictEqual(await page.getByText('✥ Resume route', { exact: true }).count(), 0);
+  for (const direction of ['up', 'down', 'left', 'right']) {
+    assert.strictEqual(await page.locator('[data-plan-pan-direction="' + direction + '"]').count(), 1);
+  }
+
+  const northWestBeforeArrowPan = await mapContainer.getAttribute('data-map-north-west');
+  await page.getByRole('button', { name: 'Pan map right', exact: true }).click();
+  await page.waitForFunction(
+    before => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-north-west') !== before,
+    northWestBeforeArrowPan,
+    { timeout: 3000 }
+  );
+  assert.strictEqual(await page.getByRole('button', { name: 'Build trail route', exact: true }).getAttribute('aria-pressed'), 'true', 'Arrow panning must leave route building active');
+  assert((await page.locator('[data-map-status]').innerText()).includes('Route building remains active'));
+
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
 
   assert.strictEqual(await page.getByText('Next segment', { exact: true }).count(), 0);
