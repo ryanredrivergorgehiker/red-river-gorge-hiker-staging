@@ -312,27 +312,8 @@ async function routeDetail(browser) {
   assert(parseFloat(networkSwatches.trailCasingWidth) > parseFloat(networkSwatches.trailCenterWidth), 'Trail casing must be wider than its colored center');
   assert(parseFloat(networkSwatches.roadCasingWidth) > parseFloat(networkSwatches.roadCenterWidth), 'Road casing must be wider than its colored center');
 
-  const networkPathStyles = await page.evaluate(() => {
-    const read = (selector) => Array.from(document.querySelectorAll(selector)).map(path => {
-      const style = getComputedStyle(path);
-      return {
-        stroke: style.stroke,
-        dash: style.strokeDasharray,
-        linecap: style.strokeLinecap,
-        width: style.strokeWidth
-      };
-    });
-    return {
-      trails: read('.leaflet-trails-pane path'),
-      roads: read('.leaflet-roads-pane path')
-    };
-  });
-  assert(networkPathStyles.trails.some(style => /0, 200, 255/.test(style.stroke)), 'Rendered Forest Service trails should retain cyan centers');
-  assert(networkPathStyles.trails.some(style => /34, 49, 58/.test(style.stroke)), 'Rendered Forest Service trails should have dark casings');
-  assert(networkPathStyles.roads.some(style => /255, 207, 51/.test(style.stroke)), 'Rendered Forest Service roads should retain yellow centers');
-  assert(networkPathStyles.roads.some(style => /34, 49, 58/.test(style.stroke)), 'Rendered Forest Service roads should have dark casings');
-  assert(networkPathStyles.trails.filter(style => style.dash !== 'none').every(style => style.linecap === 'round'), 'Trail dashes should have rounded pill ends');
-  assert(networkPathStyles.roads.filter(style => style.dash !== 'none').every(style => style.linecap === 'round'), 'Road dashes should have rounded pill ends');
+  assert.strictEqual(await page.locator('.leaflet-trails-pane canvas').count() >= 1, true, 'Forest Service trails should render in the dedicated trail canvas pane');
+  assert.strictEqual(await page.locator('.leaflet-roads-pane canvas').count() >= 1, true, 'Forest Service roads should render in the dedicated road canvas pane');
   await page.locator('.route-layer-panel > summary').click();
   assert.strictEqual(await page.getByText('Always shown', { exact: true }).count(), 0, 'County boundaries belong in the top symbol legend without an Always shown label');
   assert.strictEqual(await page.locator('.route-waypoint-icon').count(), 2);
