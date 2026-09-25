@@ -776,7 +776,7 @@ async function fullMap(browser) {
   const sharedUrl = await sharePanel.locator('[data-share-url]').inputValue();
   const shared = new URL(sharedUrl);
   assert.strictEqual(shared.searchParams.get('rrghRoute'), 'RTE-0001');
-  assert.strictEqual(shared.searchParams.get('rrghPreset'), 'hiking');
+  assert.strictEqual(shared.searchParams.get('rrghPreset'), 'custom', 'Manual layer changes should share as a custom preset');
   assert(shared.searchParams.get('rrghMap'), 'Shared link should include center and zoom');
   assert(shared.searchParams.get('rrghLayers')?.includes('usfs-special-management:0:'), 'Shared link should preserve disabled Special management');
   assert(shared.searchParams.get('rrghLayers')?.includes('kytopo:1:73'), 'Shared link should preserve Kentucky Topo opacity');
