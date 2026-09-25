@@ -297,7 +297,7 @@ async function mapControlsAndAccessibility(browser) {
   assert.strictEqual(await page.locator('[data-plan-pan]').count(), 0);
   assert.strictEqual(await page.locator('[data-plan-pan-pad]').count(), 1);
   assert.strictEqual(await page.locator('[data-plan-pan-direction]').count(), 4);
-  assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 1);
+  assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.getByRole('button', { name: 'Explore', exact: true }).count(), 1);
   assert.strictEqual(await page.getByRole('button', { name: 'Plan', exact: true }).count(), 1);
