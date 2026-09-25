@@ -340,11 +340,7 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   const stagingViewCopy = page.locator('[data-staging-copy-map-view]');
   assert.strictEqual(await stagingViewCopy.count(), 1);
-  await page.waitForFunction(() => {
-    const button = document.querySelector('[data-staging-copy-map-view]');
-    return button && !button.hidden;
-  }, { timeout: 3000 });
-  assert.strictEqual(await stagingViewCopy.isVisible(), true, 'Temporary exact-view copier should be visible on noindex staging');
+  assert.strictEqual(await stagingViewCopy.isHidden(), true, 'Exact-source UAT uses the production hostname, so the staging-only view copier must stay hidden here');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-wilderness"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 0);
