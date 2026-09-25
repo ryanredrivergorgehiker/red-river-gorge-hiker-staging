@@ -742,6 +742,67 @@ async function fullMap(browser) {
   const [download] = await Promise.all([page.waitForEvent('download'), exportGpx.click()]);
   assert(/^RRGH-planned-route-.*\.gpx$/.test(download.suggestedFilename()));
 
+  // Share must create a stateful permalink, include a selected RRGH route,
+  // preserve meaningful layer/filter state, and restore that exact view.
+  const buildTrailButton = page.getByRole('button', { name: 'Build trail route', exact: true });
+  if (await buildTrailButton.getAttribute('aria-pressed') === 'true') await buildTrailButton.click();
+  if (await page.locator('[data-map-sheet="plan"]').isVisible()) await planOpenButton.click();
+  await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
+  await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
+
+  await exploreButton.click();
+  const skybridgeExplore = page.locator('[data-map-sheet="explore"]').getByRole('button', { name: /Skybridge Arch/ }).first();
+  assert.strictEqual(await skybridgeExplore.count(), 1, 'Skybridge Arch should be selectable from Explore before sharing');
+  await skybridgeExplore.click();
+
+  await page.locator('[data-map-layer="usfs-special-management"]').evaluate(input => {
+    input.checked = false;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.locator('[data-opacity="kytopo"]').evaluate(input => {
+    input.value = '73';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'share', { configurable: true, value: undefined });
+  });
+  const shareButton = page.locator('.route-map-tools-desktop').getByRole('button', { name: 'Share', exact: true });
+  assert.strictEqual(await shareButton.count(), 1, 'Desktop Share should sit with Explore and Plan');
+  await shareButton.click();
+  const sharePanel = page.locator('[data-map-sheet="share"]');
+  assert(await sharePanel.isVisible(), 'Share fallback panel should open when native Web Share is unavailable');
+  const sharedUrl = await sharePanel.locator('[data-share-url]').inputValue();
+  const shared = new URL(sharedUrl);
+  assert.strictEqual(shared.searchParams.get('rrghRoute'), 'RTE-0001');
+  assert.strictEqual(shared.searchParams.get('rrghPreset'), 'hiking');
+  assert(shared.searchParams.get('rrghMap'), 'Shared link should include center and zoom');
+  assert(shared.searchParams.get('rrghLayers')?.includes('usfs-special-management:0:'), 'Shared link should preserve disabled Special management');
+  assert(shared.searchParams.get('rrghLayers')?.includes('kytopo:1:73'), 'Shared link should preserve Kentucky Topo opacity');
+  assert(shared.searchParams.has('rrghTrips'));
+  assert(shared.searchParams.has('rrghStatus'));
+  assert.strictEqual(shared.searchParams.has('rrghLocation'), false, 'Share URL must not add a live-location parameter');
+
+  const [shareLat, shareLng, shareZoom] = shared.searchParams.get('rrghMap').split(',').map(Number);
+  const sharedResponse = await page.goto(sharedUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(sharedResponse && sharedResponse.ok());
+  await page.waitForSelector('.leaflet-container', { timeout: 10000 });
+  await page.waitForFunction(() => Boolean(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-center')), { timeout: 10000 });
+  await page.waitForTimeout(250);
+  const restoredMap = page.locator('[data-rrgh-route-map]');
+  const [restoredLat, restoredLng] = (await restoredMap.getAttribute('data-map-center')).split(',').map(Number);
+  assert(Math.abs(restoredLat - shareLat) <= 0.0000002, 'Shared latitude should restore exactly');
+  assert(Math.abs(restoredLng - shareLng) <= 0.0000002, 'Shared longitude should restore exactly');
+  assert.strictEqual(Number(await restoredMap.getAttribute('data-current-zoom')), shareZoom, 'Shared zoom should restore exactly');
+  assert.strictEqual(await page.locator('[data-map-layer="usfs-special-management"]').isChecked(), false);
+  assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '73');
+  await page.waitForFunction(
+    () => document.querySelector('.leaflet-popup-content')?.textContent?.includes('Skybridge Arch'),
+    { timeout: 5000 }
+  );
+  record('Stateful map Share permalink and selected-route restore', 'PASS', { sharedUrl });
+
   assert.deepStrictEqual(pageErrors, []);
   await shot(page, 'desktop-full-map-hiker-first');
   record('Full map hiker-first controls, zoom, sources, optional informal trails, search, location and planning', 'PASS', {
@@ -763,7 +824,7 @@ async function mobile(browser) {
   await page.waitForSelector('.leaflet-container', { timeout: 10000 });
   await page.waitForFunction(() => Boolean(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-current-zoom')), { timeout: 10000 });
 
-  for (const label of ['Search','Layers','Plan']) {
+  for (const label of ['Search','Layers','Plan','Share']) {
     assert.strictEqual(await page.locator('.route-map-mobile-bar').getByRole('button', { name: label, exact: true }).count(), 1, label);
   }
   assert(await page.locator('.route-map-mobile-bar').isVisible());
