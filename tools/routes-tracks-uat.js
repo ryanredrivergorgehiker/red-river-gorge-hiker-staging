@@ -49,6 +49,27 @@ const ROADS = {
   }]
 };
 
+const KENTUCKY_ROADS = {
+  type: 'FeatureCollection',
+  features: [{
+    type: 'Feature',
+    properties: {
+      LSt_Name: 'KY 715',
+      St_Name: 'KY 715',
+      RoadClass: 'State Route',
+      SpeedLimit: 55,
+      OneWay: 'N'
+    },
+    geometry: { type: 'LineString', coordinates: [
+      [-83.6212, 37.8112],
+      [-83.6208, 37.8103],
+      [-83.62045, 37.8094],
+      [-83.62005, 37.8085],
+      [-83.61985, 37.8075]
+    ] }
+  }]
+};
+
 const COUNTIES = {
   type: 'FeatureCollection',
   features: [
@@ -145,6 +166,9 @@ async function installProviderStubs(page, providerRequests, slowPrimaryOverpass 
     const url = route.request().url();
     if (url.includes('Ky_CountyLines_WGS84WM') && url.includes('/query?')) {
       return route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(COUNTIES) });
+    }
+    if (url.includes('Ky_911_Road_Centerlines_WGS84WM') && url.includes('/query?')) {
+      return route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(KENTUCKY_ROADS) });
     }
     return route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG });
   });
@@ -244,6 +268,18 @@ async function routeDetail(browser) {
   }
   assert.strictEqual(await page.locator('.route-static-legend-grid .route-layer-static-row').count(), 5);
   assert((await page.locator('.route-static-legend-grid').textContent()).includes('County boundaries'));
+  await page.locator('.route-layer-panel > summary').click();
+  assert((await page.locator('.route-layer-panel').innerText()).includes('National Forest Wilderness'));
+  const informalSwatchColors = await page.evaluate(() => {
+    const node = document.querySelector('.swatch-informal');
+    return {
+      casing: getComputedStyle(node, '::before').borderTopColor,
+      center: getComputedStyle(node, '::after').borderTopColor
+    };
+  });
+  assert.notStrictEqual(informalSwatchColors.casing, informalSwatchColors.center, 'Informal trails should use a two-tone dashed treatment');
+  assert(!/255, 79, 216/.test(informalSwatchColors.casing + informalSwatchColors.center), 'Informal trails must not reuse aerial Wilderness magenta');
+  await page.locator('.route-layer-panel > summary').click();
   assert.strictEqual(await page.getByText('Always shown', { exact: true }).count(), 0, 'County boundaries belong in the top symbol legend without an Always shown label');
   assert.strictEqual(await page.locator('.route-waypoint-icon').count(), 2);
   assert((await page.locator('.route-start-icon').count()) >= 1);
@@ -539,9 +575,14 @@ async function fullMap(browser) {
   assert(box);
   await page.mouse.click(box.x + box.width * 0.62, box.y + box.height * 0.58);
   await page.waitForTimeout(80);
-  assert(await page.locator('[data-coordinate-card]').isVisible());
+  assert(await page.locator('[data-coordinate-card]').isHidden(), 'Ordinary map clicks should not open technical coordinate details');
+  await page.mouse.click(box.x + box.width * 0.62, box.y + box.height * 0.58, { button: 'right' });
+  await page.waitForTimeout(80);
+  assert(await page.locator('[data-coordinate-card]').isVisible(), 'Desktop right-click should open coordinates');
   assert(/-83\./.test(await page.locator('[data-coordinate-dd]').innerText()));
   assert((await page.locator('[data-coordinate-utm]').innerText()).includes('UTM'));
+  await page.locator('[data-coordinate-close]').click();
+  assert(await page.locator('[data-coordinate-card]').isHidden(), 'Coordinate card × should dismiss the card');
 
   await page.getByRole('button', { name: 'Plan', exact: true }).click();
   assert(await page.locator('[data-map-sheet="plan"]').isVisible());
@@ -617,9 +658,9 @@ async function fullMap(browser) {
     '.leaflet-countyLabels-pane{pointer-events:none!important}'
   ].join('') });
 
-  // The road layer may be Canvas-rendered, so derive approximate screen points from
-  // the approved Home NW anchor and try small shared offsets until the planner itself
-  // confirms a snapped leg. This validates near-road tolerance without assuming SVG.
+  // Kentucky road-centerline planning geometry is intentionally not drawn as a new
+  // overlay. Derive screen points from the approved Home NW anchor and prove that a
+  // KY 715-like state-road centerline still participates in the route graph.
   const projectFromHomeNorthWest = (lat, lng) => {
     const scale = 256 * Math.pow(2, homeZoom);
     const project = (plat, plng) => {
@@ -637,8 +678,8 @@ async function fullMap(browser) {
     };
   };
 
-  const trailABase = projectFromHomeNorthWest(37.81462, -83.58918);
-  const trailBBase = projectFromHomeNorthWest(37.81612, -83.58482);
+  const trailABase = projectFromHomeNorthWest(37.8103, -83.6208);
+  const trailBBase = projectFromHomeNorthWest(37.8085, -83.62005);
   const snapOffsets = [
     [0,0],[3,0],[-3,0],[0,3],[0,-3],[4,4],[-4,-4],[4,-4],[-4,4],
     [6,0],[-6,0],[0,6],[0,-6]
@@ -670,7 +711,9 @@ async function fullMap(browser) {
       break;
     }
   }
-  assert(trailA && trailB, 'Planner should snap a near-road click pair around the stubbed Sky Bridge Road geometry');
+  assert(trailA && trailB, 'Planner should snap a click pair along the stubbed KY 715 road-centerline geometry');
+  assert(Number(await mapContainer.getAttribute('data-planning-road-feature-count')) >= 1, 'Kentucky road planning features should be indexed');
+  assert(providerRequests.some(url => url.includes('Ky_911_Road_Centerlines_WGS84WM') && url.includes('/query?')), 'Planner should request Kentucky road centerlines');
   assert((await page.locator('.rrgh-planning-distance-label.is-plan-segment').count()) >= 1, 'Snapped road/trail planning should show segment distance on the map');
   assert((await page.locator('[data-plan-stats-distance]').innerText()).trim() !== '—', 'Planned route should show live total distance');
   await page.waitForFunction(
@@ -926,6 +969,37 @@ async function mobile(browser) {
   const map = page.locator('[data-rrgh-route-map]');
   const box = await map.boundingBox();
   assert(box);
+  const coordinateTarget = {
+    x: box.x + box.width * 0.62,
+    y: box.y + box.height * 0.56
+  };
+  await page.evaluate(({ x, y }) => {
+    const target = document.querySelector('[data-rrgh-route-map]');
+    const touch = new Touch({ identifier: 7, target, clientX: x, clientY: y, pageX: x, pageY: y, screenX: x, screenY: y });
+    target.dispatchEvent(new TouchEvent('touchstart', {
+      bubbles: true,
+      cancelable: true,
+      touches: [touch],
+      targetTouches: [touch],
+      changedTouches: [touch]
+    }));
+  }, coordinateTarget);
+  await page.waitForTimeout(700);
+  assert(await page.locator('[data-coordinate-card]').isVisible(), 'Mobile press-and-hold should open coordinates');
+  await page.evaluate(({ x, y }) => {
+    const target = document.querySelector('[data-rrgh-route-map]');
+    const touch = new Touch({ identifier: 7, target, clientX: x, clientY: y, pageX: x, pageY: y, screenX: x, screenY: y });
+    target.dispatchEvent(new TouchEvent('touchend', {
+      bubbles: true,
+      cancelable: true,
+      touches: [],
+      targetTouches: [],
+      changedTouches: [touch]
+    }));
+  }, coordinateTarget);
+  await page.locator('[data-coordinate-close]').click();
+  assert(await page.locator('[data-coordinate-card]').isHidden(), 'Mobile coordinate card should have a working × dismiss control');
+
   const before = Number(await map.getAttribute('data-current-zoom'));
   await page.touchscreen.tap(box.x + box.width * 0.5, box.y + box.height * 0.45);
   await page.waitForTimeout(80);
@@ -955,6 +1029,8 @@ async function legal(browser) {
     'Last updated: September 25, 2026',
     'Measure distance',
     'USGS 3D Elevation Program (3DEP)',
+    'fixed Red River Gorge-area set of Kentucky 911 road-centerline geometry',
+    'not generated from the visitor’s device location',
     'does not automatically send your device’s precise “My location” coordinates',
     'If you choose “My location,”',
     'does not intentionally transmit or store the precise device coordinates',
@@ -970,6 +1046,7 @@ async function legal(browser) {
     'Property and parcel boundaries are not displayed',
     'Community / Informal Trails',
     'route planner may snap to displayed community/informal paths',
+    'snap to mapped road-centerline geometry from USDA Forest Service and Kentucky public road datasets',
     'Open Database License (ODbL)'
   ]) assert(body.includes(expected), expected);
 
