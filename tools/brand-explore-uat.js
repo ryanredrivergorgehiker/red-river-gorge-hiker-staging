@@ -196,7 +196,7 @@ async function desktopExplore(browser) {
   assert.strictEqual(await menu.getAttribute('open'), null);
 
   await shot(page, 'desktop-home-explore-wide-grid');
-  record('Desktop Explore wide section grid, compact Explore All placement, keyboard, Escape and outside-click behavior', 'PASS', { trailsToExploreAllGap, exploreAllBottomGap });
+  record('Desktop Explore seven-section four-column grid, Trails and Guides CTA placement, keyboard, Escape and outside-click behavior', 'PASS', { linkToExploreAllGap, layout });
   await context.close();
 }
 
@@ -210,7 +210,7 @@ async function mobileExplore(browser) {
   const panel = menu.locator('.nav-panel-explore');
   const box = await panel.boundingBox();
   assert(box && box.x >= -1 && box.x + box.width <= 391);
-  assert.strictEqual(await panel.locator('.nav-explore-section').count(), 8);
+  assert.strictEqual(await panel.locator('.nav-explore-section').count(), 7);
   const columns = await panel.locator('.nav-explore-grid').evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(' ').filter(Boolean).length);
   assert.strictEqual(columns, 2);
   await shot(page, 'mobile-explore-section-grid');
