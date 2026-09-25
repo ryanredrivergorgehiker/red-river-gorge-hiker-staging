@@ -869,6 +869,19 @@ async function fullMap(browser) {
     return center;
   };
 
+  // Capture the exact rendered endpoint that the planner has already classified
+  // as off-trail. Reusing this proven point after resnapping makes the drag
+  // regression deterministic instead of depending on generic viewport probes.
+  const provenOffTrailTarget = await planHitPaths.nth(1).evaluate(path => {
+    const length = path.getTotalLength();
+    const point = path.getPointAtLength(length);
+    const matrix = path.getScreenCTM();
+    if (!matrix || !Number.isFinite(length) || length <= 0) return null;
+    const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix);
+    return { x: screen.x, y: screen.y };
+  });
+  assert(provenOffTrailTarget, 'Off-trail segment should expose its rendered endpoint');
+
   // Prove the actual rendered second segment hit target works: right-click deletes,
   // then Undo restores the same off-trail leg.
   let segmentCenter = await secondSegmentCenter();
@@ -918,25 +931,16 @@ async function fullMap(browser) {
   editStatus = await page.locator('[data-map-status]').innerText();
   assert(editStatus.includes('2 snapped segment(s), 0 off-trail segment(s)'), 'Dragging an off-trail segment onto mapped network should resnap it solid; status=' + editStatus);
 
-  // Drag that same rendered second segment clearly off network: it should become dashed/off-trail.
-  // With the broader Kentucky road graph, a point that was off-network from the original
-  // endpoint may be near a different road after the segment has been resnapped. Probe the
-  // existing candidate set while the drag is active and accept only a planner-previewed
-  // straight target.
+  // Drag that same rendered second segment back to the exact endpoint that was
+  // already proven off-network above. It should preview and commit as a dashed
+  // straight/off-trail segment.
   segmentCenter = await secondSegmentCenter();
   await page.mouse.move(segmentCenter.x, segmentCenter.y);
   await page.mouse.down();
-  let straightDragTarget = null;
-  for (const candidate of offTrailCandidates) {
-    await page.mouse.move(candidate.x, candidate.y, { steps: 8 });
-    await page.waitForTimeout(70);
-    const candidatePreviewMode = await mapContainer.getAttribute('data-plan-drag-preview-mode');
-    if (candidatePreviewMode === 'straight') {
-      straightDragTarget = candidate;
-      break;
-    }
-  }
-  assert(straightDragTarget, 'Planner should expose at least one clearly off-network drag target');
+  await page.mouse.move(provenOffTrailTarget.x, provenOffTrailTarget.y, { steps: 10 });
+  await page.waitForTimeout(100);
+  const offTrailPreviewMode = await mapContainer.getAttribute('data-plan-drag-preview-mode');
+  assert.strictEqual(offTrailPreviewMode, 'straight', 'Dragging back to the proven off-trail endpoint should preview straight; data-plan-drag-preview-mode=' + offTrailPreviewMode);
   await page.mouse.up();
   await page.waitForTimeout(250);
   editStatus = await page.locator('[data-map-status]').innerText();
