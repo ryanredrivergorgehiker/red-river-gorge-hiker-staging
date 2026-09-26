@@ -1039,7 +1039,7 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '73');
   assert.strictEqual(await page.locator('[data-map-layer="sunrise-sunset-potential"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-opacity="sunrise-sunset-potential"]').inputValue(), '57');
-  assert.strictEqual(await page.locator('.leaflet-sunPotential-pane img.rrgh-sun-potential-overlay').count(), 2);
+  assert.strictEqual(await page.locator('.leaflet-sunPotential-pane img.rrgh-sun-potential-overlay').count(), 1, 'Shared view should restore only the active Pinch-Em-Tight overlay');
   await page.waitForFunction(
     () => document.querySelector('.leaflet-popup-content')?.textContent?.includes('Skybridge Arch'),
     { timeout: 5000 }
