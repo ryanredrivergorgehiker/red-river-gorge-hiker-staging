@@ -1194,15 +1194,15 @@ async function legal(browser) {
     'route planner may snap to displayed community/informal paths',
     'snap to mapped road-centerline geometry from USDA Forest Service and Kentucky public road datasets',
     'Open Database License (ODbL)',
-    'limited Pinch-Em-Tight calibration pilot',
-    'Outside the pilot area the overlay is intentionally blank',
-    'bare-earth LiDAR crest test',
-    'trail proximity is only a small late confidence adjustment rather than proof of an overlook',
-    'displayed fade is restricted to connected crest pixels rather than radial blur',
-    'displayed lobe is strongest near that likely overlook edge',
-    'fades only a short distance back onto crest support',
-    'NAIP vegetation classification is not a tree-by-tree canopy-height measurement',
-    'do not guarantee that the sun will be visible'
+    'experimental photography-planning proxy limited to Pinch-Em-Tight and Auxier Ridge',
+    'KyFromAbove Phase 2 bare-earth elevation defines thin ridge lines and a narrow standing corridor',
+    'Phase 2 point-cloud canopy heights and Phase 3 RGB/NIR orthophotography',
+    'Trails cannot create or move these features and do not affect scores',
+    'Sunrise and sunset sectors are evaluated independently',
+    'Color fades only along connected corridor cells, for at most 70 meters',
+    'Both areas use the same rules',
+    'Low cover is not proof of exposed rock, safe footing, legal access or an unobstructed view',
+    'Colors do not guarantee a visible sunrise or sunset'
   ]) assert(body.includes(expected), expected);
 
   response = await page.goto(MAIN + 'copyright-and-terms/#outdoor-safety-location-disclaimer', { waitUntil: 'domcontentloaded', timeout: 60000 });
