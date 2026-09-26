@@ -925,16 +925,19 @@ async function fullMap(browser) {
   // this same viewport. The drag contract here is resnapping an existing
   // off-trail leg onto mapped network, which was just verified.
 
-  // Right-clicking the actual resnapped second segment deletes that leg.
-  segmentCenter = await secondSegmentCenter();
-  await page.mouse.click(segmentCenter.x, segmentCenter.y, { button: 'right' });
-  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Planned segment deleted'), { timeout: 3000 });
-
+  // The earlier off-trail leg already proved right-click delete + Undo.
+  // Here, prove the drag/resnap action participates cleanly in history:
+  // Undo restores the off-trail state and Redo restores the snapped state.
   assert.strictEqual(await undo.isDisabled(), false);
   await undo.click();
+  await page.waitForTimeout(150);
+  editStatus = await page.locator('[data-map-status]').innerText();
+  assert(editStatus.includes('1 off-trail segment'), 'Undo should restore the pre-resnap off-trail state; status=' + editStatus);
   assert.strictEqual(await redo.isDisabled(), false);
   await redo.click();
-  await undo.click();
+  await page.waitForTimeout(150);
+  editStatus = await page.locator('[data-map-status]').innerText();
+  assert(editStatus.includes('2 snapped segment(s), 0 off-trail segment(s)'), 'Redo should restore the resnapped state; status=' + editStatus);
 
   const exportGpx = page.getByRole('button', { name: 'Export GPX', exact: true });
   assert.strictEqual(await exportGpx.isDisabled(), false);
