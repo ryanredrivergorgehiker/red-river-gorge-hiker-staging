@@ -599,14 +599,13 @@ async function fullMap(browser) {
   assert(Math.abs(renderedSunOpacity - 0.57) < 0.02, 'Sun potential opacity should follow Fine tune layers');
 
   const crestToggle = page.locator('[data-map-layer="sun-cal-crest"]');
+  const calibrationSummary = page.locator('.route-layer-fine-tune > summary', { hasText: 'Calibration diagnostics' });
+  await calibrationSummary.click();
   const elevationBeforeCrest = providerRequests.filter(url => url.includes('elevation.nationalmap.gov')).length;
-  const crestRequest = page.waitForRequest(
-    request => new URL(request.url()).pathname.endsWith('/data/map/sunrise-sunset-calibration-crest.png'),
-    { timeout: 10000 }
-  );
   await crestToggle.check();
-  await crestRequest;
-  await page.waitForSelector('.leaflet-sunPotential-pane img.rrgh-sun-calibration-overlay', { timeout: 10000 });
+  const crestImage = page.locator('.leaflet-sunPotential-pane img.rrgh-sun-calibration-overlay').first();
+  await crestImage.waitFor({ state: 'visible', timeout: 10000 });
+  assert((await crestImage.getAttribute('src')).endsWith('/data/map/sunrise-sunset-calibration-crest.png'));
   assert.strictEqual(await crestToggle.isChecked(), true);
   assert.strictEqual(
     providerRequests.filter(url => url.includes('elevation.nationalmap.gov')).length,
@@ -614,6 +613,7 @@ async function fullMap(browser) {
     'Viewing the precomputed LiDAR crest diagnostic must not contact USGS 3DEP'
   );
   await crestToggle.uncheck();
+  await calibrationSummary.click();
 
   await aerialToggle.check();
   assert.strictEqual(await aerialToggle.isChecked(), true);
