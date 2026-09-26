@@ -1,9 +1,9 @@
-6fbf81c61a418496796a1b696f47f8a294733eb6
-purpose=Deploy v6 cliff/overlook directional Sunrise / Sunset viewshed; 20 m analysis grid; color seeded only where compact crest/nose support and near-field terrain drop agree with sunrise/sunset direction; short crest-constrained lobes; no modeled valley leakage; production unchanged
-source_ci=36213104726 SUCCESS
-routes_uat=36213192891 SUCCESS
-routes_tracks_uat=36213192901 SUCCESS
-analytics_uat=36213192915 SUCCESS
-brand_uat=36213192946 SUCCESS attempt_2
-roku_uat=36213192904 SUCCESS
-generator=36212827765 SUCCESS
+0362062c4181e4c23a2ea6d15e102d740d9f7666
+purpose=Deploy Pinch-Em-Tight sunrise sunset calibration pilot only; approximately 2 m analysis grid; explicit crest mask; short overlook-edge lobes; outside pilot bounds intentionally blank; production unchanged
+source_ci=36243385018 SUCCESS
+routes_uat=36243484815 SUCCESS
+routes_tracks_uat=36243484892 SUCCESS
+analytics_uat=36243484996 SUCCESS
+brand_uat=36243484822 SUCCESS
+roku_uat=36243484827 SUCCESS
+generator=36243016937 SUCCESS
