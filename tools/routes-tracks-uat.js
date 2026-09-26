@@ -565,7 +565,7 @@ async function fullMap(browser) {
   for (const id of calibrationIds) {
     assert.strictEqual(await page.locator('[data-map-layer="' + id + '"]').isChecked(), false, id + ' should be off by default');
   }
-  assert.strictEqual(await page.getByRole('checkbox', { name: '1 · LiDAR ridge skeleton', exact: true }).count(), 1);
+  assert.strictEqual(await page.locator('.route-layer-toggle-row').getByText('1 · LiDAR ridge skeleton', { exact: true }).count(), 1);
   assert.strictEqual(await page.getByText('3 · Overlook / outcrop candidates', { exact: true }).count(), 1);
 
   assert.strictEqual(await sunToggle.isChecked(), false, 'Sunrise / Sunset pilot must be off by default');
