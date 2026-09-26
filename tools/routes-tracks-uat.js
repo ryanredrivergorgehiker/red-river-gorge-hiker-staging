@@ -1131,6 +1131,9 @@ async function legal(browser) {
     'does not send the search text to a general-purpose external geocoding service',
     'Sunrise / Sunset potential',
     'USDA National Agriculture Imagery Program (NAIP) four-band aerial imagery',
+    'ridge, spur, upper-shoulder, and cliff-nose support',
+    'gradient is constrained to connected high-ground support',
+    'weaker sunrise/sunset direction is suppressed unless both viewing sectors are independently strong',
     'loads the finished PNG overlay from the RRGH website',
     'does not send the visitor’s map position, device location, or other coordinates to USGS, USDA, or Overpass',
     'generalized aerial proxy rather than a tree-by-tree canopy-height model'
@@ -1164,7 +1167,8 @@ async function legal(browser) {
     'snap to mapped road-centerline geometry from USDA Forest Service and Kentucky public road datasets',
     'Open Database License (ODbL)',
     'generalized photographic viewshed proxy intended as a photography-planning aid',
-    'ridge and cliff-nose positions where terrain falls away toward representative seasonal sunrise or sunset directions',
+    'Color is constrained to connected high-ground support',
+    'weaker sunrise/sunset direction is suppressed unless both viewing sectors are independently strong',
     'NAIP vegetation classification is not a tree-by-tree canopy-height measurement',
     'do not guarantee that the sun will be visible'
   ]) assert(body.includes(expected), expected);
