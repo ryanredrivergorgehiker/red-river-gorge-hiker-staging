@@ -1,9 +1,9 @@
-356752787c12cc3a60cba16f1ab81c19ef734eaa
-purpose=Replace broad Sunrise / Sunset potential overlay with conservative high-ridge and upper-shoulder model; hard mapped-water exclusion; strong low-valley suppression; USGS 3DEP terrain plus OpenStreetMap water mask; layer remains off by default; production unchanged
-source_ci=36205071751 SUCCESS
-routes_uat=36205220649 SUCCESS
-routes_tracks_uat=36205724303 SUCCESS
-analytics_uat=36205220643 SUCCESS
-brand_uat=36205220640 SUCCESS
-roku_uat=36205220658 SUCCESS
-generator=36204651935 SUCCESS
+93fc2a7c1b1f4f955de5b37d4c1e756550d6ff9a
+purpose=Balance Sunrise / Sunset potential with weighted terrain scoring; actual mapped water only hard geographic exclusion; narrow 45 m direct-water mask around mapped linear streams/rivers; valley position is weighted penalty; strong ridge cores fade through plausible shoulders; production unchanged
+source_ci=36206725453 SUCCESS
+routes_uat=36206823800 SUCCESS
+routes_tracks_uat=36206823830 SUCCESS
+analytics_uat=36206823790 SUCCESS
+brand_uat=36206823781 SUCCESS
+roku_uat=36206823764 SUCCESS
+generator=36206454247 SUCCESS
