@@ -1157,12 +1157,12 @@ async function legal(browser) {
     'Sunrise / Sunset',
     'Pinch-Em-Tight only',
     'KyFromAbove Phase 2 Z-meters bare-earth elevation',
-    'Phase 2 LiDAR point clouds for measured canopy-height evidence',
+    'Phase 2 LiDAR point clouds for measured upper-ground and absolute obstruction elevations',
     'Phase 3 leaf-off four-band RGB/NIR orthophotography',
     'Connected crest geometry and upper cliff-lip standing ground',
-    'before connected exposed-surface classification or independent sunrise/sunset evaluation',
+    'before rock-material classification or independent east/west evaluation',
     'trails are visual context and do not affect the calculation',
-    'short display fade follows connected exposed ground and crest cells rather than radial image blur',
+    'Each colored cell must pass its own directional sightline; color does not spread from neighboring viewpoints',
     'loads finished PNG overlays from the RRGH website',
     'does not send the visitor’s map position, device location or other coordinates to Kentucky GIS, USGS, USDA or Overpass',
     'leaf-off gaps, narrow ledges, changing vegetation, unsampled obstructions'
@@ -1196,14 +1196,14 @@ async function legal(browser) {
     'snap to mapped road-centerline geometry from USDA Forest Service and Kentucky public road datasets',
     'Open Database License (ODbL)',
     'experimental photography-planning proxy limited to Pinch-Em-Tight',
-    'KyFromAbove Phase 2 bare-earth elevation defines connected crest lines and upper cliff-lip standing ground',
-    'Phase 2 point-cloud canopy heights and Phase 3 leaf-off RGB/NIR orthophotography',
+    'KyFromAbove Phase 2 bare-earth elevation and classified-ground returns define connected crest lines and upper cliff-lip standing ground',
+    'Phase 2 absolute point-cloud elevations measure obstructions; Phase 3 leaf-off RGB/NIR orthophotography',
     'Trails cannot create or move these features and do not affect scores',
-    'Sunrise and sunset sectors are evaluated independently',
-    'Color fades only along connected exposed ground and crest cells, for at most 70 meters',
+    'East and west sightlines are evaluated independently',
+    'Color does not spread from neighboring viewpoints',
     'Only Pinch-Em-Tight is generated in this pass',
     'Low cover is not proof of exposed rock, safe footing, legal access or an unobstructed view',
-    'Colors do not guarantee a visible sunrise or sunset'
+    'Colors describe general east/west view potential, do not guarantee a visible sunrise or sunset'
   ]) assert(body.includes(expected), expected);
 
   response = await page.goto(MAIN + 'copyright-and-terms/#outdoor-safety-location-disclaimer', { waitUntil: 'domcontentloaded', timeout: 60000 });
