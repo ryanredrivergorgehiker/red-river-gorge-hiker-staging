@@ -436,8 +436,8 @@ async function fullMap(browser) {
   assert(body.includes('How to read this map — 30-second guide'));
   assert(body.includes('Map data:'));
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 11);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 10);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 16);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 15);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0, 'Temporary exact-view copier should be removed after Home approval');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
@@ -561,6 +561,12 @@ async function fullMap(browser) {
   const lidarToggle = page.locator('[data-map-layer="ky-hillshade"]');
   const sunToggle = page.locator('[data-map-layer="sunrise-sunset-potential"]');
   const sunOpacity = page.locator('[data-opacity="sunrise-sunset-potential"]');
+  const calibrationIds = ['sun-cal-crest','sun-cal-overlook','sun-cal-open-ground','sun-cal-sunrise-pass','sun-cal-sunset-pass'];
+  for (const id of calibrationIds) {
+    assert.strictEqual(await page.locator('[data-map-layer="' + id + '"]').isChecked(), false, id + ' should be off by default');
+  }
+  assert.strictEqual(await page.getByText('1 · LiDAR crest mask', { exact: true }).count(), 1);
+  assert.strictEqual(await page.getByText('2 · Overlook / outcrop candidates', { exact: true }).count(), 1);
 
   assert.strictEqual(await sunToggle.isChecked(), false, 'Sunrise / Sunset pilot must be off by default');
   assert.strictEqual(await sunOpacity.inputValue(), '68');
@@ -591,6 +597,23 @@ async function fullMap(browser) {
   assert.strictEqual(await sunOpacity.inputValue(), '57');
   const renderedSunOpacity = Number(await page.locator('.rrgh-sun-potential-overlay').evaluate(node => getComputedStyle(node).opacity));
   assert(Math.abs(renderedSunOpacity - 0.57) < 0.02, 'Sun potential opacity should follow Fine tune layers');
+
+  const crestToggle = page.locator('[data-map-layer="sun-cal-crest"]');
+  const elevationBeforeCrest = providerRequests.filter(url => url.includes('elevation.nationalmap.gov')).length;
+  const crestRequest = page.waitForRequest(
+    request => new URL(request.url()).pathname.endsWith('/data/map/sunrise-sunset-calibration-crest.png'),
+    { timeout: 10000 }
+  );
+  await crestToggle.check();
+  await crestRequest;
+  await page.waitForSelector('.leaflet-sunPotential-pane img.rrgh-sun-calibration-overlay', { timeout: 10000 });
+  assert.strictEqual(await crestToggle.isChecked(), true);
+  assert.strictEqual(
+    providerRequests.filter(url => url.includes('elevation.nationalmap.gov')).length,
+    elevationBeforeCrest,
+    'Viewing the precomputed LiDAR crest diagnostic must not contact USGS 3DEP'
+  );
+  await crestToggle.uncheck();
 
   await aerialToggle.check();
   assert.strictEqual(await aerialToggle.isChecked(), true);
@@ -1133,7 +1156,9 @@ async function legal(browser) {
     'limited Pinch-Em-Tight calibration pilot',
     'approximately two-meter analysis resolution',
     'Outside the pilot area the calibration overlay is intentionally blank',
-    'explicit crest terrain',
+    'bare-earth LiDAR ridge detection',
+    'terrain must fall away on both sides',
+    'Trail proximity is supporting evidence only and cannot create a crest candidate',
     'near-field terrain break in that viewing direction',
     'displayed lobe is deliberately short',
     'loads the finished PNG overlay from the RRGH website',
@@ -1170,6 +1195,8 @@ async function legal(browser) {
     'Open Database License (ODbL)',
     'limited Pinch-Em-Tight calibration pilot',
     'Outside the pilot area the overlay is intentionally blank',
+    'bare-earth LiDAR crest test',
+    'trail proximity is only supporting evidence rather than proof of an overlook',
     'displayed lobe is strongest near that likely overlook edge',
     'fades only a short distance back onto crest support',
     'NAIP vegetation classification is not a tree-by-tree canopy-height measurement',
