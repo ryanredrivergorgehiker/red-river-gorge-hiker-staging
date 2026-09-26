@@ -1,9 +1,9 @@
-0ef3f99757c975d6c4aebc2709bbe7de0a11add3
-purpose=Deploy v5 ridge-constrained directional Sunrise / Sunset viewshed; gradient constrained to connected ridge/spur/cliff-nose support; 0 percent valley leakage in model diagnostics; weaker sunrise/sunset direction suppressed unless both viewsheds independently strong; production unchanged
-source_ci=36210311317 SUCCESS
-routes_uat=36210454979 SUCCESS
-routes_tracks_uat=36210455005 SUCCESS
-analytics_uat=36210455008 SUCCESS
-brand_uat=36210455001 SUCCESS
-roku_uat=36210455012 SUCCESS
-generator=36210130435 SUCCESS
+6fbf81c61a418496796a1b696f47f8a294733eb6
+purpose=Deploy v6 cliff/overlook directional Sunrise / Sunset viewshed; 20 m analysis grid; color seeded only where compact crest/nose support and near-field terrain drop agree with sunrise/sunset direction; short crest-constrained lobes; no modeled valley leakage; production unchanged
+source_ci=36213104726 SUCCESS
+routes_uat=36213192891 SUCCESS
+routes_tracks_uat=36213192901 SUCCESS
+analytics_uat=36213192915 SUCCESS
+brand_uat=36213192946 SUCCESS attempt_2
+roku_uat=36213192904 SUCCESS
+generator=36212827765 SUCCESS
