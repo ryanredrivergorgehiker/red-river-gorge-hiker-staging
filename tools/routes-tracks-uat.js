@@ -369,7 +369,7 @@ async function fullMap(browser) {
   page.on('pageerror', error => pageErrors.push(String(error)));
   page.on('request', request => {
     try {
-      if (new URL(request.url()).pathname.endsWith('/data/map/sunrise-sunset-potential.svg')) {
+      if (new URL(request.url()).pathname.endsWith('/data/map/sunrise-sunset-potential.png')) {
         sunAssetRequests.push(request.url());
       }
     } catch {}
@@ -567,7 +567,7 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('.swatch-sun-potential').count(), 1);
   const elevationBeforeSun = providerRequests.filter(url => url.includes('elevation.nationalmap.gov')).length;
   const sunRequest = page.waitForRequest(
-    request => new URL(request.url()).pathname.endsWith('/data/map/sunrise-sunset-potential.svg'),
+    request => new URL(request.url()).pathname.endsWith('/data/map/sunrise-sunset-potential.png'),
     { timeout: 10000 }
   );
   await sunToggle.evaluate(input => {
@@ -1130,10 +1130,10 @@ async function legal(browser) {
     'does not intentionally transmit or store the precise device coordinates',
     'does not send the search text to a general-purpose external geocoding service',
     'Sunrise / Sunset potential',
-    'OpenStreetMap water features obtained during the build through public Overpass API services',
-    'does not apply the prior broad stream exclusion buffer',
-    'valley position lowers the score rather than acting as a veto',
-    'does not send the visitor’s map position, device location, or other coordinates to USGS'
+    'USDA National Agriculture Imagery Program (NAIP) four-band aerial imagery',
+    'loads the finished PNG overlay from the RRGH website',
+    'does not send the visitor’s map position, device location, or other coordinates to USGS, USDA, or Overpass',
+    'generalized aerial proxy rather than a tree-by-tree canopy-height model'
   ]) assert(body.includes(expected), expected);
 
   response = await page.goto(MAIN + 'search-and-rescue/#current-conditions', { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -1163,8 +1163,9 @@ async function legal(browser) {
     'route planner may snap to displayed community/informal paths',
     'snap to mapped road-centerline geometry from USDA Forest Service and Kentucky public road datasets',
     'Open Database License (ODbL)',
-    'generalized weighted terrain and mapped-water model intended as a photography-planning aid',
-    'does not broadly disqualify high terrain merely because a mapped stream is nearby',
+    'generalized photographic viewshed proxy intended as a photography-planning aid',
+    'ridge and cliff-nose positions where terrain falls away toward representative seasonal sunrise or sunset directions',
+    'NAIP vegetation classification is not a tree-by-tree canopy-height measurement',
     'do not guarantee that the sun will be visible'
   ]) assert(body.includes(expected), expected);
 
