@@ -436,8 +436,8 @@ async function fullMap(browser) {
   assert(body.includes('How to read this map — 30-second guide'));
   assert(body.includes('Map data:'));
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 16);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 15);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 17);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 16);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0, 'Temporary exact-view copier should be removed after Home approval');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
@@ -561,12 +561,12 @@ async function fullMap(browser) {
   const lidarToggle = page.locator('[data-map-layer="ky-hillshade"]');
   const sunToggle = page.locator('[data-map-layer="sunrise-sunset-potential"]');
   const sunOpacity = page.locator('[data-opacity="sunrise-sunset-potential"]');
-  const calibrationIds = ['sun-cal-crest','sun-cal-overlook','sun-cal-open-ground','sun-cal-sunrise-pass','sun-cal-sunset-pass'];
+  const calibrationIds = ['sun-cal-ridge-skeleton','sun-cal-crest','sun-cal-overlook','sun-cal-open-ground','sun-cal-sunrise-pass','sun-cal-sunset-pass'];
   for (const id of calibrationIds) {
     assert.strictEqual(await page.locator('[data-map-layer="' + id + '"]').isChecked(), false, id + ' should be off by default');
   }
-  assert.strictEqual(await page.getByText('1 · LiDAR crest mask', { exact: true }).count(), 1);
-  assert.strictEqual(await page.getByText('2 · Overlook / outcrop candidates', { exact: true }).count(), 1);
+  assert.strictEqual(await page.getByText('1 · LiDAR ridge skeleton', { exact: true }).count(), 1);
+  assert.strictEqual(await page.getByText('3 · Overlook / outcrop candidates', { exact: true }).count(), 1);
 
   assert.strictEqual(await sunToggle.isChecked(), false, 'Sunrise / Sunset pilot must be off by default');
   assert.strictEqual(await sunOpacity.inputValue(), '68');
@@ -595,7 +595,8 @@ async function fullMap(browser) {
     input.dispatchEvent(new Event('change', { bubbles: true }));
   });
   assert.strictEqual(await sunOpacity.inputValue(), '57');
-  const renderedSunOpacity = Number(await page.locator('.rrgh-sun-potential-overlay').evaluate(node => getComputedStyle(node).opacity));
+  assert.strictEqual(await page.locator('.rrgh-sun-potential-overlay').count(), 2, 'Both calibration areas should use the shared toggle');
+  const renderedSunOpacity = Number(await page.locator('.rrgh-sun-potential-overlay').first().evaluate(node => getComputedStyle(node).opacity));
   assert(Math.abs(renderedSunOpacity - 0.57) < 0.02, 'Sun potential opacity should follow Fine tune layers');
 
   const crestToggle = page.locator('[data-map-layer="sun-cal-crest"]');

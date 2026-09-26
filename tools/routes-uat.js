@@ -304,11 +304,11 @@ async function mapControlsAndAccessibility(browser) {
     return button && !button.disabled;
   }, { timeout: 10000 });
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 16);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 15);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 17);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 16);
   assert.strictEqual(await page.locator('[data-map-layer="sunrise-sunset-potential"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="sunrise-sunset-potential"]').inputValue(), '68');
-  for (const id of ['sun-cal-crest','sun-cal-overlook','sun-cal-open-ground','sun-cal-sunrise-pass','sun-cal-sunset-pass']) {
+  for (const id of ['sun-cal-ridge-skeleton','sun-cal-crest','sun-cal-overlook','sun-cal-open-ground','sun-cal-sunrise-pass','sun-cal-sunset-pass']) {
     assert.strictEqual(await page.locator('[data-map-layer="' + id + '"]').isChecked(), false, id + ' should be off by default');
   }
   assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 0);
