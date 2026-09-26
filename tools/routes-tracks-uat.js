@@ -1166,6 +1166,8 @@ async function legal(browser) {
     'does not intentionally transmit or store the precise device coordinates',
     'does not send the search text to a general-purpose external geocoding service',
     'Sunrise / Sunset potential',
+    'OpenStreetMap water features obtained during the build through public Overpass API services',
+    'hard-excludes mapped water',
     'does not send the visitor’s map position, device location, or other coordinates to USGS'
   ]) assert(body.includes(expected), expected);
 
@@ -1196,7 +1198,7 @@ async function legal(browser) {
     'route planner may snap to displayed community/informal paths',
     'snap to mapped road-centerline geometry from USDA Forest Service and Kentucky public road datasets',
     'Open Database License (ODbL)',
-    'generalized, bare-earth terrain model intended as a photography-planning aid',
+    'generalized high-ground terrain and mapped-water model intended as a photography-planning aid',
     'do not guarantee that the sun will be visible'
   ]) assert(body.includes(expected), expected);
 
