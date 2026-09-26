@@ -569,6 +569,7 @@ async function fullMap(browser) {
   assert.strictEqual(await page.getByText('3 · Overlook / outcrop candidates', { exact: true }).count(), 1);
 
   assert.strictEqual(await sunToggle.isChecked(), false, 'Sunrise / Sunset pilot must be off by default');
+  assert.strictEqual(await page.getByText(/Purple: both/).count(), 1, 'Both independent directions need an explicit legend');
   assert.strictEqual(await sunOpacity.inputValue(), '68');
   assert.strictEqual(await page.locator('.swatch-sun-potential').count(), 1);
   const elevationBeforeSun = providerRequests.filter(url => url.includes('elevation.nationalmap.gov')).length;
@@ -595,7 +596,7 @@ async function fullMap(browser) {
     input.dispatchEvent(new Event('change', { bubbles: true }));
   });
   assert.strictEqual(await sunOpacity.inputValue(), '57');
-  assert.strictEqual(await page.locator('.rrgh-sun-potential-overlay').count(), 2, 'Both calibration areas should use the shared toggle');
+  assert.strictEqual(await page.locator('.rrgh-sun-potential-overlay').count(), 1, 'Only Pinch-Em-Tight should be active in this pass');
   const renderedSunOpacity = Number(await page.locator('.rrgh-sun-potential-overlay').first().evaluate(node => getComputedStyle(node).opacity));
   assert(Math.abs(renderedSunOpacity - 0.57) < 0.02, 'Sun potential opacity should follow Fine tune layers');
 
@@ -1154,11 +1155,11 @@ async function legal(browser) {
     'does not intentionally transmit or store the precise device coordinates',
     'does not send the search text to a general-purpose external geocoding service',
     'Sunrise / Sunset',
-    'Pinch-Em-Tight and Auxier Ridge only',
+    'Pinch-Em-Tight only',
     'KyFromAbove Phase 2 Z-meters bare-earth elevation',
     'Phase 2 LiDAR point clouds for measured canopy-height evidence',
-    'Phase 3 four-band RGB/NIR orthophotography',
-    'Thin ridge geometry, a narrow crest corridor and adjacent gentle high ground',
+    'Phase 3 leaf-off four-band RGB/NIR orthophotography',
+    'Connected crest geometry and upper cliff-lip standing ground',
     'before connected exposed-surface classification or independent sunrise/sunset evaluation',
     'trails are visual context and do not affect the calculation',
     'short display fade follows connected exposed ground and crest cells rather than radial image blur',
@@ -1194,13 +1195,13 @@ async function legal(browser) {
     'route planner may snap to displayed community/informal paths',
     'snap to mapped road-centerline geometry from USDA Forest Service and Kentucky public road datasets',
     'Open Database License (ODbL)',
-    'experimental photography-planning proxy limited to Pinch-Em-Tight and Auxier Ridge',
-    'KyFromAbove Phase 2 bare-earth elevation defines thin ridge lines, a narrow crest corridor and adjacent gentle high ground',
-    'Phase 2 point-cloud canopy heights and Phase 3 RGB/NIR orthophotography',
+    'experimental photography-planning proxy limited to Pinch-Em-Tight',
+    'KyFromAbove Phase 2 bare-earth elevation defines connected crest lines and upper cliff-lip standing ground',
+    'Phase 2 point-cloud canopy heights and Phase 3 leaf-off RGB/NIR orthophotography',
     'Trails cannot create or move these features and do not affect scores',
     'Sunrise and sunset sectors are evaluated independently',
     'Color fades only along connected exposed ground and crest cells, for at most 70 meters',
-    'Both areas use the same rules',
+    'Only Pinch-Em-Tight is generated in this pass',
     'Low cover is not proof of exposed rock, safe footing, legal access or an unobstructed view',
     'Colors do not guarantee a visible sunrise or sunset'
   ]) assert(body.includes(expected), expected);
