@@ -11,3 +11,4 @@ retry_of_deploy=36252726134
 retry_reason=Transient USGS 3DEP HTTP 502 during unrelated route elevation rebuild; source SHA unchanged
 staging_pipeline_fix=Avoid duplicate route-elevation regeneration during deployment; build:site follows successful npm run check
 deterministic_deploy_checks=Validate committed route artifacts and tests without live USGS regeneration during staging deployment
+validated_route_cache=Skybridge elevation recovered from last successful staging artifact; reuse guarded by exact route JSON/GeoJSON/GPX Git blob identities
