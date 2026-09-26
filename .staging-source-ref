@@ -1,9 +1,9 @@
-93fc2a7c1b1f4f955de5b37d4c1e756550d6ff9a
-purpose=Balance Sunrise / Sunset potential with weighted terrain scoring; actual mapped water only hard geographic exclusion; narrow 45 m direct-water mask around mapped linear streams/rivers; valley position is weighted penalty; strong ridge cores fade through plausible shoulders; production unchanged
-source_ci=36206725453 SUCCESS
-routes_uat=36206823800 SUCCESS
-routes_tracks_uat=36206823830 SUCCESS
-analytics_uat=36206823790 SUCCESS
-brand_uat=36206823781 SUCCESS
-roku_uat=36206823764 SUCCESS
-generator=36206454247 SUCCESS
+08e514822c8f0381aa5b75efa21c2f2c007a90f1
+purpose=Replace v3 terrain suitability with v4 photographic viewshed proxy; 25 m USGS 3DEP bare-earth terrain plus USDA NAIP four-band aerial vegetation/open-ground confidence; directional terrain drop/horizon and viewing-sector vegetation; smooth PNG gradient; mapped water excluded; production unchanged
+source_ci=36208972736 SUCCESS
+routes_uat=36209059764 SUCCESS
+routes_tracks_uat=36209059794 SUCCESS
+analytics_uat=36209059799 SUCCESS
+brand_uat=36209059768 SUCCESS
+roku_uat=36209059797 SUCCESS
+generator=36208576549 SUCCESS
