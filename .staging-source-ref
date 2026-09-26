@@ -9,3 +9,4 @@ roku_uat=36250592324 SUCCESS
 generator=36249882727 SUCCESS
 retry_of_deploy=36252726134
 retry_reason=Transient USGS 3DEP HTTP 502 during unrelated route elevation rebuild; source SHA unchanged
+staging_pipeline_fix=Avoid duplicate route-elevation regeneration during deployment; build:site follows successful npm run check

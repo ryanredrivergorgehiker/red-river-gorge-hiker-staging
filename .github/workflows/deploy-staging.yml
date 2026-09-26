@@ -80,7 +80,10 @@ jobs:
         env:
           SITE_URL: https://ryanredrivergorgehiker.github.io
           BASE_PATH: /red-river-gorge-hiker-staging/
-        run: npm run build
+        # npm run check immediately above already regenerates and validates the
+        # committed route-elevation artifact. Avoid a redundant second live
+        # USGS 3DEP request during deployment.
+        run: npm run build:site
 
       - name: Mark staging output noindex
         working-directory: site
