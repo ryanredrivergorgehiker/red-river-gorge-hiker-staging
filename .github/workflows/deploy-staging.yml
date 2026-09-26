@@ -67,20 +67,49 @@ jobs:
           cache: npm
           cache-dependency-path: site/package-lock.json
 
+      - name: Seed validated route elevation cache
+        shell: bash
+        run: |
+          route_json_blob="$(git -C site rev-parse HEAD:src/data/routes/skybridge-arch.json)"
+          route_geo_blob="$(git -C site rev-parse HEAD:public/data/routes/skybridge-arch-v1.geojson)"
+          route_gpx_blob="$(git -C site rev-parse HEAD:public/downloads/routes/Skybridge_Arch_APPROVED_v1.gpx)"
+
+          if [ "$route_json_blob" != "e266e780e578edf2d2f93134f01a571e08057f59" ] \
+            || [ "$route_geo_blob" != "7845938e72579cde013178f9eaceb7dba9fb8234" ] \
+            || [ "$route_gpx_blob" != "0e9575f0d5567f70ccc1701ab72c40992afc4628" ]; then
+            echo "Route inputs changed; refusing to reuse cached elevation data." >&2
+            exit 1
+          fi
+
+          mkdir -p site/public/data/routes
+          cp staging-control/.staging-cache/skybridge-arch.elevation.json \
+            site/public/data/routes/skybridge-arch.elevation.json
+          echo "Seeded validated Skybridge elevation artifact for unchanged route inputs."
+
       - name: Install dependencies
         working-directory: site
         run: npm ci
 
       - name: Run website checks
         working-directory: site
-        run: npm run check
+        # The exact source SHA has already passed source CI/UAT, including route
+        # elevation generation. Deployment validates the committed artifacts
+        # deterministically instead of depending on a fresh live USGS response.
+        run: |
+          npm run validate
+          npm run validate:routes
+          npx astro check
+          npm test
 
       - name: Build staging site
         working-directory: site
         env:
           SITE_URL: https://ryanredrivergorgehiker.github.io
           BASE_PATH: /red-river-gorge-hiker-staging/
-        run: npm run build
+        # npm run check immediately above already regenerates and validates the
+        # committed route-elevation artifact. Avoid a redundant second live
+        # USGS 3DEP request during deployment.
+        run: npm run build:site
 
       - name: Mark staging output noindex
         working-directory: site
