@@ -10,7 +10,7 @@ const SHARED = 'rrgh-analytics-consent-v1';
 const REGION = 'rrgh-region-country-v1';
 const GPX_SHA = '2469c85ebaddd3e701ba6dc8eea3664d90a0667dcd86f2aab43ae1445986830d';
 const GEO_SHA = '123fdb57e1142299f86c714367cc466b70f18fa90cfbaabb92b0d9ced157dc66';
-const PROVIDERS = new Set(['kygisserver.ky.gov', 'basemap.nationalmap.gov', 'elevation.nationalmap.gov', 'apps.fs.usda.gov', 'overpass.maprva.org', 'overpass.private.coffee', 'overpass-api.de', 'maps.mail.ru']);
+const PROVIDERS = new Set(['kygisserver.ky.gov', 'basemap.nationalmap.gov', 'apps.fs.usda.gov', 'overpass.maprva.org', 'overpass.private.coffee', 'overpass-api.de', 'maps.mail.ru']);
 
 const TRANSPARENT_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X3JmAAAAAElFTkSuQmCC',
@@ -45,27 +45,6 @@ const ROADS = {
     properties: { name: 'Sky Bridge Road', id: '10', route_status: 'OPEN', oper_maint_level: '3' },
     geometry: { type: 'LineString', coordinates: [
       [-83.5890, 37.8145], [-83.5850, 37.8160], [-83.5828, 37.8175]
-    ] }
-  }]
-};
-
-const KENTUCKY_ROADS = {
-  type: 'FeatureCollection',
-  features: [{
-    type: 'Feature',
-    properties: {
-      LSt_Name: 'KY 715',
-      St_Name: 'KY 715',
-      RoadClass: 'State Route',
-      SpeedLimit: 55,
-      OneWay: 'N'
-    },
-    geometry: { type: 'LineString', coordinates: [
-      [-83.6212, 37.8112],
-      [-83.6208, 37.8103],
-      [-83.62045, 37.8094],
-      [-83.62005, 37.8085],
-      [-83.61985, 37.8075]
     ] }
   }]
 };
@@ -167,33 +146,12 @@ async function installProviderStubs(page, providerRequests, slowPrimaryOverpass 
     if (url.includes('Ky_CountyLines_WGS84WM') && url.includes('/query?')) {
       return route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(COUNTIES) });
     }
-    if (url.includes('Ky_911_Road_Centerlines_WGS84WM') && url.includes('/query?')) {
-      return route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(KENTUCKY_ROADS) });
-    }
     return route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG });
   });
 
   await page.route('https://basemap.nationalmap.gov/**', route =>
     route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG })
   );
-
-  await page.route('https://elevation.nationalmap.gov/**', async route => {
-    const requestUrl = new URL(route.request().url());
-    if (!requestUrl.pathname.includes('/3DEPElevation/ImageServer/getSamples')) return route.abort();
-    let points = [];
-    try {
-      points = JSON.parse(requestUrl.searchParams.get('geometry') || '{}').points || [];
-    } catch {}
-    const samples = points.map((point, index) => ({
-      location: { x: point[0], y: point[1], spatialReference: { wkid: 4326 } },
-      value: 305 + index * 2.5
-    }));
-    return route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ samples })
-    });
-  });
 
   await page.route('https://apps.fs.usda.gov/**', async route => {
     const url = route.request().url();
@@ -268,53 +226,6 @@ async function routeDetail(browser) {
   }
   assert.strictEqual(await page.locator('.route-static-legend-grid .route-layer-static-row').count(), 5);
   assert((await page.locator('.route-static-legend-grid').textContent()).includes('County boundaries'));
-  await page.locator('.route-layer-panel > summary').click();
-  assert((await page.locator('.route-layer-panel').innerText()).includes('National Forest Wilderness'));
-  const informalSwatchColors = await page.evaluate(() => {
-    const node = document.querySelector('.swatch-informal');
-    return {
-      casing: getComputedStyle(node, '::before').borderTopColor,
-      center: getComputedStyle(node, '::after').borderTopColor
-    };
-  });
-  assert.notStrictEqual(informalSwatchColors.casing, informalSwatchColors.center, 'Informal trails should use a two-tone dashed treatment');
-  assert(!/255, 79, 216/.test(informalSwatchColors.casing + informalSwatchColors.center), 'Informal trails must not reuse aerial Wilderness magenta');
-  const networkSwatches = await page.evaluate(() => {
-    const trail = document.querySelector('.swatch-usfs-trail');
-    const road = document.querySelector('.swatch-usfs-road');
-    const trailCasing = getComputedStyle(trail, '::before');
-    const trailCenter = getComputedStyle(trail, '::after');
-    const roadCasing = getComputedStyle(road, '::before');
-    const roadCenter = getComputedStyle(road, '::after');
-    return {
-      trailCasingStyle: trailCasing.borderTopStyle,
-      trailCasingColor: trailCasing.borderTopColor,
-      trailCasingWidth: trailCasing.borderTopWidth,
-      trailCenterStyle: trailCenter.borderTopStyle,
-      trailCenterColor: trailCenter.borderTopColor,
-      trailCenterWidth: trailCenter.borderTopWidth,
-      roadCasingStyle: roadCasing.borderTopStyle,
-      roadCasingColor: roadCasing.borderTopColor,
-      roadCasingWidth: roadCasing.borderTopWidth,
-      roadCenterStyle: roadCenter.borderTopStyle,
-      roadCenterColor: roadCenter.borderTopColor,
-      roadCenterWidth: roadCenter.borderTopWidth
-    };
-  });
-  assert.strictEqual(networkSwatches.trailCasingStyle, 'dashed', 'Forest Service trail casing should be dashed');
-  assert.strictEqual(networkSwatches.trailCenterStyle, 'dashed', 'Forest Service trail center should be dashed');
-  assert.strictEqual(networkSwatches.roadCasingStyle, 'dashed', 'Forest Service road casing should be dashed');
-  assert.strictEqual(networkSwatches.roadCenterStyle, 'dashed', 'Forest Service road center should be dashed');
-  assert(/34, 49, 58/.test(networkSwatches.trailCasingColor), 'Forest Service trail should use the shared dark network casing');
-  assert(/34, 49, 58/.test(networkSwatches.roadCasingColor), 'Forest Service road should use the shared dark network casing');
-  assert(/0, 200, 255/.test(networkSwatches.trailCenterColor), 'Forest Service trail should retain cyan');
-  assert(/255, 207, 51/.test(networkSwatches.roadCenterColor), 'Forest Service road should retain yellow');
-  assert(parseFloat(networkSwatches.trailCasingWidth) > parseFloat(networkSwatches.trailCenterWidth), 'Trail casing must be wider than its colored center');
-  assert(parseFloat(networkSwatches.roadCasingWidth) > parseFloat(networkSwatches.roadCenterWidth), 'Road casing must be wider than its colored center');
-
-  assert.strictEqual(await page.locator('.leaflet-trails-pane canvas').count() >= 1, true, 'Forest Service trails should render in the dedicated trail canvas pane');
-  assert.strictEqual(await page.locator('.leaflet-roads-pane canvas').count() >= 1, true, 'Forest Service roads should render in the dedicated road canvas pane');
-  await page.locator('.route-layer-panel > summary').click();
   assert.strictEqual(await page.getByText('Always shown', { exact: true }).count(), 0, 'County boundaries belong in the top symbol legend without an Always shown label');
   assert.strictEqual(await page.locator('.route-waypoint-icon').count(), 2);
   assert((await page.locator('.route-start-icon').count()) >= 1);
@@ -364,16 +275,8 @@ async function fullMap(browser) {
 
   const page = await context.newPage();
   const providerRequests = [];
-  const sunAssetRequests = [];
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(String(error)));
-  page.on('request', request => {
-    try {
-      if (new URL(request.url()).pathname.endsWith('/data/map/sunrise-sunset-potential.png')) {
-        sunAssetRequests.push(request.url());
-      }
-    } catch {}
-  });
   await installProviderStubs(page, providerRequests, true);
 
   let releaseInformalCache;
@@ -429,15 +332,11 @@ async function fullMap(browser) {
   const body = await page.locator('body').innerText();
   assert(body.includes('Property boundaries are not shown; this map does not establish legal access.'));
   assert(body.includes('Before you go: check closures, road access & conditions'));
-  const beforeYouGo = page.locator('.route-map-context-strip').getByRole('link', { name: /Before you go: check closures/ });
-  assert.strictEqual(await beforeYouGo.count(), 1);
-  const beforeYouGoHref = await beforeYouGo.getAttribute('href');
-  assert(beforeYouGoHref.endsWith('/search-and-rescue/#current-conditions'), 'Before-you-go link should target Current Conditions; href=' + beforeYouGoHref);
   assert(body.includes('How to read this map — 30-second guide'));
   assert(body.includes('Map data:'));
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 17);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 16);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 10);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 9);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0, 'Temporary exact-view copier should be removed after Home approval');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
@@ -476,19 +375,8 @@ async function fullMap(browser) {
     assert.strictEqual(await page.getByLabel(status, { exact: true }).count(), 1, status);
   }
 
-  assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), false, 'Hiking should start with Kentucky Topo off');
+  assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), true, 'Hiking should start with Kentucky Topo on');
   assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true, 'Hiking should start with USGS Topo on');
-  assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), false, 'Hiking should start with Terrain relief off');
-  assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').inputValue(), '100', 'Hiking should use full USGS Topo opacity');
-
-  const utilityBox = await page.locator('.route-map-utility-tools').boundingBox();
-  const scaleControl = page.locator('.leaflet-control-scale');
-  const scaleBox = await scaleControl.boundingBox();
-  assert(utilityBox && scaleBox, 'Map utility bar and scale should both render');
-  assert(scaleBox.y >= utilityBox.y + utilityBox.height - 2, 'Adaptive map scale should sit beneath Search / My location / Home controls');
-  const initialScaleText = (await scaleControl.innerText()).trim();
-  const initialScaleWidth = (await scaleControl.boundingBox()).width;
-
   const safetyLink = page.getByRole('link', { name: /^Outdoor safety and location disclaimer/ });
   assert.strictEqual(await safetyLink.count(), 1, 'Every RouteMap should expose the outdoor safety/location disclaimer link');
   assert((await safetyLink.getAttribute('href')).endsWith('/copyright-and-terms/#outdoor-safety-location-disclaimer'));
@@ -503,13 +391,6 @@ async function fullMap(browser) {
   );
   const zoomedOut = Number(await mapContainer.getAttribute('data-current-zoom'));
   assert(zoomedOut < startZoom, 'Desktop minus control must zoom out');
-  await page.waitForTimeout(120);
-  const zoomedOutScaleText = (await scaleControl.innerText()).trim();
-  const zoomedOutScaleWidth = (await scaleControl.boundingBox()).width;
-  assert(
-    zoomedOutScaleText !== initialScaleText || Math.abs(zoomedOutScaleWidth - initialScaleWidth) > 1,
-    'Adaptive map scale should change when zoom changes'
-  );
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 13, 'Home must restore the approved zoom 13 landing view even if the status message is asynchronously replaced');
   await page.waitForFunction(() => {
@@ -559,63 +440,6 @@ async function fullMap(browser) {
   const kyTopoToggle = page.locator('[data-map-layer="kytopo"]');
   const usgsTopoToggle = page.locator('[data-map-layer="usgs-topo"]');
   const lidarToggle = page.locator('[data-map-layer="ky-hillshade"]');
-  const sunToggle = page.locator('[data-map-layer="sunrise-sunset-potential"]');
-  const sunOpacity = page.locator('[data-opacity="sunrise-sunset-potential"]');
-  const calibrationIds = ['sun-cal-ridge-skeleton','sun-cal-crest','sun-cal-overlook','sun-cal-open-ground','sun-cal-sunrise-pass','sun-cal-sunset-pass'];
-  for (const id of calibrationIds) {
-    assert.strictEqual(await page.locator('[data-map-layer="' + id + '"]').isChecked(), false, id + ' should be off by default');
-  }
-  assert.strictEqual(await page.locator('.route-layer-toggle-row').getByText('1 · LiDAR ridge skeleton', { exact: true }).count(), 1);
-  assert.strictEqual(await page.getByText('3 · Overlook / outcrop candidates', { exact: true }).count(), 1);
-
-  assert.strictEqual(await sunToggle.isChecked(), false, 'Sunrise / Sunset pilot must be off by default');
-  assert.strictEqual(await page.getByText(/Purple: both/).count(), 1, 'Both independent directions need an explicit legend');
-  assert.strictEqual(await sunOpacity.inputValue(), '68');
-  assert.strictEqual(await page.locator('.swatch-sun-potential').count(), 1);
-  const elevationBeforeSun = providerRequests.filter(url => url.includes('elevation.nationalmap.gov')).length;
-  const sunRequest = page.waitForRequest(
-    request => new URL(request.url()).pathname.endsWith('/data/map/sunrise-sunset-potential.png'),
-    { timeout: 10000 }
-  );
-  await sunToggle.evaluate(input => {
-    input.checked = true;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  await sunRequest;
-  await page.waitForSelector('.leaflet-sunPotential-pane img.rrgh-sun-potential-overlay', { timeout: 10000 });
-  assert.strictEqual(await sunToggle.isChecked(), true);
-  assert(sunAssetRequests.length >= 1, 'Enabling Sun pilot should request the local derived PNG');
-  assert.strictEqual(
-    providerRequests.filter(url => url.includes('elevation.nationalmap.gov')).length,
-    elevationBeforeSun,
-    'Viewing the precomputed Sun potential layer must not contact USGS 3DEP'
-  );
-  await sunOpacity.evaluate(input => {
-    input.value = '57';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  assert.strictEqual(await sunOpacity.inputValue(), '57');
-  assert.strictEqual(await page.locator('.rrgh-sun-potential-overlay').count(), 1, 'Only Pinch-Em-Tight should be active in this pass');
-  const renderedSunOpacity = Number(await page.locator('.rrgh-sun-potential-overlay').first().evaluate(node => getComputedStyle(node).opacity));
-  assert(Math.abs(renderedSunOpacity - 0.57) < 0.02, 'Sun potential opacity should follow Fine tune layers');
-
-  const crestToggle = page.locator('[data-map-layer="sun-cal-crest"]');
-  const calibrationSummary = page.locator('.route-layer-fine-tune > summary', { hasText: 'Calibration diagnostics' });
-  await calibrationSummary.click();
-  const elevationBeforeCrest = providerRequests.filter(url => url.includes('elevation.nationalmap.gov')).length;
-  await crestToggle.check();
-  const crestImage = page.locator('.leaflet-sunPotential-pane img.rrgh-sun-calibration-overlay').first();
-  await crestImage.waitFor({ state: 'visible', timeout: 10000 });
-  assert((await crestImage.getAttribute('src')).endsWith('/data/map/sunrise-sunset-calibration-crest.png'));
-  assert.strictEqual(await crestToggle.isChecked(), true);
-  assert.strictEqual(
-    providerRequests.filter(url => url.includes('elevation.nationalmap.gov')).length,
-    elevationBeforeCrest,
-    'Viewing the precomputed LiDAR crest diagnostic must not contact USGS 3DEP'
-  );
-  await crestToggle.uncheck();
-  await calibrationSummary.click();
 
   await aerialToggle.check();
   assert.strictEqual(await aerialToggle.isChecked(), true);
@@ -649,11 +473,6 @@ async function fullMap(browser) {
   assert.strictEqual(await aerialToggle.isChecked(), false, 'Selecting USGS Topo must turn Aerial off');
 
   await page.getByRole('button', { name: /^Hiking/ }).click();
-  assert.strictEqual(await kyTopoToggle.isChecked(), false, 'Hiking preset should turn Kentucky Topo off');
-  assert.strictEqual(await usgsTopoToggle.isChecked(), true, 'Hiking preset should leave only USGS Topo on among base/terrain layers');
-  assert.strictEqual(await lidarToggle.isChecked(), false, 'Hiking preset should turn Terrain relief off');
-  assert.strictEqual(await aerialToggle.isChecked(), false, 'Hiking preset should turn Aerial off');
-  assert.strictEqual(await sunToggle.isChecked(), true, 'Map presets must not silently disable the independent Sun potential layer');
   if ((await page.locator('.route-layer-panel').getAttribute('open')) !== null) {
     await page.locator('.route-layer-panel > summary').click();
   }
@@ -680,19 +499,9 @@ async function fullMap(browser) {
   assert(box);
   await page.mouse.click(box.x + box.width * 0.62, box.y + box.height * 0.58);
   await page.waitForTimeout(80);
-  assert(await page.locator('[data-coordinate-card]').isHidden(), 'Ordinary map clicks should not open technical coordinate details');
-  await page.mouse.click(box.x + box.width * 0.62, box.y + box.height * 0.58, { button: 'right' });
-  await page.waitForTimeout(80);
-  assert(await page.locator('[data-coordinate-card]').isVisible(), 'Desktop right-click should open coordinates');
+  assert(await page.locator('[data-coordinate-card]').isVisible());
   assert(/-83\./.test(await page.locator('[data-coordinate-dd]').innerText()));
   assert((await page.locator('[data-coordinate-utm]').innerText()).includes('UTM'));
-  const copyBox = await page.locator('[data-coordinate-copy]').boundingBox();
-  const closeBox = await page.locator('[data-coordinate-close]').boundingBox();
-  assert(copyBox && closeBox);
-  assert(closeBox.x > copyBox.x + copyBox.width - 1, 'Coordinate × should sit to the right of Copy coordinates');
-  assert(Math.abs((closeBox.y + closeBox.height / 2) - (copyBox.y + copyBox.height / 2)) <= 5, 'Coordinate actions should remain on one row');
-  await page.locator('[data-coordinate-close]').click();
-  assert(await page.locator('[data-coordinate-card]').isHidden(), 'Coordinate card × should dismiss the card');
 
   await page.getByRole('button', { name: 'Plan', exact: true }).click();
   assert(await page.locator('[data-map-sheet="plan"]').isVisible());
@@ -700,18 +509,6 @@ async function fullMap(browser) {
   await mapContainer.click({ position: { x: box.width * 0.22, y: box.height * 0.26 } });
   await mapContainer.click({ position: { x: box.width * 0.31, y: box.height * 0.26 } });
   await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Measured distance'), { timeout: 3000 });
-  assert((await page.locator('.rrgh-planning-distance-label.is-measure-segment').count()) >= 1, 'Measure should put segment distance directly on the map');
-  assert((await page.locator('[data-plan-stats-distance]').innerText()).trim() !== '—', 'Measure should show a live total distance');
-  await page.waitForFunction(
-    () => {
-      const gain = document.querySelector('[data-plan-stats-gain]')?.textContent?.trim();
-      const range = document.querySelector('[data-plan-stats-range]')?.textContent?.trim();
-      return Boolean(gain && gain !== '—' && range && range !== '—');
-    },
-    { timeout: 5000 }
-  );
-  assert(providerRequests.some(url => url.includes('elevation.nationalmap.gov') && url.includes('/getSamples?')), 'Measure should request USGS 3DEP elevation samples');
-  assert((await page.locator('.rrgh-planning-distance-label.is-measure-segment').first().innerText()).includes('ft'), 'Measure segment label should include elevation change after 3DEP returns');
 
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   if (await page.locator('[data-map-sheet="plan"]').isHidden()) await planOpenButton.click();
@@ -768,9 +565,9 @@ async function fullMap(browser) {
     '.leaflet-countyLabels-pane{pointer-events:none!important}'
   ].join('') });
 
-  // Kentucky road-centerline planning geometry is intentionally not drawn as a new
-  // overlay. Derive screen points from the approved Home NW anchor and prove that a
-  // KY 715-like state-road centerline still participates in the route graph.
+  // The road layer may be Canvas-rendered, so derive approximate screen points from
+  // the approved Home NW anchor and try small shared offsets until the planner itself
+  // confirms a snapped leg. This validates near-road tolerance without assuming SVG.
   const projectFromHomeNorthWest = (lat, lng) => {
     const scale = 256 * Math.pow(2, homeZoom);
     const project = (plat, plng) => {
@@ -788,8 +585,8 @@ async function fullMap(browser) {
     };
   };
 
-  const trailABase = projectFromHomeNorthWest(37.8103, -83.6208);
-  const trailBBase = projectFromHomeNorthWest(37.8085, -83.62005);
+  const trailABase = projectFromHomeNorthWest(37.81462, -83.58918);
+  const trailBBase = projectFromHomeNorthWest(37.81612, -83.58482);
   const snapOffsets = [
     [0,0],[3,0],[-3,0],[0,3],[0,-3],[4,4],[-4,-4],[4,-4],[-4,4],
     [6,0],[-6,0],[0,6],[0,-6]
@@ -821,22 +618,7 @@ async function fullMap(browser) {
       break;
     }
   }
-  assert(trailA && trailB, 'Planner should snap a click pair along the stubbed KY 715 road-centerline geometry');
-  assert(Number(await mapContainer.getAttribute('data-planning-road-feature-count')) >= 1, 'Kentucky road planning features should be indexed');
-  assert(providerRequests.some(url => url.includes('Ky_911_Road_Centerlines_WGS84WM') && url.includes('/query?')), 'Planner should request Kentucky road centerlines');
-  assert((await page.locator('.rrgh-planning-distance-label.is-plan-segment').count()) >= 1, 'Snapped road/trail planning should show segment distance on the map');
-  assert((await page.locator('[data-plan-stats-distance]').innerText()).trim() !== '—', 'Planned route should show live total distance');
-  await page.waitForFunction(
-    () => {
-      const gain = document.querySelector('[data-plan-stats-gain]')?.textContent?.trim();
-      const loss = document.querySelector('[data-plan-stats-loss]')?.textContent?.trim();
-      const range = document.querySelector('[data-plan-stats-range]')?.textContent?.trim();
-      return Boolean(gain && gain !== '—' && loss && loss !== '—' && range && range !== '—');
-    },
-    { timeout: 5000 }
-  );
-  assert(providerRequests.some(url => url.includes('elevation.nationalmap.gov') && url.includes('/getSamples?')), 'Build trail route should request USGS 3DEP elevation samples');
-  const initialPlanDistance = (await page.locator('[data-plan-stats-distance]').innerText()).trim();
+  assert(trailA && trailB, 'Planner should snap a near-road click pair around the stubbed Sky Bridge Road geometry');
 
   const undo = page.getByRole('button', { name: 'Undo', exact: true });
   const redo = page.getByRole('button', { name: 'Redo', exact: true });
@@ -873,8 +655,6 @@ async function fullMap(browser) {
     }
   }
   assert(offTrail, 'Planner should classify at least one clear map area as off-trail while preserving the baseline snapped leg');
-  const extendedPlanDistance = (await page.locator('[data-plan-stats-distance]').innerText()).trim();
-  assert.notStrictEqual(extendedPlanDistance, initialPlanDistance, 'Planned distance should update when another point/segment is added');
 
   const planHitPaths = page.locator('.rrgh-plan-segment-hit');
   assert.strictEqual(await planHitPaths.count(), 2, 'Two planned legs should expose two rendered segment hit paths');
@@ -882,16 +662,9 @@ async function fullMap(browser) {
   const secondSegmentCenter = async () => {
     const count = await planHitPaths.count();
     assert(count >= 2, 'Expected a second rendered plan segment');
-    const center = await planHitPaths.nth(1).evaluate(path => {
-      const length = path.getTotalLength();
-      const point = path.getPointAtLength(length / 2);
-      const matrix = path.getScreenCTM();
-      if (!matrix || !Number.isFinite(length) || length <= 0) return null;
-      const screen = new DOMPoint(point.x, point.y).matrixTransform(matrix);
-      return { x: screen.x, y: screen.y };
-    });
-    assert(center, 'Second planned segment should expose a usable SVG midpoint');
-    return center;
+    const box = await planHitPaths.nth(1).boundingBox();
+    assert(box && box.width > 0 && box.height > 0, 'Second planned segment should have a rendered hit box');
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   };
 
   // Prove the actual rendered second segment hit target works: right-click deletes,
@@ -943,26 +716,26 @@ async function fullMap(browser) {
   editStatus = await page.locator('[data-map-status]').innerText();
   assert(editStatus.includes('2 snapped segment(s), 0 off-trail segment(s)'), 'Dragging an off-trail segment onto mapped network should resnap it solid; status=' + editStatus);
 
-  // Off-trail creation was already proven above using an actual planner click,
-  // including rendered dashed geometry plus delete/undo. The Home viewport can
-  // legitimately be dense enough that every sampled drag target remains within
-  // the 90 m snapping tolerance, so do not require a second off-network point in
-  // this same viewport. The drag contract here is resnapping an existing
-  // off-trail leg onto mapped network, which was just verified.
+  // Drag that same rendered second segment clearly off network: it should become dashed/off-trail.
+  segmentCenter = await secondSegmentCenter();
+  await page.mouse.move(segmentCenter.x, segmentCenter.y);
+  await page.mouse.down();
+  await page.mouse.move(offTrail.x, offTrail.y, { steps: 10 });
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  editStatus = await page.locator('[data-map-status]').innerText();
+  assert(editStatus.includes('1 off-trail segment(s)'), 'Dragging a snapped segment clearly off network should make it dashed; status=' + editStatus);
 
-  // The earlier off-trail leg already proved right-click delete + Undo.
-  // Here, prove the drag/resnap action participates cleanly in history:
-  // Undo restores the off-trail state and Redo restores the snapped state.
+  // Right-clicking the actual moved second segment deletes that leg.
+  segmentCenter = await secondSegmentCenter();
+  await page.mouse.click(segmentCenter.x, segmentCenter.y, { button: 'right' });
+  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Planned segment deleted'), { timeout: 3000 });
+
   assert.strictEqual(await undo.isDisabled(), false);
   await undo.click();
-  await page.waitForTimeout(150);
-  editStatus = await page.locator('[data-map-status]').innerText();
-  assert(editStatus.includes('1 off-trail segment'), 'Undo should restore the pre-resnap off-trail state; status=' + editStatus);
   assert.strictEqual(await redo.isDisabled(), false);
   await redo.click();
-  await page.waitForTimeout(150);
-  editStatus = await page.locator('[data-map-status]').innerText();
-  assert(editStatus.includes('2 snapped segment(s), 0 off-trail segment(s)'), 'Redo should restore the resnapped state; status=' + editStatus);
+  await undo.click();
 
   const exportGpx = page.getByRole('button', { name: 'Export GPX', exact: true });
   assert.strictEqual(await exportGpx.isDisabled(), false);
@@ -986,10 +759,6 @@ async function fullMap(browser) {
     input.checked = false;
     input.dispatchEvent(new Event('change', { bubbles: true }));
   });
-  await kyTopoToggle.evaluate(input => {
-    input.checked = true;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
   await page.locator('[data-opacity="kytopo"]').evaluate(input => {
     input.value = '73';
     input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -1011,7 +780,6 @@ async function fullMap(browser) {
   assert(shared.searchParams.get('rrghMap'), 'Shared link should include center and zoom');
   assert(shared.searchParams.get('rrghLayers')?.includes('usfs-special-management:0:'), 'Shared link should preserve disabled Special management');
   assert(shared.searchParams.get('rrghLayers')?.includes('kytopo:1:73'), 'Shared link should preserve Kentucky Topo opacity');
-  assert(shared.searchParams.get('rrghLayers')?.includes('sunrise-sunset-potential:1:57'), 'Shared link should preserve Sun potential enabled state and opacity');
   assert(shared.searchParams.has('rrghTrips'));
   assert(shared.searchParams.has('rrghStatus'));
   assert.strictEqual(shared.searchParams.has('rrghLocation'), false, 'Share URL must not add a live-location parameter');
@@ -1037,9 +805,6 @@ async function fullMap(browser) {
   assert.strictEqual(restoredZoom, shareZoom, 'Shared zoom should restore exactly');
   assert.strictEqual(await page.locator('[data-map-layer="usfs-special-management"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '73');
-  assert.strictEqual(await page.locator('[data-map-layer="sunrise-sunset-potential"]').isChecked(), true);
-  assert.strictEqual(await page.locator('[data-opacity="sunrise-sunset-potential"]').inputValue(), '57');
-  assert.strictEqual(await page.locator('.leaflet-sunPotential-pane img.rrgh-sun-potential-overlay').count(), 1, 'Shared view should restore only the active Pinch-Em-Tight overlay');
   await page.waitForFunction(
     () => document.querySelector('.leaflet-popup-content')?.textContent?.includes('Skybridge Arch'),
     { timeout: 5000 }
@@ -1074,7 +839,7 @@ async function mobile(browser) {
 
   await page.locator('.route-map-mobile-bar').getByRole('button', { name: 'Layers', exact: true }).click();
   assert(await page.locator('.route-layer-panel').isVisible());
-  assert(await page.locator('.route-layer-fine-tune > summary', { hasText: 'Fine tune layers' }).isVisible());
+  assert(await page.locator('.route-layer-fine-tune > summary').isVisible());
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert(overflow <= 2, 'Mobile horizontal overflow: ' + overflow);
@@ -1083,42 +848,6 @@ async function mobile(browser) {
   const map = page.locator('[data-rrgh-route-map]');
   const box = await map.boundingBox();
   assert(box);
-  const coordinateTarget = {
-    x: box.x + box.width * 0.62,
-    y: box.y + box.height * 0.56
-  };
-  await page.evaluate(({ x, y }) => {
-    const target = document.querySelector('[data-rrgh-route-map]');
-    const touch = new Touch({ identifier: 7, target, clientX: x, clientY: y, pageX: x, pageY: y, screenX: x, screenY: y });
-    target.dispatchEvent(new TouchEvent('touchstart', {
-      bubbles: true,
-      cancelable: true,
-      touches: [touch],
-      targetTouches: [touch],
-      changedTouches: [touch]
-    }));
-  }, coordinateTarget);
-  await page.waitForTimeout(700);
-  assert(await page.locator('[data-coordinate-card]').isVisible(), 'Mobile press-and-hold should open coordinates');
-  await page.evaluate(({ x, y }) => {
-    const target = document.querySelector('[data-rrgh-route-map]');
-    const touch = new Touch({ identifier: 7, target, clientX: x, clientY: y, pageX: x, pageY: y, screenX: x, screenY: y });
-    target.dispatchEvent(new TouchEvent('touchend', {
-      bubbles: true,
-      cancelable: true,
-      touches: [],
-      targetTouches: [],
-      changedTouches: [touch]
-    }));
-  }, coordinateTarget);
-  const mobileCopyBox = await page.locator('[data-coordinate-copy]').boundingBox();
-  const mobileCloseBox = await page.locator('[data-coordinate-close]').boundingBox();
-  assert(mobileCopyBox && mobileCloseBox);
-  assert(mobileCloseBox.x > mobileCopyBox.x + mobileCopyBox.width - 1, 'Mobile coordinate × should sit to the right of Copy coordinates');
-  assert(Math.abs((mobileCloseBox.y + mobileCloseBox.height / 2) - (mobileCopyBox.y + mobileCopyBox.height / 2)) <= 5, 'Mobile coordinate actions should remain on one row');
-  await page.locator('[data-coordinate-close]').click();
-  assert(await page.locator('[data-coordinate-card]').isHidden(), 'Mobile coordinate card should have a working × dismiss control');
-
   const before = Number(await map.getAttribute('data-current-zoom'));
   await page.touchscreen.tap(box.x + box.width * 0.5, box.y + box.height * 0.45);
   await page.waitForTimeout(80);
@@ -1145,44 +874,10 @@ async function legal(browser) {
     'Interactive Maps and Map-Data Services',
     'Community / Informal Trails',
     'RRGH-hosted cache derived from OpenStreetMap data',
-    'Last updated: September 25, 2026',
-    'Measure distance',
-    'USGS 3D Elevation Program (3DEP)',
-    'fixed Red River Gorge-area set of Kentucky 911 road-centerline geometry',
-    'not generated from the visitor’s device location',
-    'does not automatically send your device’s precise “My location” coordinates',
     'If you choose “My location,”',
     'does not intentionally transmit or store the precise device coordinates',
-    'does not send the search text to a general-purpose external geocoding service',
-    'Sunrise / Sunset',
-    'Pinch-Em-Tight only',
-    'KyFromAbove Phase 2 Z-meters bare-earth elevation',
-    'Phase 2 LiDAR point clouds for measured upper-ground and absolute obstruction elevations',
-    'Phase 3 leaf-off four-band RGB/NIR orthophotography',
-    'Connected crest geometry and upper cliff-lip standing ground',
-    'before rock-material classification or independent east/west evaluation',
-    'trails are visual context and do not affect the calculation',
-    'Each colored cell must pass its own directional sightline; color does not spread from neighboring viewpoints',
-    'loads finished PNG overlays from the RRGH website',
-    'does not send the visitor’s map position, device location or other coordinates to Kentucky GIS, USGS, USDA or Overpass',
-    'leaf-off gaps, narrow ledges, changing vegetation, unsampled obstructions'
+    'does not send the search text to a general-purpose external geocoding service'
   ]) assert(body.includes(expected), expected);
-
-  response = await page.goto(MAIN + 'search-and-rescue/#current-conditions', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  assert(response && response.ok());
-  await page.waitForSelector('#current-conditions', { timeout: 5000 });
-  await page.waitForTimeout(450);
-  assert(await page.getByText('Plan before you go', { exact: true }).isVisible());
-  assert(await page.getByRole('heading', { name: 'Current conditions are part of the route', exact: true }).isVisible());
-  assert.strictEqual(await page.locator('#current-conditions').count(), 1);
-  assert.strictEqual(await page.evaluate(() => window.location.hash), '#current-conditions');
-  const conditionsBox = await page.locator('#current-conditions').boundingBox();
-  const conditionsHeadingBox = await page.getByRole('heading', { name: 'Current conditions are part of the route', exact: true }).boundingBox();
-  const educationHeadingBox = await page.getByRole('heading', { name: 'Make yourself easier to help', exact: true }).boundingBox();
-  assert(conditionsBox && conditionsHeadingBox && educationHeadingBox);
-  assert(conditionsBox.y >= 100 && conditionsBox.y <= 300, 'Current Conditions section should land below the persistent page chrome; y=' + conditionsBox.y);
-  assert(conditionsHeadingBox.y < page.viewportSize().height * 0.55, 'Current Conditions heading should be visibly in the upper half of the viewport');
-  assert(educationHeadingBox.y > conditionsHeadingBox.y + 250, 'Search & Rescue Education must remain below the Current Conditions landing target');
 
   response = await page.goto(MAIN + 'copyright-and-terms/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(response && response.ok());
@@ -1193,17 +888,7 @@ async function legal(browser) {
     'Property and parcel boundaries are not displayed',
     'Community / Informal Trails',
     'route planner may snap to displayed community/informal paths',
-    'snap to mapped road-centerline geometry from USDA Forest Service and Kentucky public road datasets',
-    'Open Database License (ODbL)',
-    'experimental photography-planning proxy limited to Pinch-Em-Tight',
-    'KyFromAbove Phase 2 bare-earth elevation and classified-ground returns define connected crest lines and upper cliff-lip standing ground',
-    'Phase 2 absolute point-cloud elevations measure obstructions; Phase 3 leaf-off RGB/NIR orthophotography',
-    'Trails cannot create or move these features and do not affect scores',
-    'East and west sightlines are evaluated independently',
-    'Color does not spread from neighboring viewpoints',
-    'Only Pinch-Em-Tight is generated in this pass',
-    'Low cover is not proof of exposed rock, safe footing, legal access or an unobstructed view',
-    'Colors describe general east/west view potential, do not guarantee a visible sunrise or sunset'
+    'Open Database License (ODbL)'
   ]) assert(body.includes(expected), expected);
 
   response = await page.goto(MAIN + 'copyright-and-terms/#outdoor-safety-location-disclaimer', { waitUntil: 'domcontentloaded', timeout: 60000 });

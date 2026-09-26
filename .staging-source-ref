@@ -1,1 +1,7 @@
-dd2931fb053bc7ffd51fe698dcc303924ebca353
+204928cee18683741193c394048c1b9d6db65e4d
+purpose=Routes map Share refinement and Explore menu reflow; combine Trails and Maps & Guides into Trails and Guides with approved four-column desktop order; add stateful map Share control beside Plan on desktop and mobile; rename Map nerd details to Advanced Map Details; preserve selected route, map center/zoom, preset/custom layer state, route filters, and selected route in shareable permalink; production unchanged
+routes_uat=36088124366 SUCCESS
+routes_tracks_uat=36088307413 SUCCESS
+analytics_uat=36088124302 SUCCESS
+brand_uat=36088161532 SUCCESS
+roku_uat=36088124275 SUCCESS

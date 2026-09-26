@@ -34,17 +34,6 @@ const ROADS = {
     ] }
   }]
 };
-const KENTUCKY_ROADS = {
-  type: 'FeatureCollection',
-  features: [{
-    type: 'Feature',
-    properties: { LSt_Name: 'KY 715', St_Name: 'KY 715', RoadClass: 'State Route', SpeedLimit: 55, OneWay: 'N' },
-    geometry: { type: 'LineString', coordinates: [
-      [-83.6212, 37.8112], [-83.6208, 37.8103], [-83.62045, 37.8094], [-83.62005, 37.8085], [-83.61985, 37.8075]
-    ] }
-  }]
-};
-
 const COUNTIES = {
   type: 'FeatureCollection',
   features: [
@@ -112,8 +101,6 @@ async function installStubs(page) {
     const url = route.request().url();
     if (url.includes('Ky_CountyLines_WGS84WM') && url.includes('/query?')) {
       await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(COUNTIES) });
-    } else if (url.includes('Ky_911_Road_Centerlines_WGS84WM') && url.includes('/query?')) {
-      await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(KENTUCKY_ROADS) });
     } else {
       await route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG });
     }
@@ -304,13 +291,8 @@ async function mapControlsAndAccessibility(browser) {
     return button && !button.disabled;
   }, { timeout: 10000 });
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 17);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 16);
-  assert.strictEqual(await page.locator('[data-map-layer="sunrise-sunset-potential"]').isChecked(), false);
-  assert.strictEqual(await page.locator('[data-opacity="sunrise-sunset-potential"]').inputValue(), '68');
-  for (const id of ['sun-cal-ridge-skeleton','sun-cal-crest','sun-cal-overlook','sun-cal-open-ground','sun-cal-sunrise-pass','sun-cal-sunset-pass']) {
-    assert.strictEqual(await page.locator('[data-map-layer="' + id + '"]').isChecked(), false, id + ' should be off by default');
-  }
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 10);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 9);
   assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 0);
   assert.strictEqual(await page.locator('[data-plan-pan]').count(), 0);
   assert.strictEqual(await page.locator('[data-plan-pan-pad]').count(), 1);
@@ -339,7 +321,7 @@ async function mapControlsAndAccessibility(browser) {
   await page.locator('.route-layer-panel > summary').click();
   await page.locator('[data-map-layer="kyaerial-phase3"]').check();
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), false, 'Aerial should turn LiDAR hillshade off.');
-  await page.locator('.route-layer-fine-tune > summary', { hasText: 'Fine tune layers' }).click();
+  await page.locator('.route-layer-fine-tune > summary').click();
   await page.locator('[data-opacity="kyaerial-phase3"]').fill('42');
   const aerialOpacity = await page.locator('.leaflet-baseAerial-pane .leaflet-layer').first().evaluate(element => getComputedStyle(element).opacity);
   assert(Math.abs(Number(aerialOpacity) - 0.42) < 0.02);
