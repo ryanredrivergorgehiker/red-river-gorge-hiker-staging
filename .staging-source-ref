@@ -1,9 +1,9 @@
-08e514822c8f0381aa5b75efa21c2f2c007a90f1
-purpose=Replace v3 terrain suitability with v4 photographic viewshed proxy; 25 m USGS 3DEP bare-earth terrain plus USDA NAIP four-band aerial vegetation/open-ground confidence; directional terrain drop/horizon and viewing-sector vegetation; smooth PNG gradient; mapped water excluded; production unchanged
-source_ci=36208972736 SUCCESS
-routes_uat=36209059764 SUCCESS
-routes_tracks_uat=36209059794 SUCCESS
-analytics_uat=36209059799 SUCCESS
-brand_uat=36209059768 SUCCESS
-roku_uat=36209059797 SUCCESS
-generator=36208576549 SUCCESS
+0ef3f99757c975d6c4aebc2709bbe7de0a11add3
+purpose=Deploy v5 ridge-constrained directional Sunrise / Sunset viewshed; gradient constrained to connected ridge/spur/cliff-nose support; 0 percent valley leakage in model diagnostics; weaker sunrise/sunset direction suppressed unless both viewsheds independently strong; production unchanged
+source_ci=36210311317 SUCCESS
+routes_uat=36210454979 SUCCESS
+routes_tracks_uat=36210455005 SUCCESS
+analytics_uat=36210455008 SUCCESS
+brand_uat=36210455001 SUCCESS
+roku_uat=36210455012 SUCCESS
+generator=36210130435 SUCCESS
