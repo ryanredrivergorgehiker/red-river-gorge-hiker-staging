@@ -1,9 +1,9 @@
-3858f80b35518843027f59696fe1b50a0d2cf351
-purpose=Add optional RRGH-hosted Sunrise / Sunset potential overlay derived from USGS 3DEP bare-earth terrain; coral sunrise and indigo sunset seasonal potential; off by default; local static asset; share-state compatible; disclosures updated; production unchanged
-source_ci=36194143125 SUCCESS
-routes_uat=36200982225 SUCCESS
-routes_tracks_uat=36201261903 SUCCESS
-analytics_uat=36200802017 SUCCESS
-brand_uat=36200802015 SUCCESS
-roku_uat=36200802018 SUCCESS
-generator=36193535145 SUCCESS
+356752787c12cc3a60cba16f1ab81c19ef734eaa
+purpose=Replace broad Sunrise / Sunset potential overlay with conservative high-ridge and upper-shoulder model; hard mapped-water exclusion; strong low-valley suppression; USGS 3DEP terrain plus OpenStreetMap water mask; layer remains off by default; production unchanged
+source_ci=36205071751 SUCCESS
+routes_uat=36205220649 SUCCESS
+routes_tracks_uat=36205724303 SUCCESS
+analytics_uat=36205220643 SUCCESS
+brand_uat=36205220640 SUCCESS
+roku_uat=36205220658 SUCCESS
+generator=36204651935 SUCCESS
