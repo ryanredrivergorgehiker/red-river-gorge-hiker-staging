@@ -1,14 +1,12 @@
-adb0ede03488ecc8b6d235c9e8c6eb58c74d7687
-purpose=Deploy Pinch-Em-Tight crest-connected sun calibration pilot; LiDAR-only crest/outcrop geometry; aerial openness second; trail late confidence only; connected crest propagation instead of radial blur; production unchanged
-source_ci=36250401132 SUCCESS
-routes_uat=36250592284 SUCCESS
-routes_tracks_uat=36250742303 SUCCESS
-analytics_uat=36250592297 SUCCESS
-brand_uat=36250592266 SUCCESS
-roku_uat=36250592324 SUCCESS
-generator=36249882727 SUCCESS
-retry_of_deploy=36252726134
-retry_reason=Transient USGS 3DEP HTTP 502 during unrelated route elevation rebuild; source SHA unchanged
-staging_pipeline_fix=Avoid duplicate route-elevation regeneration during deployment; build:site follows successful npm run check
-deterministic_deploy_checks=Validate committed route artifacts and tests without live USGS regeneration during staging deployment
-validated_route_cache=Skybridge elevation recovered from last successful staging artifact; reuse guarded by exact route JSON/GeoJSON/GPX Git blob identities
+d2006ad821700880ed5e62063bf78863c772f8a9
+purpose=Stage v11 terrain-first sunrise/sunset calibration in Pinch-Em-Tight and independent Auxier Ridge areas; Ryan visual approval pending; no production or Gorge-wide promotion
+source_ci=36265473197 SUCCESS
+reproducibility=36265469511 SUCCESS; fresh source arrays and generated images match committed fingerprints
+routes_uat=36265536772 SUCCESS
+routes_tracks_uat=36266156993 SUCCESS
+brand_uat=36265536770 SUCCESS
+analytics_uat=36265536711 SUCCESS
+roku_uat=36265536722 SUCCESS
+review_first=1 LiDAR ridge skeleton over Terrain then Aerial; all seven layers off by default
+remaining_acceptance=Ryan geometry review and identification of the intended trail-end sunrise positive; canopy gaps and missed outcrops remain limitations
+validated_route_cache=Unchanged Skybridge cache guard requires exact route JSON/GeoJSON/GPX Git blob identities
