@@ -1153,19 +1153,18 @@ async function legal(browser) {
     'If you choose “My location,”',
     'does not intentionally transmit or store the precise device coordinates',
     'does not send the search text to a general-purpose external geocoding service',
-    'Sunrise / Sunset potential',
-    'limited Pinch-Em-Tight calibration pilot',
-    'approximately two-meter analysis resolution',
-    'Outside the pilot area the calibration overlay is intentionally blank',
-    'bare-earth LiDAR ridge detection',
-    'terrain must fall away on both sides',
-    'Trail proximity is applied only as a small late confidence adjustment to an already valid candidate',
-    'cannot create, move, or broaden crest/outcrop geometry',
-    'near-field terrain break in that viewing direction',
-    'displayed fade is propagated only through connected crest pixels rather than by radial image blur',
-    'loads the finished PNG overlay from the RRGH website',
-    'does not send the visitor’s map position, device location, or other coordinates to USGS, USDA, or Overpass',
-    'generalized aerial proxy rather than a tree-by-tree canopy-height model'
+    'Sunrise / Sunset',
+    'Pinch-Em-Tight and Auxier Ridge only',
+    'KyFromAbove Phase 2 Z-meters bare-earth elevation',
+    'Phase 2 LiDAR point clouds for measured canopy-height evidence',
+    'Phase 3 four-band RGB/NIR orthophotography',
+    'Thin ridge geometry and a separate narrow standing corridor',
+    'before canopy, aerial classification or independent sunrise/sunset evaluation',
+    'trails are visual context and do not affect the calculation',
+    'short display fade follows connected corridor cells rather than radial image blur',
+    'loads finished PNG overlays from the RRGH website',
+    'does not send the visitor’s map position, device location or other coordinates to Kentucky GIS, USGS, USDA or Overpass',
+    'leaf-off gaps, narrow ledges, changing vegetation, unsampled obstructions'
   ]) assert(body.includes(expected), expected);
 
   response = await page.goto(MAIN + 'search-and-rescue/#current-conditions', { waitUntil: 'domcontentloaded', timeout: 60000 });
