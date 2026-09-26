@@ -73,7 +73,14 @@ jobs:
 
       - name: Run website checks
         working-directory: site
-        run: npm run check
+        # The exact source SHA has already passed source CI/UAT, including route
+        # elevation generation. Deployment validates the committed artifacts
+        # deterministically instead of depending on a fresh live USGS response.
+        run: |
+          npm run validate
+          npm run validate:routes
+          npx astro check
+          npm test
 
       - name: Build staging site
         working-directory: site
