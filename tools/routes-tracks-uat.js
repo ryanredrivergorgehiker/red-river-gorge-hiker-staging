@@ -562,7 +562,7 @@ async function fullMap(browser) {
   const sunToggle = page.locator('[data-map-layer="sunrise-sunset-potential"]');
   const sunOpacity = page.locator('[data-opacity="sunrise-sunset-potential"]');
 
-  assert.strictEqual(await sunToggle.isChecked(), false, 'Sunrise / Sunset potential must be off by default');
+  assert.strictEqual(await sunToggle.isChecked(), false, 'Sunrise / Sunset pilot must be off by default');
   assert.strictEqual(await sunOpacity.inputValue(), '68');
   assert.strictEqual(await page.locator('.swatch-sun-potential').count(), 1);
   const elevationBeforeSun = providerRequests.filter(url => url.includes('elevation.nationalmap.gov')).length;
@@ -577,7 +577,7 @@ async function fullMap(browser) {
   await sunRequest;
   await page.waitForSelector('.leaflet-sunPotential-pane img.rrgh-sun-potential-overlay', { timeout: 10000 });
   assert.strictEqual(await sunToggle.isChecked(), true);
-  assert(sunAssetRequests.length >= 1, 'Enabling Sun potential should request the local derived SVG');
+  assert(sunAssetRequests.length >= 1, 'Enabling Sun pilot should request the local derived PNG');
   assert.strictEqual(
     providerRequests.filter(url => url.includes('elevation.nationalmap.gov')).length,
     elevationBeforeSun,
@@ -1130,8 +1130,10 @@ async function legal(browser) {
     'does not intentionally transmit or store the precise device coordinates',
     'does not send the search text to a general-purpose external geocoding service',
     'Sunrise / Sunset potential',
-    'USDA National Agriculture Imagery Program (NAIP) four-band aerial imagery',
-    'compact crest, projecting ridge-nose, upper-shoulder, and cliff-edge support',
+    'limited Pinch-Em-Tight calibration pilot',
+    'approximately two-meter analysis resolution',
+    'Outside the pilot area the calibration overlay is intentionally blank',
+    'explicit crest terrain',
     'near-field terrain break in that viewing direction',
     'displayed lobe is deliberately short',
     'loads the finished PNG overlay from the RRGH website',
@@ -1166,7 +1168,8 @@ async function legal(browser) {
     'route planner may snap to displayed community/informal paths',
     'snap to mapped road-centerline geometry from USDA Forest Service and Kentucky public road datasets',
     'Open Database License (ODbL)',
-    'generalized photographic viewshed proxy intended as a photography-planning aid',
+    'limited Pinch-Em-Tight calibration pilot',
+    'Outside the pilot area the overlay is intentionally blank',
     'displayed lobe is strongest near that likely overlook edge',
     'fades only a short distance back onto crest support',
     'NAIP vegetation classification is not a tree-by-tree canopy-height measurement',
