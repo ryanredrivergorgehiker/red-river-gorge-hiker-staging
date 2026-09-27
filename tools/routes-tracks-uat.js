@@ -1166,6 +1166,8 @@ async function mobile(browser) {
   assert(overflow <= 2, 'Mobile horizontal overflow: ' + overflow);
 
   await layerSummary.click();
+  await map.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(120);
   box = await map.boundingBox();
   assert(box);
   const coordinateTarget = {
