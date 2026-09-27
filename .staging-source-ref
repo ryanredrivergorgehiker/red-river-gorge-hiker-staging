@@ -1,8 +1,8 @@
-d765eca5db2f9f889811b28e8a7a1a4257ea6f38
-purpose=Owner mobile-map correction: touch drags beginning inside the map remain map pans in all directions; remove prior whole-map vertical page-scroll escape; page scrolling remains native outside the map; mobile scale moved to actual upper-left map corner; prior Terrain 25/75/100, sticky Layers, mobile control reflow and desktop layout retained; production unchanged
-source_ci=36346865652 SUCCESS attempt=2 (attempt 1 external Store 403 during Pinterest catalog generation; source repository contract passed; retry fully green)
-routes_uat=36347063329 SUCCESS
-routes_tracks_uat=36347063291 SUCCESS
-brand_uat=36347063352 SUCCESS
-analytics_uat=36347063356 SUCCESS
-roku_uat=36347063311 SUCCESS
+32eae7a7e606b005596a3406a8f0fb024876b4bf
+purpose=Owner mobile touch refinement: retain full map panning for touches begun in the map interior; add transparent 24px mobile-only left/right page-scroll gutters as non-Leaflet siblings so gutter drags scroll the page without panning map content; prior upper-left scale, Terrain 25/75/100, sticky Layers, mobile control flow and desktop layout retained; production unchanged
+source_ci=36347772339 SUCCESS
+routes_uat=36347797200 SUCCESS
+routes_tracks_uat=36347797221 SUCCESS
+brand_uat=36347797154 SUCCESS
+analytics_uat=36347797216 SUCCESS
+roku_uat=36347797234 SUCCESS
