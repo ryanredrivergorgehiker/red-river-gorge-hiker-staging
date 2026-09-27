@@ -1,8 +1,8 @@
-dbc98f420298975574898a0147d22568f64c64e1
-purpose=Split Sunrise / Sunset Potential into master plus independent Sunrise and Sunset controls while retaining one combined Fine tune checkbox/opacity; add verified KyFromAbove Phase 2 6-inch leaf-off aerial alongside current Phase 3 leaf-on aerial with mutual exclusivity carried through topo/terrain controls; clamp Terrain relief LiDAR to at least 75% whenever enabled; remove the Potential explanatory subtext; preserve accepted LiDAR terrain generation and production unchanged
-source_ci=36335040149 SUCCESS
-routes_uat=36335248969 SUCCESS
-routes_tracks_uat=36335248849 SUCCESS
-brand_uat=36335248875 SUCCESS
-analytics_uat=36335248908 SUCCESS
-roku_uat=36335248853 SUCCESS
+12e5efbc54018bb5a06a0bb8f58632c6106be6ed
+purpose=Owner-approved public route taxonomy simplification: replace retired tripType plus trailStatus browse model with exactly one public routeCategory enum (day-hike, backpacking, off-trail); Skybridge authoritative category Day hike; full-map and route-library public filters exactly Day hikes / Backpacking / Off-trail; shared state uses rrghCategories; internalTrailContext remains factual/internal context rather than browse taxonomy; Publication Class remains separate internal publication/sensitivity/legal control; approved GPX/GeoJSON/waypoints unchanged; production unchanged
+source_ci=36338176687 SUCCESS
+routes_uat=36338203688 SUCCESS
+routes_tracks_uat=36338203703 SUCCESS
+brand_uat=36338203695 SUCCESS
+analytics_uat=36338203733 SUCCESS
+roku_uat=36338203701 SUCCESS
