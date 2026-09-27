@@ -440,6 +440,8 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-map-layer="usfs-special-management"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-land-units"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="pinch-lidar-sun-pilot"]').isChecked(), false);
+  assert.strictEqual(await page.locator('[data-map-layer="rrg-lidar-sun"]').isChecked(), false, 'Gorge LiDAR expansion must be off by default');
+  assert.strictEqual(await page.locator('[data-opacity="rrg-lidar-sun"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="usfs-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="osm-informal-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="usfs-roads"]').inputValue(), '100');
@@ -462,6 +464,27 @@ async function fullMap(browser) {
   assert(lidarPilot.features.every(feature => ['sunrise','sunset'].includes(feature.properties?.kind)), 'LiDAR pilot may contain only sunrise/sunset feature kinds');
   assert(lidarPilot.features.some(feature => feature.properties?.hard === true), 'LiDAR pilot must preserve hard cliff-lip geometry');
   assert(lidarPilot.features.some(feature => feature.properties?.hard === false), 'LiDAR pilot must preserve inward gradient geometry');
+
+  const gorgeManifest = await page.evaluate(async () => {
+    const response = await fetch('/data/map/rrg-lidar-sun-manifest.json', { cache: 'no-cache' });
+    if (!response.ok) throw new Error('Gorge LiDAR manifest HTTP ' + response.status);
+    return response.json();
+  });
+  assert.strictEqual(gorgeManifest.version, 'lidar-only-gorge-v1');
+  assert.strictEqual(gorgeManifest.minimumElevationFeet, 1100);
+  assert.strictEqual(gorgeManifest.sectors.length, 12);
+  assert(gorgeManifest.counts.features > 50000, 'Gorge LiDAR expansion should contain substantial terrain geometry');
+  assert.strictEqual(gorgeManifest.generationInputs.usesAerial, false);
+  assert.strictEqual(gorgeManifest.generationInputs.usesCanopy, false);
+  assert.strictEqual(gorgeManifest.generationInputs.usesTrails, false);
+  assert.strictEqual(gorgeManifest.generationInputs.usesMarkedReviewPoints, false);
+  const sampleSector = await page.evaluate(async (file) => {
+    const response = await fetch('/' + file, { cache: 'no-cache' });
+    if (!response.ok) throw new Error('Gorge LiDAR sector HTTP ' + response.status);
+    return response.json();
+  }, gorgeManifest.sectors.find(sector => sector.features > 1000).file);
+  assert(sampleSector.features.some(feature => feature.properties?.hard === true), 'Gorge LiDAR sector must preserve hard cliff-lip geometry');
+  assert(sampleSector.features.some(feature => feature.properties?.hard === false), 'Gorge LiDAR sector must preserve inward gradient geometry');
 
   const [south, west, north, east] = cacheData.rrgh_cache.bbox;
   for (const feature of cacheData.features) {
@@ -570,6 +593,18 @@ async function fullMap(browser) {
   assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Enabled LiDAR pilot should render in its own pane');
   assert((await page.locator('.route-layer-panel').innerText()).includes('terrain at or above 1,100 ft only'));
   await pilotToggle.uncheck();
+
+  const gorgeToggle = page.locator('[data-map-layer="rrg-lidar-sun"]');
+  await gorgeToggle.check();
+  await page.waitForFunction(
+    () => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-rrg-lidar-sun-loaded-sectors')) > 0
+      && Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-rrg-lidar-sun-feature-count')) > 0,
+    { timeout: 20000 }
+  );
+  assert.strictEqual(await mapContainer.getAttribute('data-rrg-lidar-sun-load-error'), null, 'Gorge LiDAR sectors should load without error');
+  assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Enabled Gorge LiDAR expansion should render in the LiDAR pane');
+  assert((await page.locator('.route-layer-panel').innerText()).includes('same locked terrain-only method'));
+  await gorgeToggle.uncheck();
 
   const aerialToggle = page.locator('[data-map-layer="kyaerial-phase3"]');
   const kyTopoToggle = page.locator('[data-map-layer="kytopo"]');
