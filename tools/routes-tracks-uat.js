@@ -1126,9 +1126,13 @@ async function mobile(browser) {
   await page.waitForSelector('.leaflet-container', { timeout: 10000 });
   await page.waitForFunction(() => Boolean(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-current-zoom')), { timeout: 10000 });
 
-  for (const label of ['My location','Home','Layers']) {
-    assert.strictEqual(await page.locator('.route-map-mobile-topbar').getByRole('button', { name: label, exact: true }).count(), 1, label);
-  }
+  const mobileTopbar = page.locator('.route-map-mobile-topbar');
+  assert.strictEqual(await mobileTopbar.locator('[data-map-action="locate"]').count(), 1, 'My location');
+  assert.strictEqual((await mobileTopbar.locator('[data-map-action="locate"]').innerText()).trim(), 'My location');
+  assert.strictEqual(await mobileTopbar.locator('[data-map-action="home"]').count(), 1, 'Home');
+  assert.strictEqual((await mobileTopbar.locator('[data-map-action="home"]').innerText()).trim(), 'Home');
+  assert.strictEqual(await mobileTopbar.locator('[data-sheet-open="layers"]').count(), 1, 'Layers');
+  assert.strictEqual((await mobileTopbar.locator('[data-sheet-open="layers"]').innerText()).trim(), 'Layers');
   for (const label of ['Search','Explore','Plan','Share']) {
     assert.strictEqual(await page.locator('.route-map-mobile-bar').getByRole('button', { name: label, exact: true }).count(), 1, label);
   }
@@ -1147,7 +1151,7 @@ async function mobile(browser) {
   assert(mobileBarBox.y >= mobileStatusBox.y + mobileStatusBox.height - 2, 'Search/Explore/Plan/Share should sit below the mobile instructions');
   assert(box.height >= 0.6 * 844, 'Mobile map should occupy most of the viewport; height=' + box.height);
 
-  await page.locator('.route-map-mobile-topbar').getByRole('button', { name: 'Layers', exact: true }).click();
+  await mobileTopbar.locator('[data-sheet-open="layers"]').click();
   assert(await page.locator('.route-layer-panel').isVisible());
   assert(await page.locator('.route-layer-fine-tune > summary').isVisible());
   const layerSummary = page.locator('.route-layer-panel > summary');
