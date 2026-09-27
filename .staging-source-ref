@@ -1,8 +1,8 @@
-5e8ce184438dc5c530bd61acd6f2199eba3cf0d6
-purpose=Correct visual UAT defect: desktop Map View buttons and Show RRGH routes category boxes now share one explicit 67px rendered height; existing checkbox/label alignment, route taxonomy, map behavior, route data, and production remain unchanged
-source_ci=36343269053 SUCCESS
-routes_uat=36343330755 SUCCESS
-routes_tracks_uat=36343330750 SUCCESS
-brand_uat=36343332694 SUCCESS
-analytics_uat=36343334544 SUCCESS
-roku_uat=36343336623 SUCCESS
+f2f59f03a33360870566f73758d3d07f9c1430f3
+purpose=Owner-approved map UX refinement: Terrain preset Kentucky Topo 25%, USGS Topo 75%, Terrain relief 100%; Layers panel header sticky while panel scrolls; mobile-only My location/Home/Layers above map, instructions plus Search/Explore/Plan/Share below map, large responsive map, deliberate vertical-swipe page-scroll escape; desktop otherwise unchanged; production unchanged
+source_ci=36344575038 SUCCESS
+routes_uat=36344651554 SUCCESS
+routes_tracks_uat=36345064989 SUCCESS
+brand_uat=36344653766 SUCCESS
+analytics_uat=36344656310 SUCCESS
+roku_uat=36344658102 SUCCESS
