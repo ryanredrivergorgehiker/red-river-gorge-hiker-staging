@@ -1,9 +1,9 @@
-a64e7d626fcaf37e69ead6433668b4cbe47565eb
-purpose=Gorge-wide LiDAR-only sunrise/sunset staging expansion using the accepted Pinch-Em-Tight method: KyFromAbove Phase 2 bare-earth DEM only, minimum elevation 1100 ft, east-facing cliff/rim lips hard coral sunrise with same-ridge inward/uphill crest fade, west-facing lips hard indigo sunset with opposite fade; 12 overlapping sectors across broad working envelope -83.70,37.77 to -83.52,37.89; no aerial, canopy, trail geometry, or marked review points; layer off by default and viewport-loaded; production unchanged
-generator=36284496477 SUCCESS
-source_ci=36284796358 SUCCESS
-routes_uat=36284955832 SUCCESS
-routes_tracks_uat=36284955860 SUCCESS
-brand_uat=36284853360 SUCCESS
-analytics_uat=36284853302 SUCCESS
-roku_uat=36284853286 SUCCESS
+a0baeed5e4eb25839296a7eb5da383dc3ae2b1c3
+purpose=Sunrise / Sunset Potential staging refinement: extend accepted LiDAR-only >=1100 ft method from the prior 3x4 core to the full default/Home map extent using a preserved 12-sector core plus one surrounding sector ring (30 sectors total), keep hard east/west rim placement unchanged, smooth only the inward/uphill same-ridge fade from four to six bands, remove the historical pilot from public UI, and add synchronized Fine tune layer checkboxes that control the same top-level layer state and disable opacity when off; no aerial/canopy/trail/marked-point generation inputs; production unchanged
+generator=36287849262 SUCCESS
+source_ci=36288431646 SUCCESS
+routes_uat=36288509085 SUCCESS
+routes_tracks_uat=36288786210 SUCCESS
+brand_uat=36288509101 SUCCESS
+analytics_uat=36288509104 SUCCESS
+roku_uat=36288509161 SUCCESS
