@@ -1,8 +1,8 @@
-c88676e854e042c2dd0d367341953bc42db98053
-purpose=Owner-approved visual UAT refinement: keep existing Show RRGH routes checkbox cards and behavior, make desktop category boxes match Map View control height, and vertically center the existing checkbox plus label; no taxonomy, route data, map behavior, or production change
-source_ci=36342638272 SUCCESS
-routes_uat=36342754142 SUCCESS
-routes_tracks_uat=36342754133 SUCCESS
-brand_uat=36342757060 SUCCESS
-analytics_uat=36342759498 SUCCESS
-roku_uat=36342762337 SUCCESS
+5e8ce184438dc5c530bd61acd6f2199eba3cf0d6
+purpose=Correct visual UAT defect: desktop Map View buttons and Show RRGH routes category boxes now share one explicit 67px rendered height; existing checkbox/label alignment, route taxonomy, map behavior, route data, and production remain unchanged
+source_ci=36343269053 SUCCESS
+routes_uat=36343330755 SUCCESS
+routes_tracks_uat=36343330750 SUCCESS
+brand_uat=36343332694 SUCCESS
+analytics_uat=36343334544 SUCCESS
+roku_uat=36343336623 SUCCESS
