@@ -586,9 +586,9 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true);
-  assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '72');
-  assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').inputValue(), '72');
-  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '75');
+  assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '25');
+  assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').inputValue(), '75');
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '100');
   for (let i = 0; i < 10; i += 1) await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
   await page.waitForTimeout(150);
   assert((await page.locator('.leaflet-baseTopo-pane img.leaflet-tile').count()) > 0, 'Topo tiles should remain at close zoom above terrain relief');
@@ -1126,21 +1126,43 @@ async function mobile(browser) {
   await page.waitForSelector('.leaflet-container', { timeout: 10000 });
   await page.waitForFunction(() => Boolean(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-current-zoom')), { timeout: 10000 });
 
-  for (const label of ['Search','Layers','Plan','Share']) {
+  for (const label of ['My location','Home','Layers']) {
+    assert.strictEqual(await page.locator('.route-map-mobile-topbar').getByRole('button', { name: label, exact: true }).count(), 1, label);
+  }
+  for (const label of ['Search','Explore','Plan','Share']) {
     assert.strictEqual(await page.locator('.route-map-mobile-bar').getByRole('button', { name: label, exact: true }).count(), 1, label);
   }
+  assert(await page.locator('.route-map-mobile-topbar').isVisible());
   assert(await page.locator('.route-map-mobile-bar').isVisible());
+  assert(await page.locator('[data-map-mobile-status]').isVisible());
 
-  await page.locator('.route-map-mobile-bar').getByRole('button', { name: 'Layers', exact: true }).click();
+  const map = page.locator('[data-rrgh-route-map]');
+  let box = await map.boundingBox();
+  const topbarBox = await page.locator('.route-map-mobile-topbar').boundingBox();
+  const mobileStatusBox = await page.locator('[data-map-mobile-status]').boundingBox();
+  const mobileBarBox = await page.locator('.route-map-mobile-bar').boundingBox();
+  assert(box && topbarBox && mobileStatusBox && mobileBarBox);
+  assert(topbarBox.y + topbarBox.height <= box.y + 2, 'Mobile My location/Home/Layers controls should sit above the map');
+  assert(mobileStatusBox.y >= box.y + box.height - 2, 'Mobile instructions should sit below the map instead of overlaying it');
+  assert(mobileBarBox.y >= mobileStatusBox.y + mobileStatusBox.height - 2, 'Search/Explore/Plan/Share should sit below the mobile instructions');
+  assert(box.height >= 0.6 * 844, 'Mobile map should occupy most of the viewport; height=' + box.height);
+
+  await page.locator('.route-map-mobile-topbar').getByRole('button', { name: 'Layers', exact: true }).click();
   assert(await page.locator('.route-layer-panel').isVisible());
   assert(await page.locator('.route-layer-fine-tune > summary').isVisible());
+  const layerSummary = page.locator('.route-layer-panel > summary');
+  const stickyBefore = await layerSummary.boundingBox();
+  await page.locator('.route-layer-panel').evaluate(panel => { panel.scrollTop = Math.min(300, panel.scrollHeight - panel.clientHeight); });
+  await page.waitForTimeout(80);
+  const stickyAfter = await layerSummary.boundingBox();
+  assert(stickyBefore && stickyAfter);
+  assert(Math.abs(stickyAfter.y - stickyBefore.y) <= 2, 'Layers header should remain fixed while the panel body scrolls');
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert(overflow <= 2, 'Mobile horizontal overflow: ' + overflow);
 
-  await page.locator('.route-layer-panel > summary').click();
-  const map = page.locator('[data-rrgh-route-map]');
-  const box = await map.boundingBox();
+  await layerSummary.click();
+  box = await map.boundingBox();
   assert(box);
   const coordinateTarget = {
     x: box.x + box.width * 0.62,
