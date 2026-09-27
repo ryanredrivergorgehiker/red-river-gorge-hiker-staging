@@ -428,8 +428,8 @@ async function fullMap(browser) {
   assert(body.includes('How to read this map — 30-second guide'));
   assert(body.includes('Map data:'));
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 11);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 10);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 12);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 11);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0, 'Temporary exact-view copier should be removed after Home approval');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
