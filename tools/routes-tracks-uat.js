@@ -627,9 +627,9 @@ async function fullMap(browser) {
   assert.notStrictEqual(aerialLegendColors.management, aerialLegendColors.land);
 
   await kyTopoToggle.check();
-  assert.strictEqual(await page.locator('[data-opacity="kytopo"]').isDisabled(), false);
-  assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').isDisabled(), false);
-  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), false);
+  assert.strictEqual(await page.locator('[data-opacity="kytopo"]').isDisabled(), false, 'Enabled Kentucky Topo must enable its opacity');
+  assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').isDisabled(), true, 'USGS Topo opacity must stay disabled while that layer is off');
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true, 'Terrain relief opacity must stay disabled while that layer is off');
   assert.strictEqual(await aerialToggle.isChecked(), false, 'Selecting Kentucky Topo must turn Aerial off');
 
   await aerialToggle.check();
