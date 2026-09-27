@@ -304,8 +304,8 @@ async function mapControlsAndAccessibility(browser) {
     return button && !button.disabled;
   }, { timeout: 10000 });
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 12);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 11);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 11);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 10);
   assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 0);
   assert.strictEqual(await page.locator('[data-plan-pan]').count(), 0);
   assert.strictEqual(await page.locator('[data-plan-pan-pad]').count(), 1);
@@ -332,11 +332,21 @@ async function mapControlsAndAccessibility(browser) {
   assert.strictEqual(await overlook.getAttribute('tabindex'), '0');
 
   await page.locator('.route-layer-panel > summary').click();
-  assert.strictEqual(await page.locator('[data-map-layer="pinch-lidar-sun-pilot"]').isChecked(), false, 'LiDAR sunrise/sunset pilot must default off.');
-  assert.strictEqual(await page.locator('[data-opacity="pinch-lidar-sun-pilot"]').inputValue(), '100');
+  assert.strictEqual(await page.locator('[data-map-layer="pinch-lidar-sun-pilot"]').count(), 0, 'Historical pilot must be removed from public layer UI');
+  assert.strictEqual(await page.getByText('Sunrise / Sunset Potential', { exact: true }).count() >= 1, true);
+  await page.locator('.route-layer-fine-tune > summary').click();
+  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 10);
+  const reliefFineToggle = page.locator('[data-fine-tune-layer="ky-hillshade"]');
+  assert.strictEqual(await reliefFineToggle.isChecked(), false);
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true);
+  await reliefFineToggle.check();
+  assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), false);
+  await reliefFineToggle.uncheck();
+  assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), false);
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true);
   await page.locator('[data-map-layer="kyaerial-phase3"]').check();
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), false, 'Aerial should turn LiDAR hillshade off.');
-  await page.locator('.route-layer-fine-tune > summary').click();
   await page.locator('[data-opacity="kyaerial-phase3"]').fill('42');
   const aerialOpacity = await page.locator('.leaflet-baseAerial-pane .leaflet-layer').first().evaluate(element => getComputedStyle(element).opacity);
   assert(Math.abs(Number(aerialOpacity) - 0.42) < 0.02);

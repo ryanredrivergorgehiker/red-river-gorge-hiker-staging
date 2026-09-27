@@ -428,8 +428,8 @@ async function fullMap(browser) {
   assert(body.includes('How to read this map — 30-second guide'));
   assert(body.includes('Map data:'));
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 12);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 11);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 11);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 10);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0, 'Temporary exact-view copier should be removed after Home approval');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
@@ -439,12 +439,22 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-opacity="usfs-wilderness"]').count(), 0);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-special-management"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-land-units"]').isChecked(), true);
-  assert.strictEqual(await page.locator('[data-map-layer="pinch-lidar-sun-pilot"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-map-layer="rrg-lidar-sun"]').isChecked(), false, 'Gorge LiDAR expansion must be off by default');
   assert.strictEqual(await page.locator('[data-opacity="rrg-lidar-sun"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="usfs-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="osm-informal-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="usfs-roads"]').inputValue(), '100');
+  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 10);
+  assert.strictEqual(await page.locator('[data-fine-tune-layer="usgs-topo"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-fine-tune-layer="ky-hillshade"]').isChecked(), false);
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true);
+  const reliefFineToggle = page.locator('[data-fine-tune-layer="ky-hillshade"]');
+  await reliefFineToggle.check();
+  assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true, 'Fine-tune checkbox must enable matching main layer');
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), false, 'Enabled fine-tune layer must enable its opacity slider');
+  await page.locator('[data-map-layer="ky-hillshade"]').uncheck();
+  assert.strictEqual(await reliefFineToggle.isChecked(), false, 'Main layer checkbox must sync back to fine-tune checkbox');
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true, 'Disabled main layer must disable fine-tune opacity');
   assert.strictEqual(await page.locator('[data-map-layer="ky-counties"]').count(), 0);
   assert.strictEqual(await page.locator('.leaflet-control-scale').count(), 1);
 
@@ -455,25 +465,17 @@ async function fullMap(browser) {
   });
   assert(cacheData.features.length > 100, 'RRGH OSM cache should contain substantial community trail coverage');
 
-  const lidarPilot = await page.evaluate(async () => {
-    const response = await fetch('/data/map/pinch-em-tight-lidar-sun-pilot.geojson', { cache: 'no-cache' });
-    if (!response.ok) throw new Error('LiDAR pilot HTTP ' + response.status);
-    return response.json();
-  });
-  assert(lidarPilot.features.length > 500, 'Pinch-Em-Tight LiDAR pilot should contain substantial generated terrain geometry');
-  assert(lidarPilot.features.every(feature => ['sunrise','sunset'].includes(feature.properties?.kind)), 'LiDAR pilot may contain only sunrise/sunset feature kinds');
-  assert(lidarPilot.features.some(feature => feature.properties?.hard === true), 'LiDAR pilot must preserve hard cliff-lip geometry');
-  assert(lidarPilot.features.some(feature => feature.properties?.hard === false), 'LiDAR pilot must preserve inward gradient geometry');
-
   const gorgeManifest = await page.evaluate(async () => {
     const response = await fetch('/data/map/rrg-lidar-sun-manifest.json', { cache: 'no-cache' });
     if (!response.ok) throw new Error('Gorge LiDAR manifest HTTP ' + response.status);
     return response.json();
   });
-  assert.strictEqual(gorgeManifest.version, 'lidar-only-gorge-v1');
+  assert.strictEqual(gorgeManifest.version, 'lidar-only-home-extent-v2');
   assert.strictEqual(gorgeManifest.minimumElevationFeet, 1100);
-  assert.strictEqual(gorgeManifest.sectors.length, 12);
-  assert(gorgeManifest.counts.features > 50000, 'Gorge LiDAR expansion should contain substantial terrain geometry');
+  assert.strictEqual(gorgeManifest.sectors.length, 30);
+  assert.deepStrictEqual(gorgeManifest.boundsWgs84, [-83.745, 37.73, -83.475, 37.93]);
+  assert.strictEqual(gorgeManifest.sectorGrid.ring, 1);
+  assert(gorgeManifest.counts.features > 50000, 'Sunrise / Sunset Potential should contain substantial generated terrain geometry');
   assert.strictEqual(gorgeManifest.generationInputs.usesAerial, false);
   assert.strictEqual(gorgeManifest.generationInputs.usesCanopy, false);
   assert.strictEqual(gorgeManifest.generationInputs.usesTrails, false);
@@ -506,8 +508,6 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), false, 'Hiking should start with Kentucky Topo off');
   assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true, 'Hiking should start with USGS Topo on');
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), false, 'Hiking should start with Terrain relief off');
-  assert.strictEqual(await page.locator('[data-map-layer="pinch-lidar-sun-pilot"]').isChecked(), false, 'LiDAR sunrise/sunset pilot must be off by default');
-  assert.strictEqual(await page.locator('[data-opacity="pinch-lidar-sun-pilot"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').inputValue(), '100', 'Hiking should use full USGS Topo opacity');
 
   const utilityBox = await page.locator('.route-map-utility-tools').boundingBox();
@@ -584,16 +584,6 @@ async function fullMap(browser) {
   assert(!(await page.locator('.route-layer-panel').innerText()).includes('Always shown'));
   assert((await page.locator('.route-static-legend-grid').innerText()).includes('County boundaries'));
 
-  const pilotToggle = page.locator('[data-map-layer="pinch-lidar-sun-pilot"]');
-  await pilotToggle.check();
-  await page.waitForFunction(
-    () => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-pinch-lidar-sun-feature-count')) > 500,
-    { timeout: 5000 }
-  );
-  assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Enabled LiDAR pilot should render in its own pane');
-  assert((await page.locator('.route-layer-panel').innerText()).includes('terrain at or above 1,100 ft only'));
-  await pilotToggle.uncheck();
-
   const gorgeToggle = page.locator('[data-map-layer="rrg-lidar-sun"]');
   await gorgeToggle.check();
   await page.waitForFunction(
@@ -603,7 +593,8 @@ async function fullMap(browser) {
   );
   assert.strictEqual(await mapContainer.getAttribute('data-rrg-lidar-sun-load-error'), null, 'Gorge LiDAR sectors should load without error');
   assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Enabled Gorge LiDAR expansion should render in the LiDAR pane');
-  assert((await page.locator('.route-layer-panel').innerText()).includes('same locked terrain-only method'));
+  assert((await page.locator('.route-layer-panel').innerText()).includes('Sunrise / Sunset Potential'));
+  assert((await page.locator('.route-layer-panel').innerText()).includes('Potential does not guarantee standing room'));
   await gorgeToggle.uncheck();
 
   const aerialToggle = page.locator('[data-map-layer="kyaerial-phase3"]');
