@@ -428,8 +428,8 @@ async function fullMap(browser) {
   assert(body.includes('How to read this map — 30-second guide'));
   assert(body.includes('Map data:'));
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 10);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 9);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 11);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 10);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0, 'Temporary exact-view copier should be removed after Home approval');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
@@ -439,6 +439,7 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-opacity="usfs-wilderness"]').count(), 0);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-special-management"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-land-units"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-map-layer="pinch-lidar-sun-pilot"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="usfs-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="osm-informal-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="usfs-roads"]').inputValue(), '100');
@@ -451,6 +452,17 @@ async function fullMap(browser) {
     return response.json();
   });
   assert(cacheData.features.length > 100, 'RRGH OSM cache should contain substantial community trail coverage');
+
+  const lidarPilot = await page.evaluate(async () => {
+    const response = await fetch('/data/map/pinch-em-tight-lidar-sun-pilot.geojson', { cache: 'no-cache' });
+    if (!response.ok) throw new Error('LiDAR pilot HTTP ' + response.status);
+    return response.json();
+  });
+  assert(lidarPilot.features.length > 500, 'Pinch-Em-Tight LiDAR pilot should contain substantial generated terrain geometry');
+  assert(lidarPilot.features.every(feature => ['sunrise','sunset'].includes(feature.properties?.kind)), 'LiDAR pilot may contain only sunrise/sunset feature kinds');
+  assert(lidarPilot.features.some(feature => feature.properties?.hard === true), 'LiDAR pilot must preserve hard cliff-lip geometry');
+  assert(lidarPilot.features.some(feature => feature.properties?.hard === false), 'LiDAR pilot must preserve inward gradient geometry');
+
   const [south, west, north, east] = cacheData.rrgh_cache.bbox;
   for (const feature of cacheData.features) {
     for (const [lon, lat] of feature.geometry.coordinates) {
@@ -471,6 +483,8 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), false, 'Hiking should start with Kentucky Topo off');
   assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true, 'Hiking should start with USGS Topo on');
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), false, 'Hiking should start with Terrain relief off');
+  assert.strictEqual(await page.locator('[data-map-layer="pinch-lidar-sun-pilot"]').isChecked(), false, 'LiDAR sunrise/sunset pilot must be off by default');
+  assert.strictEqual(await page.locator('[data-opacity="pinch-lidar-sun-pilot"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').inputValue(), '100', 'Hiking should use full USGS Topo opacity');
 
   const utilityBox = await page.locator('.route-map-utility-tools').boundingBox();
@@ -546,6 +560,16 @@ async function fullMap(browser) {
   assert(Number(await mapContainer.getAttribute('data-planner-node-count')) > 1, 'Planner graph should include mapped trail/road network');
   assert(!(await page.locator('.route-layer-panel').innerText()).includes('Always shown'));
   assert((await page.locator('.route-static-legend-grid').innerText()).includes('County boundaries'));
+
+  const pilotToggle = page.locator('[data-map-layer="pinch-lidar-sun-pilot"]');
+  await pilotToggle.check();
+  await page.waitForFunction(
+    () => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-pinch-lidar-sun-feature-count')) > 500,
+    { timeout: 5000 }
+  );
+  assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Enabled LiDAR pilot should render in its own pane');
+  assert((await page.locator('.route-layer-panel').innerText()).includes('terrain at or above 1,100 ft only'));
+  await pilotToggle.uncheck();
 
   const aerialToggle = page.locator('[data-map-layer="kyaerial-phase3"]');
   const kyTopoToggle = page.locator('[data-map-layer="kytopo"]');
