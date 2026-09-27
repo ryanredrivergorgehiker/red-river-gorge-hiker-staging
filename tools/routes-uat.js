@@ -187,10 +187,26 @@ async function routeLibrary(browser) {
   await search.fill('Skybridge');
   assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '1 route');
 
-  const trip = page.locator('[data-route-trip]');
-  await trip.selectOption('backpacking');
+  const dayHike = page.locator('[data-route-category-filter="day-hike"]');
+  const backpacking = page.locator('[data-route-category-filter="backpacking"]');
+  const offTrail = page.locator('[data-route-category-filter="off-trail"]');
+  assert.strictEqual(await page.locator('[data-route-category-filter]').count(), 3);
+  assert.strictEqual(await page.getByText('Multi-day', { exact: true }).count(), 0);
+  assert.strictEqual(await page.getByText('Official / on-trail', { exact: true }).count(), 0);
+  assert.strictEqual(await page.getByText('Mixed', { exact: true }).count(), 0);
+
+  await dayHike.uncheck();
   assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '0 routes');
-  await trip.selectOption('day-hike');
+  await dayHike.check();
+  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '1 route');
+
+  await backpacking.uncheck();
+  await offTrail.uncheck();
+  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '1 route');
+  await dayHike.uncheck();
+  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '0 routes');
+  await dayHike.check();
+  await offTrail.check();
   assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '1 route');
 
   await shot(page, 'desktop-route-library');
@@ -211,6 +227,7 @@ async function routeArtifactsAndContent(browser) {
   for (const expected of [
     'Skybridge Arch',
     '0.78 mi',
+    'Day hike',
     'Mostly official trail',
     'Moderate',
     'Straightforward official-trail navigation',

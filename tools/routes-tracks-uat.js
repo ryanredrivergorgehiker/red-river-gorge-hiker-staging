@@ -330,7 +330,8 @@ async function routeDetail(browser) {
   assert(popup.includes('Skybridge Arch'));
   assert(popup.includes('0.78 mi'));
   assert(popup.includes('Moderate'));
-  assert(popup.includes('Mostly official trail'));
+  assert(popup.includes('Day hike'));
+  assert(!popup.includes('Multi-day'));
   assert(popup.includes('View route guide'));
   assert(popup.includes('Download GPX'));
 
@@ -506,9 +507,28 @@ async function fullMap(browser) {
   for (const preset of ['Hiking','Terrain','Aerial']) {
     assert.strictEqual(await page.getByRole('button', { name: new RegExp('^' + preset) }).count(), 1, preset);
   }
-  for (const status of ['Official','Mixed','Off-trail']) {
-    assert.strictEqual(await page.getByLabel(status, { exact: true }).count(), 1, status);
+  for (const category of ['Day hikes','Backpacking','Off-trail']) {
+    assert.strictEqual(await page.getByLabel(category, { exact: true }).count(), 1, category);
   }
+  assert.strictEqual(await page.getByLabel('Multi-day', { exact: true }).count(), 0);
+  assert.strictEqual(await page.getByLabel('Official', { exact: true }).count(), 0);
+  assert.strictEqual(await page.getByLabel('Mixed', { exact: true }).count(), 0);
+
+  const dayHikeFilter = page.locator('[data-route-category-filter="day-hike"]');
+  const backpackingFilter = page.locator('[data-route-category-filter="backpacking"]');
+  const offTrailFilter = page.locator('[data-route-category-filter="off-trail"]');
+  assert.strictEqual(await dayHikeFilter.isChecked(), true);
+  assert.strictEqual(await backpackingFilter.isChecked(), true);
+  assert.strictEqual(await offTrailFilter.isChecked(), true);
+  await dayHikeFilter.uncheck();
+  await page.waitForFunction(() => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-visible-route-count') === '0');
+  await dayHikeFilter.check();
+  await page.waitForFunction(() => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-visible-route-count') === '1');
+  await backpackingFilter.uncheck();
+  await offTrailFilter.uncheck();
+  assert.strictEqual(await dayHikeFilter.isChecked(), true);
+  assert.strictEqual(await backpackingFilter.isChecked(), false);
+  assert.strictEqual(await offTrailFilter.isChecked(), false);
 
   assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), false, 'Hiking should start with Kentucky Topo off');
   assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true, 'Hiking should start with USGS Topo on');
@@ -1015,6 +1035,12 @@ async function fullMap(browser) {
   assert.strictEqual(await skybridgeExplore.count(), 1, 'Skybridge Arch should be selectable from Explore before sharing');
   await skybridgeExplore.click();
 
+  await backpackingFilter.uncheck();
+  await offTrailFilter.check();
+  assert.strictEqual(await dayHikeFilter.isChecked(), true);
+  assert.strictEqual(await backpackingFilter.isChecked(), false);
+  assert.strictEqual(await offTrailFilter.isChecked(), true);
+
   await page.locator('[data-map-layer="usfs-special-management"]').evaluate(input => {
     input.checked = false;
     input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1044,8 +1070,9 @@ async function fullMap(browser) {
   assert(shared.searchParams.get('rrghMap'), 'Shared link should include center and zoom');
   assert(shared.searchParams.get('rrghLayers')?.includes('usfs-special-management:0:'), 'Shared link should preserve disabled Special management');
   assert(shared.searchParams.get('rrghLayers')?.includes('kytopo:1:73'), 'Shared link should preserve Kentucky Topo opacity');
-  assert(shared.searchParams.has('rrghTrips'));
-  assert(shared.searchParams.has('rrghStatus'));
+  assert.strictEqual(shared.searchParams.get('rrghCategories'), 'day-hike,off-trail');
+  assert.strictEqual(shared.searchParams.has('rrghTrips'), false);
+  assert.strictEqual(shared.searchParams.has('rrghStatus'), false);
   assert.strictEqual(shared.searchParams.has('rrghLocation'), false, 'Share URL must not add a live-location parameter');
 
   const [shareLat, shareLng, shareZoom] = shared.searchParams.get('rrghMap').split(',').map(Number);
@@ -1069,6 +1096,9 @@ async function fullMap(browser) {
   assert.strictEqual(restoredZoom, shareZoom, 'Shared zoom should restore exactly');
   assert.strictEqual(await page.locator('[data-map-layer="usfs-special-management"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '73');
+  assert.strictEqual(await page.locator('[data-route-category-filter="day-hike"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-route-category-filter="backpacking"]').isChecked(), false);
+  assert.strictEqual(await page.locator('[data-route-category-filter="off-trail"]').isChecked(), true);
   await page.waitForFunction(
     () => document.querySelector('.leaflet-popup-content')?.textContent?.includes('Skybridge Arch'),
     { timeout: 5000 }
