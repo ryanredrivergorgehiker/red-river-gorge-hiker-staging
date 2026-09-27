@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: routes-tracks-uat
+  group: routes-tracks-uat-v2
   cancel-in-progress: true
 
 jobs:
