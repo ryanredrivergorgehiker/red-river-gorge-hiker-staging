@@ -1,8 +1,8 @@
-12e5efbc54018bb5a06a0bb8f58632c6106be6ed
-purpose=Owner-approved public route taxonomy simplification: replace retired tripType plus trailStatus browse model with exactly one public routeCategory enum (day-hike, backpacking, off-trail); Skybridge authoritative category Day hike; full-map and route-library public filters exactly Day hikes / Backpacking / Off-trail; shared state uses rrghCategories; internalTrailContext remains factual/internal context rather than browse taxonomy; Publication Class remains separate internal publication/sensitivity/legal control; approved GPX/GeoJSON/waypoints unchanged; production unchanged
-source_ci=36338176687 SUCCESS
-routes_uat=36338203688 SUCCESS
-routes_tracks_uat=36338203703 SUCCESS
-brand_uat=36338203695 SUCCESS
-analytics_uat=36338203733 SUCCESS
-roku_uat=36338203701 SUCCESS
+c88676e854e042c2dd0d367341953bc42db98053
+purpose=Owner-approved visual UAT refinement: keep existing Show RRGH routes checkbox cards and behavior, make desktop category boxes match Map View control height, and vertically center the existing checkbox plus label; no taxonomy, route data, map behavior, or production change
+source_ci=36342638272 SUCCESS
+routes_uat=36342754142 SUCCESS
+routes_tracks_uat=36342754133 SUCCESS
+brand_uat=36342757060 SUCCESS
+analytics_uat=36342759498 SUCCESS
+roku_uat=36342762337 SUCCESS
