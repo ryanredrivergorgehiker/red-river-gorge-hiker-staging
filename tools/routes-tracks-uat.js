@@ -448,6 +448,8 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-fine-tune-layer="usgs-topo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="ky-hillshade"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true);
+  await page.locator('.route-layer-panel > summary').click();
+  await page.locator('.route-layer-fine-tune > summary').click();
   const reliefFineToggle = page.locator('[data-fine-tune-layer="ky-hillshade"]');
   await reliefFineToggle.check();
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true, 'Fine-tune checkbox must enable matching main layer');
@@ -455,6 +457,8 @@ async function fullMap(browser) {
   await page.locator('[data-map-layer="ky-hillshade"]').uncheck();
   assert.strictEqual(await reliefFineToggle.isChecked(), false, 'Main layer checkbox must sync back to fine-tune checkbox');
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true, 'Disabled main layer must disable fine-tune opacity');
+  await page.locator('.route-layer-fine-tune > summary').click();
+  await page.locator('.route-layer-panel > summary').click();
   assert.strictEqual(await page.locator('[data-map-layer="ky-counties"]').count(), 0);
   assert.strictEqual(await page.locator('.leaflet-control-scale').count(), 1);
 
