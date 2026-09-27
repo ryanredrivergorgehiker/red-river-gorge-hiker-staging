@@ -1198,6 +1198,35 @@ async function mobile(browser) {
   assert.notStrictEqual(centerAfterVerticalPan, centerBeforeVerticalPan, 'A vertical touch drag inside the mobile map must pan the map');
   assert(Math.abs(scrollAfterVerticalPan - scrollBeforeVerticalPan) <= 3, 'A vertical touch drag inside the mobile map must not drag the page; before=' + scrollBeforeVerticalPan + ' after=' + scrollAfterVerticalPan);
 
+  const leftScrollGutter = page.locator('[data-map-scroll-gutter="left"]');
+  const rightScrollGutter = page.locator('[data-map-scroll-gutter="right"]');
+  assert(await leftScrollGutter.isVisible(), 'Left mobile page-scroll gutter must be visible');
+  assert(await rightScrollGutter.isVisible(), 'Right mobile page-scroll gutter must be visible');
+  const leftGutterBox = await leftScrollGutter.boundingBox();
+  const rightGutterBox = await rightScrollGutter.boundingBox();
+  assert(leftGutterBox && rightGutterBox);
+  assert(leftGutterBox.width >= 22 && leftGutterBox.width <= 26, 'Left scroll gutter should remain about 24px wide; width=' + leftGutterBox.width);
+  assert(rightGutterBox.width >= 22 && rightGutterBox.width <= 26, 'Right scroll gutter should remain about 24px wide; width=' + rightGutterBox.width);
+
+  const centerBeforeGutterScroll = await map.getAttribute('data-map-center');
+  const scrollBeforeGutterScroll = await page.evaluate(() => window.scrollY);
+  const gutterX = leftGutterBox.x + leftGutterBox.width * 0.5;
+  const gutterStartY = Math.min(leftGutterBox.y + leftGutterBox.height * 0.68, 720);
+  const gutterTouchPoint = (y) => ({ x: gutterX, y, radiusX: 2, radiusY: 2, rotationAngle: 0, force: 1, id: 12 });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [gutterTouchPoint(gutterStartY)] });
+  for (const delta of [18, 36, 54, 72, 90, 108]) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [gutterTouchPoint(gutterStartY - delta)] });
+    await page.waitForTimeout(25);
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.waitForTimeout(350);
+  const centerAfterGutterScroll = await map.getAttribute('data-map-center');
+  const scrollAfterGutterScroll = await page.evaluate(() => window.scrollY);
+  assert.strictEqual(centerAfterGutterScroll, centerBeforeGutterScroll, 'Dragging a mobile side gutter must not pan the map');
+  assert(scrollAfterGutterScroll > scrollBeforeGutterScroll + 20, 'Dragging a mobile side gutter should scroll the page; before=' + scrollBeforeGutterScroll + ' after=' + scrollAfterGutterScroll);
+
+  await map.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(120);
   box = await map.boundingBox();
   assert(box);
   const coordinateTarget = {
