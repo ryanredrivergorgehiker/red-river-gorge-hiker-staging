@@ -1170,6 +1170,36 @@ async function mobile(browser) {
   await page.waitForTimeout(120);
   box = await map.boundingBox();
   assert(box);
+
+  const mobileScale = page.locator('.leaflet-control-scale');
+  const scaleBox = await mobileScale.boundingBox();
+  assert(scaleBox, 'Mobile scale must be visible');
+  const scaleOffsetX = scaleBox.x - box.x;
+  const scaleOffsetY = scaleBox.y - box.y;
+  assert(scaleOffsetX >= 0 && scaleOffsetX <= 24, 'Mobile scale should sit in the map upper-left corner; x offset=' + scaleOffsetX);
+  assert(scaleOffsetY >= 0 && scaleOffsetY <= 24, 'Mobile scale should sit in the map upper-left corner; y offset=' + scaleOffsetY);
+
+  await page.waitForFunction(() => Boolean(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-center')), { timeout: 3000 });
+  const centerBeforeVerticalPan = await map.getAttribute('data-map-center');
+  const scrollBeforeVerticalPan = await page.evaluate(() => window.scrollY);
+  const cdp = await context.newCDPSession(page);
+  const panX = box.x + box.width * 0.52;
+  const panStartY = box.y + box.height * 0.42;
+  const touchPoint = (y) => ({ x: panX, y, radiusX: 2, radiusY: 2, rotationAngle: 0, force: 1, id: 11 });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [touchPoint(panStartY)] });
+  for (const delta of [22, 44, 66, 88, 110]) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [touchPoint(panStartY + delta)] });
+    await page.waitForTimeout(25);
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.waitForTimeout(350);
+  const centerAfterVerticalPan = await map.getAttribute('data-map-center');
+  const scrollAfterVerticalPan = await page.evaluate(() => window.scrollY);
+  assert.notStrictEqual(centerAfterVerticalPan, centerBeforeVerticalPan, 'A vertical touch drag inside the mobile map must pan the map');
+  assert(Math.abs(scrollAfterVerticalPan - scrollBeforeVerticalPan) <= 3, 'A vertical touch drag inside the mobile map must not drag the page; before=' + scrollBeforeVerticalPan + ' after=' + scrollAfterVerticalPan);
+
+  box = await map.boundingBox();
+  assert(box);
   const coordinateTarget = {
     x: box.x + box.width * 0.62,
     y: box.y + box.height * 0.56
