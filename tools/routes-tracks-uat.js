@@ -428,8 +428,8 @@ async function fullMap(browser) {
   assert(body.includes('How to read this map — 30-second guide'));
   assert(body.includes('Map data:'));
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 11);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 10);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 12);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 11);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0, 'Temporary exact-view copier should be removed after Home approval');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
@@ -444,7 +444,7 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-opacity="usfs-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="osm-informal-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="usfs-roads"]').inputValue(), '100');
-  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 10);
+  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 11);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="usgs-topo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="ky-hillshade"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true);
@@ -454,6 +454,7 @@ async function fullMap(browser) {
   await reliefFineToggle.check();
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true, 'Fine-tune checkbox must enable matching main layer');
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), false, 'Enabled fine-tune layer must enable its opacity slider');
+  assert(Number(await page.locator('[data-opacity="ky-hillshade"]').inputValue()) >= 75, 'Turning Terrain relief on must clamp opacity to at least 75%');
   await page.locator('[data-map-layer="ky-hillshade"]').uncheck();
   assert.strictEqual(await reliefFineToggle.isChecked(), false, 'Main layer checkbox must sync back to fine-tune checkbox');
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true, 'Disabled main layer must disable fine-tune opacity');
@@ -567,7 +568,7 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '72');
   assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').inputValue(), '72');
-  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '72');
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '75');
   for (let i = 0; i < 10; i += 1) await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
   await page.waitForTimeout(150);
   assert((await page.locator('.leaflet-baseTopo-pane img.leaflet-tile').count()) > 0, 'Topo tiles should remain at close zoom above terrain relief');
@@ -589,25 +590,57 @@ async function fullMap(browser) {
   assert((await page.locator('.route-static-legend-grid').innerText()).includes('County boundaries'));
 
   const gorgeToggle = page.locator('[data-map-layer="rrg-lidar-sun"]');
+  const sunriseToggle = page.locator('[data-sun-kind-toggle="sunrise"]');
+  const sunsetToggle = page.locator('[data-sun-kind-toggle="sunset"]');
+  const sunFineToggle = page.locator('[data-fine-tune-layer="rrg-lidar-sun"]');
+  assert.strictEqual(await sunriseToggle.isChecked(), false);
+  assert.strictEqual(await sunsetToggle.isChecked(), false);
+  assert.strictEqual(await page.locator('[data-opacity="rrg-lidar-sun"]').isDisabled(), true);
+  assert(!(await page.locator('.route-layer-panel').innerText()).includes('Potential does not guarantee standing room'));
+
+  await sunriseToggle.check();
+  assert.strictEqual(await gorgeToggle.isChecked(), true, 'Sunrise alone must keep the combined master active');
+  assert.strictEqual(await gorgeToggle.evaluate(el => el.indeterminate), true, 'Combined master must be indeterminate with Sunrise only');
+  assert.strictEqual(await sunFineToggle.evaluate(el => el.indeterminate), true, 'Combined Fine tune toggle must mirror partial sunrise/sunset state');
+  assert.strictEqual(await page.locator('[data-opacity="rrg-lidar-sun"]').isDisabled(), false);
+
+  await sunsetToggle.check();
+  assert.strictEqual(await gorgeToggle.evaluate(el => el.indeterminate), false);
+  assert.strictEqual(await sunFineToggle.evaluate(el => el.indeterminate), false);
+
+  await sunriseToggle.uncheck();
+  assert.strictEqual(await sunsetToggle.isChecked(), true);
+  assert.strictEqual(await gorgeToggle.evaluate(el => el.indeterminate), true);
+
+  await gorgeToggle.uncheck();
+  assert.strictEqual(await sunriseToggle.isChecked(), false, 'Combined master off must turn Sunrise off');
+  assert.strictEqual(await sunsetToggle.isChecked(), false, 'Combined master off must turn Sunset off');
+  assert.strictEqual(await page.locator('[data-opacity="rrg-lidar-sun"]').isDisabled(), true);
+
   await gorgeToggle.check();
+  assert.strictEqual(await sunriseToggle.isChecked(), true, 'Combined master on must turn Sunrise on');
+  assert.strictEqual(await sunsetToggle.isChecked(), true, 'Combined master on must turn Sunset on');
   await page.waitForFunction(
     () => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-rrg-lidar-sun-loaded-sectors')) > 0
       && Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-rrg-lidar-sun-feature-count')) > 0,
     { timeout: 20000 }
   );
   assert.strictEqual(await mapContainer.getAttribute('data-rrg-lidar-sun-load-error'), null, 'Gorge LiDAR sectors should load without error');
-  assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Enabled Gorge LiDAR expansion should render in the LiDAR pane');
+  assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Enabled Sunrise / Sunset Potential should render in the LiDAR pane');
   assert((await page.locator('.route-layer-panel').innerText()).includes('Sunrise / Sunset Potential'));
-  assert((await page.locator('.route-layer-panel').innerText()).includes('Potential does not guarantee standing room'));
   await gorgeToggle.uncheck();
 
   const aerialToggle = page.locator('[data-map-layer="kyaerial-phase3"]');
+  const leafOffAerialToggle = page.locator('[data-map-layer="kyaerial-phase2-leafoff"]');
   const kyTopoToggle = page.locator('[data-map-layer="kytopo"]');
   const usgsTopoToggle = page.locator('[data-map-layer="usgs-topo"]');
   const lidarToggle = page.locator('[data-map-layer="ky-hillshade"]');
 
+  assert.strictEqual(await aerialToggle.isChecked(), false);
+  assert.strictEqual(await leafOffAerialToggle.isChecked(), false);
   await aerialToggle.check();
   assert.strictEqual(await aerialToggle.isChecked(), true);
+  assert.strictEqual(await leafOffAerialToggle.isChecked(), false, 'Leaf-on must exclude Leaf-off');
   assert.strictEqual(await kyTopoToggle.isChecked(), false);
   assert.strictEqual(await usgsTopoToggle.isChecked(), false);
   assert.strictEqual(await lidarToggle.isChecked(), false);
@@ -626,22 +659,34 @@ async function fullMap(browser) {
   assert.notStrictEqual(aerialLegendColors.wilderness, aerialLegendColors.management);
   assert.notStrictEqual(aerialLegendColors.management, aerialLegendColors.land);
 
+  await leafOffAerialToggle.check();
+  assert.strictEqual(await leafOffAerialToggle.isChecked(), true, 'Leaf-off aerial must turn on');
+  assert.strictEqual(await aerialToggle.isChecked(), false, 'Leaf-off aerial must turn Leaf-on aerial off');
+  assert.strictEqual(await kyTopoToggle.isChecked(), false);
+  assert.strictEqual(await usgsTopoToggle.isChecked(), false);
+  assert.strictEqual(await lidarToggle.isChecked(), false);
+  await page.waitForTimeout(250);
+  assert(providerRequests.some(url => url.includes('Ky_Imagery_Phase2_6IN_WGS84WM')), 'Leaf-off aerial must request the verified Phase 2 6-inch service');
+
   await kyTopoToggle.check();
   assert.strictEqual(await page.locator('[data-opacity="kytopo"]').isDisabled(), false, 'Enabled Kentucky Topo must enable its opacity');
   assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').isDisabled(), true, 'USGS Topo opacity must stay disabled while that layer is off');
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true, 'Terrain relief opacity must stay disabled while that layer is off');
-  assert.strictEqual(await aerialToggle.isChecked(), false, 'Selecting Kentucky Topo must turn Aerial off');
+  assert.strictEqual(await aerialToggle.isChecked(), false, 'Selecting Kentucky Topo must keep Leaf-on aerial off');
+  assert.strictEqual(await leafOffAerialToggle.isChecked(), false, 'Selecting Kentucky Topo must turn Leaf-off aerial off');
 
   await aerialToggle.check();
-  assert.strictEqual(await kyTopoToggle.isChecked(), false, 'Selecting Aerial must turn Kentucky Topo off');
+  assert.strictEqual(await kyTopoToggle.isChecked(), false, 'Selecting Leaf-on aerial must turn Kentucky Topo off');
   await usgsTopoToggle.check();
-  assert.strictEqual(await aerialToggle.isChecked(), false, 'Selecting USGS Topo must turn Aerial off');
+  assert.strictEqual(await aerialToggle.isChecked(), false, 'Selecting USGS Topo must turn Leaf-on aerial off');
+  assert.strictEqual(await leafOffAerialToggle.isChecked(), false, 'Selecting USGS Topo must keep Leaf-off aerial off');
 
   await page.getByRole('button', { name: /^Hiking/ }).click();
   assert.strictEqual(await kyTopoToggle.isChecked(), false, 'Hiking preset should turn Kentucky Topo off');
   assert.strictEqual(await usgsTopoToggle.isChecked(), true, 'Hiking preset should leave only USGS Topo on among base/terrain layers');
   assert.strictEqual(await lidarToggle.isChecked(), false, 'Hiking preset should turn Terrain relief off');
-  assert.strictEqual(await aerialToggle.isChecked(), false, 'Hiking preset should turn Aerial off');
+  assert.strictEqual(await aerialToggle.isChecked(), false, 'Hiking preset should turn Leaf-on aerial off');
+  assert.strictEqual(await leafOffAerialToggle.isChecked(), false, 'Hiking preset should turn Leaf-off aerial off');
   if ((await page.locator('.route-layer-panel').getAttribute('open')) !== null) {
     await page.locator('.route-layer-panel > summary').click();
   }
