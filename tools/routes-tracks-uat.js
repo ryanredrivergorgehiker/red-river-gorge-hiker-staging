@@ -1471,13 +1471,61 @@ async function mobile(browser) {
   await page.locator('[data-map-preset="sunlight"]').click();
   const mobileMapPointBox = await map.boundingBox();
   assert(mobileMapPointBox);
-  await page.mouse.click(
-    mobileMapPointBox.x + mobileMapPointBox.width * 0.52,
-    mobileMapPointBox.y + mobileMapPointBox.height * 0.44,
-    { button: 'right' }
-  );
+  await map.evaluate((element, position) => {
+    const rect = element.getBoundingClientRect();
+    const clientX = rect.left + rect.width * position.x;
+    const clientY = rect.top + rect.height * position.y;
+    const touch = new Touch({
+      identifier: 7,
+      target: element,
+      clientX,
+      clientY,
+      pageX: clientX + window.scrollX,
+      pageY: clientY + window.scrollY,
+      screenX: clientX,
+      screenY: clientY,
+      radiusX: 1,
+      radiusY: 1,
+      rotationAngle: 0,
+      force: 1
+    });
+    element.dispatchEvent(new TouchEvent('touchstart', {
+      bubbles: true,
+      cancelable: true,
+      touches: [touch],
+      targetTouches: [touch],
+      changedTouches: [touch]
+    }));
+  }, { x: 0.52, y: 0.44 });
+  await page.waitForTimeout(700);
   const mobileCoordinateCard = page.locator('[data-coordinate-card]');
-  assert(await mobileCoordinateCard.isVisible(), 'Mobile Map Point card must open for responsive layout UAT');
+  assert(await mobileCoordinateCard.isVisible(), 'Mobile press-and-hold must open the Map Point card for responsive layout UAT');
+  await map.evaluate((element, position) => {
+    const rect = element.getBoundingClientRect();
+    const clientX = rect.left + rect.width * position.x;
+    const clientY = rect.top + rect.height * position.y;
+    const touch = new Touch({
+      identifier: 7,
+      target: element,
+      clientX,
+      clientY,
+      pageX: clientX + window.scrollX,
+      pageY: clientY + window.scrollY,
+      screenX: clientX,
+      screenY: clientY,
+      radiusX: 1,
+      radiusY: 1,
+      rotationAngle: 0,
+      force: 0
+    });
+    element.dispatchEvent(new TouchEvent('touchend', {
+      bubbles: true,
+      cancelable: true,
+      touches: [],
+      targetTouches: [],
+      changedTouches: [touch]
+    }));
+  }, { x: 0.52, y: 0.44 });
   await page.waitForFunction(
     () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-sunlight-terrain-ready') === 'true',
     { timeout: 10000 }
