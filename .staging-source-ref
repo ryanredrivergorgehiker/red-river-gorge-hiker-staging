@@ -1,8 +1,8 @@
-637816cbb20f887aff5f43cbde141bd40b22160d
-purpose=Owner-requested Routes UAT correction pass: Oil & Gas well types are aligned inside a disclosure collapsed by default; Kentucky road planning now heals short aligned endpoint gaps even when adjacent source fragments use different road names around a county-side boundary; selecting Measure distance or Build trail route automatically minimizes the plan panel; the mobile pan pad is reduced to a compact 74px rendered footprint and placed at the map's upper-right edge; KGS farm/lease-name data is neither requested nor displayed, and Privacy/Terms explicitly state that boundary. Production unchanged.
-source_ci=36482837248 SUCCESS
-routes_uat=36482964127 SUCCESS
-routes_tracks_uat=36484303169 SUCCESS
-brand_uat=36482975006 SUCCESS
-analytics_uat=36482985743 SUCCESS
-roku_uat=36482996205 SUCCESS
+a409dacfa228e6881d3478bb398a5d699209505b
+purpose=Owner-requested Routes UAT correction pass: route planning now heals short unambiguous mutual-nearest Kentucky road-source endpoint gaps when one side approaches the gap but the opposite fragment turns sharply, covering the Lower Swift Camp / Osborne Bend bridge defect class without broadly relaxing the prior alignment guard; Undo, Redo, Export GPX and Clear are moved directly below Measure distance / Build trail route. Production unchanged.
+source_ci=36488253896 SUCCESS
+routes_uat_source_ref_commit=dac9ef36a261d70600160418afa04bfd1b193dcb
+routes_tracks_uat_source_ref_commit=50aec1f2a6478856a7f4e9e52b1cfd63075e11cf
+brand_uat_source_ref_commit=ae7a664dbfc02c730efdf82b7c50a3a1db9125d5
+analytics_uat_source_ref_commit=b62694b78a15908bcbe31bd22013dfd7eac557ba
+roku_uat_source_ref_commit=81fae200d7eaf4fe2f39832a3b57fa55df5fb08f
