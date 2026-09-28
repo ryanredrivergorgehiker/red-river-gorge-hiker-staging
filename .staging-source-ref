@@ -1,8 +1,8 @@
-8f63a35da8c63cab19411e18108db82539256042
-purpose=Owner-requested planner / Map Point / Oil & Gas correction pass: short gaps between segments of the same named Kentucky road are healed for route planning and a short-route detour guard prevents absurd multi-mile loops; minimized mobile Build Trail Route is reduced to a compact one-row four-stat strip with title removed; mobile planning pan pad is smaller and positioned directly beneath the scale; Map Point selections zoom into detail only from broad views and preserve an already-detailed viewport unless the point would be hidden; KGS Oil & Gas popups no longer auto-pan/requery away; Oil & Gas Wells now has master-plus-type subfilters for oil, gas, oil+gas, dry/abandoned, service/recovery, coal-bed methane, and locations/other with cleaner legend swatches. Oil & Gas remains off by default in every Map View. Production unchanged.
-source_ci=36478912501 SUCCESS
-routes_uat=36479178948 SUCCESS
-routes_tracks_uat=36479638083 SUCCESS
-brand_uat=36479191242 SUCCESS
-analytics_uat=36479200127 SUCCESS
-roku_uat=36479213081 SUCCESS
+637816cbb20f887aff5f43cbde141bd40b22160d
+purpose=Owner-requested Routes UAT correction pass: Oil & Gas well types are aligned inside a disclosure collapsed by default; Kentucky road planning now heals short aligned endpoint gaps even when adjacent source fragments use different road names around a county-side boundary; selecting Measure distance or Build trail route automatically minimizes the plan panel; the mobile pan pad is reduced to a compact 74px rendered footprint and placed at the map's upper-right edge; KGS farm/lease-name data is neither requested nor displayed, and Privacy/Terms explicitly state that boundary. Production unchanged.
+source_ci=36482837248 SUCCESS
+routes_uat=36482964127 SUCCESS
+routes_tracks_uat=36484303169 SUCCESS
+brand_uat=36482975006 SUCCESS
+analytics_uat=36482985743 SUCCESS
+roku_uat=36482996205 SUCCESS
