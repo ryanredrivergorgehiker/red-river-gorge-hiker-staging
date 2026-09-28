@@ -851,60 +851,7 @@ async function fullMap(browser) {
   assert.strictEqual(await mapContainer.getAttribute('data-coordinate-point-visible'), null);
   await page.locator('[data-map-preset="hiking"]').click();
 
-  const cacheData = await page.evaluate
-async function liveKgsOilGasProbe(browser) {
-  const context = await preparedContext(browser, { viewport: { width: 1100, height: 900 } });
-  const page = await context.newPage();
-  const providerRequests = [];
-  const pageErrors = [];
-  page.on('pageerror', error => pageErrors.push(String(error)));
-  await installProviderStubs(page, providerRequests, false, 'live');
-
-  const target = MAIN + 'routes/map/?rrghMap=37.6500000,-83.6500000,11&rrghLayers=kgs-oil-gas-wells:1:90';
-  const response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  assert(response && response.ok());
-  await page.waitForFunction(
-    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-oil-gas-load-state') === 'loaded',
-    { timeout: 25000 }
-  );
-  const map = page.locator('[data-rrgh-route-map]');
-  const count = Number(await map.getAttribute('data-oil-gas-well-count'));
-  const loadMs = Number(await map.getAttribute('data-oil-gas-load-ms'));
-  assert(count > 0, 'Live KGS viewport query over Lee County should return at least one well');
-  assert(Number.isFinite(loadMs) && loadMs < 20000, 'Live KGS viewport query should complete within 20 seconds; ms=' + loadMs);
-  assert(providerRequests.some(url => url.includes('kgs.uky.edu') && url.includes('KYOilGasWells_static_WGS84/MapServer/1/query')));
-  assert.strictEqual(await map.getAttribute('data-oil-gas-load-error'), null);
-  assert.deepStrictEqual(pageErrors, []);
-  record('Live KGS Oil & Gas Wells CORS and viewport performance', 'PASS', { count, loadMs });
-  await context.close();
-}
-
-async function oilGasFailureHandling(browser) {
-  const context = await preparedContext(browser, { viewport: { width: 1100, height: 900 } });
-  const page = await context.newPage();
-  const providerRequests = [];
-  const pageErrors = [];
-  page.on('pageerror', error => pageErrors.push(String(error)));
-  await installProviderStubs(page, providerRequests, false, 'fail');
-  const response = await page.goto(MAIN + 'routes/map/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  assert(response && response.ok());
-  await page.waitForFunction(() => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-core-ready') === 'true', { timeout: 10000 });
-  await page.locator('.route-layer-panel > summary').click();
-  await page.locator('[data-map-layer="kgs-oil-gas-wells"]').check();
-  await page.waitForFunction(
-    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-oil-gas-load-state') === 'error',
-    { timeout: 10000 }
-  );
-  const map = page.locator('[data-rrgh-route-map]');
-  assert.strictEqual(await map.getAttribute('data-oil-gas-load-error'), 'true');
-  assert((await page.locator('[data-oil-gas-status]').innerText()).includes('temporarily unavailable'));
-  assert.strictEqual(await map.getAttribute('data-map-core-ready'), 'true', 'KGS failure must not break the rest of the map');
-  assert.deepStrictEqual(pageErrors, []);
-  record('KGS Oil & Gas Wells failure handling is isolated', 'PASS');
-  await context.close();
-}
-
-(async () => {
+  const cacheData = await page.evaluate(async () => {
     const response = await fetch('/data/map/osm-informal-trails.geojson', { cache: 'no-cache' });
     if (!response.ok) throw new Error('OSM cache HTTP ' + response.status);
     return response.json();
@@ -1995,6 +1942,59 @@ async function legal(browser) {
   assert(anchorBox && anchorBox.y >= 90 && anchorBox.y <= 330, 'Disclaimer heading should land visibly below the sticky site header; y=' + (anchorBox && anchorBox.y));
 
   record('Map geolocation, OSM and legal-access disclosures', 'PASS');
+  await context.close();
+}
+
+
+async function liveKgsOilGasProbe(browser) {
+  const context = await preparedContext(browser, { viewport: { width: 1100, height: 900 } });
+  const page = await context.newPage();
+  const providerRequests = [];
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error)));
+  await installProviderStubs(page, providerRequests, false, 'live');
+
+  const target = MAIN + 'routes/map/?rrghMap=37.6500000,-83.6500000,11&rrghLayers=kgs-oil-gas-wells:1:90';
+  const response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(response && response.ok());
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-oil-gas-load-state') === 'loaded',
+    { timeout: 25000 }
+  );
+  const map = page.locator('[data-rrgh-route-map]');
+  const count = Number(await map.getAttribute('data-oil-gas-well-count'));
+  const loadMs = Number(await map.getAttribute('data-oil-gas-load-ms'));
+  assert(count > 0, 'Live KGS viewport query over Lee County should return at least one well');
+  assert(Number.isFinite(loadMs) && loadMs < 20000, 'Live KGS viewport query should complete within 20 seconds; ms=' + loadMs);
+  assert(providerRequests.some(url => url.includes('kgs.uky.edu') && url.includes('KYOilGasWells_static_WGS84/MapServer/1/query')));
+  assert.strictEqual(await map.getAttribute('data-oil-gas-load-error'), null);
+  assert.deepStrictEqual(pageErrors, []);
+  record('Live KGS Oil & Gas Wells CORS and viewport performance', 'PASS', { count, loadMs });
+  await context.close();
+}
+
+async function oilGasFailureHandling(browser) {
+  const context = await preparedContext(browser, { viewport: { width: 1100, height: 900 } });
+  const page = await context.newPage();
+  const providerRequests = [];
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error)));
+  await installProviderStubs(page, providerRequests, false, 'fail');
+  const response = await page.goto(MAIN + 'routes/map/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(response && response.ok());
+  await page.waitForFunction(() => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-core-ready') === 'true', { timeout: 10000 });
+  await page.locator('.route-layer-panel > summary').click();
+  await page.locator('[data-map-layer="kgs-oil-gas-wells"]').check();
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-oil-gas-load-state') === 'error',
+    { timeout: 10000 }
+  );
+  const map = page.locator('[data-rrgh-route-map]');
+  assert.strictEqual(await map.getAttribute('data-oil-gas-load-error'), 'true');
+  assert((await page.locator('[data-oil-gas-status]').innerText()).includes('temporarily unavailable'));
+  assert.strictEqual(await map.getAttribute('data-map-core-ready'), 'true', 'KGS failure must not break the rest of the map');
+  assert.deepStrictEqual(pageErrors, []);
+  record('KGS Oil & Gas Wells failure handling is isolated', 'PASS');
   await context.close();
 }
 
