@@ -1,8 +1,8 @@
-da7b46ae4b614487117270f31712fffe55438dd3
-purpose=Owner-requested Routes correction pass after real Lower Swift / Red River UAT: planner graph now distinguishes source kinds and heals a narrowly bounded road-to-trail source seam only near an official Forest Service trailhead, connecting the nearest mapped road node to a mapped official/community trail endpoint within 45 m while both lie within 90 m of the same trailhead. Existing Kentucky-road gap healing and short-detour guard remain. Undo, Redo, Export GPX and Clear remain directly below Measure distance / Build trail route. Production unchanged.
-source_ci=36491882089 SUCCESS
-routes_uat_source_ref_commit=03d4bd9e28e52fbcc116504804b5c33a81dbf7d6
-routes_tracks_uat_source_ref_commit=8ce9d69dbfbe4ba5b5fcbf8234b46bd222649db7
-brand_uat_source_ref_commit=4540aa4a2ac0387e89d7f272bf979a1acbdff375
-analytics_uat_source_ref_commit=01775511c20b730d88bc069490d6fc4987749cdd
-roku_uat_source_ref_commit=17d34ded43154b312e130d9799f5fcec764620e0
+23f49e8f5f8e79590823bc95670e810df947c8ab
+purpose=Emergency staging performance rollback. Removes the trailhead road-to-trail graph scan introduced after a409dac because that startup routine performed a large nested scan across real planner nodes and could block the browser main thread during map initialization. This source is file-for-file identical to responsive candidate a409dacfa228e6881d3478bb398a5d699209505b; Undo, Redo, Export GPX and Clear remain directly below Measure distance / Build trail route. Production unchanged.
+source_ci=36492764216 SUCCESS
+content_equivalent_to=a409dacfa228e6881d3478bb398a5d699209505b
+routes_uat_source_ref_commit=fef0f325ffdc40c20845ad7c12450d7d2635e123
+brand_uat_source_ref_commit=9525b26c4097a79faa052c4bcd39814885d83996
+analytics_uat_source_ref_commit=db9e675890fa3c1a9edb077980a8d2e8db0a5163
+roku_uat_source_ref_commit=3f7df364cb67d793473fdecb4dd8f7ff321843c6
