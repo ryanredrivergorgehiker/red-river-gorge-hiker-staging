@@ -723,7 +723,7 @@ async function fullMap(browser) {
   assert.strictEqual(await coordinateCard.locator('.route-coordinate-sun-table tbody tr').count(), 10, 'Map Point must show the next 10 days');
   const sunlightHeaders = await coordinateCard.locator('.route-coordinate-sun-table thead th').allInnerTexts();
   assert.deepStrictEqual(sunlightHeaders.map(value => value.trim()), ['DATE', 'SUNRISE', 'FIRST DIRECT SUN', 'LAST DIRECT SUN', 'SUNSET']);
-  assert((await coordinateCard.locator('.route-coordinate-sun-table tbody tr').first().locator('th').innerText()).includes('Today'), 'First sunlight row must explicitly identify Today');
+  assert(/today/i.test(await coordinateCard.locator('.route-coordinate-sun-table tbody tr').first().locator('th').innerText()), 'First sunlight row must explicitly identify Today');
   const sunTable = coordinateCard.locator('.route-coordinate-sun-table');
   const [sunTableBox, expandedCardBox, directHeaderStyle] = await Promise.all([
     sunTable.boundingBox(),
@@ -1498,7 +1498,7 @@ async function mobile(browser) {
   }
   const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert(mobileOverflow <= 2, 'Mobile Map Point must not create horizontal page overflow: ' + mobileOverflow);
-  assert((await mobileCoordinateCard.locator('.route-coordinate-sun-table tbody tr').first().locator('th').innerText()).includes('Today'));
+  assert(/today/i.test(await mobileCoordinateCard.locator('.route-coordinate-sun-table tbody tr').first().locator('th').innerText()));
   await mobileCoordinateCard.locator('[data-coordinate-close]').click();
   await page.locator('[data-map-preset="hiking"]').click();
   await mobileTopbar.locator('[data-map-action="home"]').click();
