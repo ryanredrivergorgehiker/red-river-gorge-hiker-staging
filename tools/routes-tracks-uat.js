@@ -686,7 +686,7 @@ async function fullMap(browser) {
   assert.strictEqual(overlapsCard, false, 'Auto-pan must keep the selected map point visible outside the Map Point card');
 
   const todayPanel = coordinateCard.locator('[data-coordinate-sun-today]');
-  assert((await todayPanel.innerText()).includes('Sunlight today'));
+  assert(/sunlight today/i.test(await todayPanel.innerText()));
   for (const label of ['Sunrise', 'First direct sun', 'Last direct sun', 'Sunset']) assert((await todayPanel.innerText()).includes(label), label);
   assert.strictEqual(await coordinateCard.locator('[data-coordinate-sun-details]').getAttribute('open'), '');
   await page.waitForFunction(
