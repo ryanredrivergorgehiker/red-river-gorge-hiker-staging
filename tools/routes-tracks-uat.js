@@ -2024,7 +2024,7 @@ async function legal(browser) {
     'off by default in every Map View',
     'Kentucky Geological Survey / University of Kentucky',
     'sends the current map viewport',
-    'transforms the returned public well records for web display'
+    'requests and transforms selected public well fields for web display'
   ]) assert(body.includes(expected), expected);
 
   response = await page.goto(MAIN + 'search-and-rescue/#current-conditions', { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -2055,7 +2055,8 @@ async function legal(browser) {
     'snap to mapped road-centerline geometry from USDA Forest Service and Kentucky public road datasets',
     'Open Database License (ODbL)',
     'optional Oil & Gas Wells layer',
-    'public Kentucky Geological Survey / University of Kentucky well records',
+    'selected public Kentucky Geological Survey / University of Kentucky well-record fields',
+    'does not request or display KGS farm/lease-name fields',
     'does not establish present ownership, mineral rights, operator responsibility, legal access'
   ]) assert(body.includes(expected), expected);
 
