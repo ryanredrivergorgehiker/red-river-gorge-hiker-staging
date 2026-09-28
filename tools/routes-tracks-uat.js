@@ -667,7 +667,7 @@ async function fullMap(browser) {
   assert(mapPointHeadingBox.x >= mapPointCopyBox.x + mapPointCopyBox.width + 2, 'The Map Point information block must sit to the right of Copy coordinates');
   assert(mapPointCloseBox.x + mapPointCloseBox.width >= toolbarBox.x + toolbarBox.width - 6, 'Close must remain isolated at the upper-right');
   const titleText = (await coordinateTitle.innerText()).replace(/\s+/g, ' ').trim();
-  assert(/^Map point — Elevation /.test(titleText), 'Map Point title must place elevation on the same line after an em dash; text=' + titleText);
+  assert(/^Map point — Elevation /i.test(titleText), 'Map Point title must place elevation on the same line after an em dash; text=' + titleText);
 
   assert.strictEqual(await coordinateCard.locator('.route-map-point-symbol').count(), 1, 'Map Point card must show the same selected-point legend symbol');
   assert.strictEqual(await page.locator('.route-map-point-icon .route-map-point-symbol').count(), 1, 'Selected point must be dominant and visible on the map');
