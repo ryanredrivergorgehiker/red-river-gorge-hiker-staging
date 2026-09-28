@@ -1,8 +1,8 @@
-66c33198a12b32e0f957168eb84f7caeb2db6247
-purpose=Owner UAT refinement from 2026-09-28 screenshots: overview area labels now hide when zoomed too far out, show compact full names at Home/landing, switch to NB/RRG/CW one zoom in, and disappear one zoom closer; desktop Home zoom remains 13; mobile Home is pinned one step closer at zoom 11 matching the 5 km / 3 mi scale; Map Point now always resolves elevation, keeps Sunrise / First direct sun / Last direct sun / Sunset in the Today summary even when the 10-day table is collapsed, and moves Copy coordinates to the upper left with Close isolated at upper right; prior Sunlight, readiness, Plan, Terrain, sticky Layers, mobile gutters and route behavior retained; production unchanged
-source_ci=36433125384 SUCCESS
-routes_uat=36433460723 SUCCESS
-routes_tracks_uat=36433703075 SUCCESS
-brand_uat=36433460906 SUCCESS
-analytics_uat=36433461533 SUCCESS
-roku_uat=36433460834 SUCCESS
+93471e7b36a1abfa7d91ec059305dc46c8d49311
+purpose=Owner refinement continuation: transparent gray italic bold all-caps area typography with broad-acronym/full-name/near-acronym/hidden zoom progression; compact Map Point header with tall two-line Copy button, Map point + elevation inline, stacked Sunlight today summary at right, narrower 10-day table with wrapped headers/source notes; dominant orange selected Map Point symbol mirrored in card and automatically panned into a safe visible map area; active Measure/Build trail route panel minimizes instead of closing and retains live distance/elevation totals while pins update; Search and Explore remain disabled until core map readiness; mobile Map Point X pinned upper-right; prior accepted Terrain, Sunlight, mobile Home, Layers, scale, route taxonomy and production state retained; production unchanged
+source_ci=36445060376 SUCCESS
+routes_uat=36446234129 SUCCESS
+routes_tracks_uat=36446566364 SUCCESS
+brand_uat=36446234229 SUCCESS
+analytics_uat=36446233955 SUCCESS
+roku_uat=36446233963 SUCCESS
