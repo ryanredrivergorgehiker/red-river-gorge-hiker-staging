@@ -129,17 +129,30 @@ const OIL_GAS_WELLS = {
 
 const RECREATION = {
   type: 'FeatureCollection',
-  features: [{
-    type: 'Feature',
-    properties: {
-      site_name: 'Sky Bridge Trailhead',
-      public_site_name: 'Sky Bridge Trailhead',
-      site_type: 'TRAILHEAD',
-      seasonal_operational_status: 'OPEN',
-      usda_portal_url: 'https://www.fs.usda.gov/'
+  features: [
+    {
+      type: 'Feature',
+      properties: {
+        site_name: 'Sky Bridge Trailhead',
+        public_site_name: 'Sky Bridge Trailhead',
+        site_type: 'TRAILHEAD',
+        seasonal_operational_status: 'OPEN',
+        usda_portal_url: 'https://www.fs.usda.gov/'
+      },
+      geometry: { type: 'Point', coordinates: [-83.5827, 37.8176] }
     },
-    geometry: { type: 'Point', coordinates: [-83.5827, 37.8176] }
-  }]
+    {
+      type: 'Feature',
+      properties: {
+        site_name: 'Lower Swift Camp Trailhead',
+        public_site_name: 'Lower Swift Camp Trailhead',
+        site_type: 'TRAILHEAD',
+        seasonal_operational_status: 'OPEN',
+        usda_portal_url: 'https://www.fs.usda.gov/'
+      },
+      geometry: { type: 'Point', coordinates: [-83.61970, 37.80755] }
+    }
+  ]
 };
 
 const WILDERNESS = {
@@ -172,16 +185,28 @@ const LAND_UNITS = {
 const OSM = {
   version: 0.6,
   generator: 'Overpass API',
-  elements: [{
-    type: 'way',
-    id: 123456,
-    tags: { highway: 'path', informal: 'yes', name: 'Community Path', trail_visibility: 'intermediate', access: 'discouraged' },
-    geometry: [
-      { lat: 37.8181, lon: -83.5834 },
-      { lat: 37.8185, lon: -83.5828 },
-      { lat: 37.8189, lon: -83.5821 }
-    ]
-  }]
+  elements: [
+    {
+      type: 'way',
+      id: 123456,
+      tags: { highway: 'path', informal: 'yes', name: 'Community Path', trail_visibility: 'intermediate', access: 'discouraged' },
+      geometry: [
+        { lat: 37.8181, lon: -83.5834 },
+        { lat: 37.8185, lon: -83.5828 },
+        { lat: 37.8189, lon: -83.5821 }
+      ]
+    },
+    {
+      type: 'way',
+      id: 123457,
+      tags: { highway: 'path', informal: 'yes', name: 'Trailhead Access Path', trail_visibility: 'good' },
+      geometry: [
+        { lat: 37.80755, lon: -83.61955 },
+        { lat: 37.80748, lon: -83.61910 },
+        { lat: 37.80745, lon: -83.61870 }
+      ]
+    }
+  ]
 };
 
 fs.mkdirSync(EVIDENCE, { recursive: true });
@@ -1318,6 +1343,17 @@ async function fullMap(browser) {
   };
 
   assert(Number(await mapContainer.getAttribute('data-ky-road-mutual-endpoint-bridge-count')) >= 1, 'A short unambiguous Kentucky road-source gap should heal even when one fragment turns sharply at the bridge and the road name changes');
+  assert(Number(await mapContainer.getAttribute('data-trailhead-access-bridge-count')) >= 1, 'An official trailhead should heal a short road-to-trail source seam when the mapped path starts more than the generic 12 m bridge tolerance from the road');
+
+  const trailheadRoadPoint = projectFromHomeNorthWest(37.8075, -83.61985);
+  const trailheadPathPoint = projectFromHomeNorthWest(37.80755, -83.61955);
+  await page.locator('[data-map-tool="clear"]').evaluate(button => button.click());
+  await mapContainer.click({ position: trailheadRoadPoint });
+  await mapContainer.click({ position: trailheadPathPoint });
+  await page.waitForTimeout(140);
+  const trailheadAccessStatus = await page.locator('[data-map-status]').innerText();
+  assert(trailheadAccessStatus.includes('1 snapped segment'), 'Official-trailhead road-to-trail access must stay in the snapped graph instead of falling back to a purple straight segment; status=' + trailheadAccessStatus);
+  await page.locator('[data-map-tool="clear"]').evaluate(button => button.click());
 
   const bridgeGapA = projectFromHomeNorthWest(37.8075, -83.61985);
   const bridgeGapB = projectFromHomeNorthWest(37.80690, -83.61975);
