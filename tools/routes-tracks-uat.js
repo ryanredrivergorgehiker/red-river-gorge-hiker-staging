@@ -691,7 +691,7 @@ async function fullMap(browser) {
   const oilGasPaneZ = Number(await page.locator('.leaflet-oilGas-pane').evaluate(node => getComputedStyle(node).zIndex));
   const routePaneZ = Number(await page.locator('.leaflet-routes-pane').evaluate(node => getComputedStyle(node).zIndex));
   const areaPaneZ = Number(await page.locator('.leaflet-areaLabels-pane').evaluate(node => getComputedStyle(node).zIndex));
-  assert(oilGasPaneZ < routePaneZ && oilGasPaneZ < areaPaneZ, 'Oil/gas wells should remain informational beneath routes and area labels');
+  assert(oilGasPaneZ > routePaneZ && oilGasPaneZ < areaPaneZ, 'Oil/gas wells must sit above interactive route panes for clicks while staying below area labels');
   const mapBoxForOil = await mapContainer.boundingBox();
   assert(mapBoxForOil);
   await page.mouse.click(mapBoxForOil.x + mapBoxForOil.width / 2, mapBoxForOil.y + mapBoxForOil.height / 2);
