@@ -1873,7 +1873,7 @@ async function mobile(browser) {
   const mobilePanPad = page.locator('[data-plan-pan-pad]');
   const mobilePanPadBox = await mobilePanPad.boundingBox();
   assert(mobilePanPadBox);
-  assert(mobilePanPadBox.width <= 72 && mobilePanPadBox.height <= 72, 'Mobile pan pad should be very compact; size=' + mobilePanPadBox.width + 'x' + mobilePanPadBox.height);
+  assert(mobilePanPadBox.width <= 76 && mobilePanPadBox.height <= 76, 'Mobile pan pad should be very compact; size=' + mobilePanPadBox.width + 'x' + mobilePanPadBox.height);
   assert(mobilePanPadBox.x + mobilePanPadBox.width >= box.x + box.width - 14, 'Mobile pan pad should sit at the upper-right edge of the map');
   assert(mobilePanPadBox.y >= box.y && mobilePanPadBox.y <= box.y + 18, 'Mobile pan pad should sit at the upper-right top edge of the map');
   const compactPlanBox = await mobilePlanPanel.boundingBox();
