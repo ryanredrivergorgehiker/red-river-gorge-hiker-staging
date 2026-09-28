@@ -448,36 +448,67 @@ async function fullMap(browser) {
   assert.strictEqual(await shareButtonReady.isDisabled(), false, 'Share must unlock after initial map state restoration');
   assert.strictEqual(await page.locator('[data-map-preset]').evaluateAll(nodes => nodes.every(node => !node.disabled)), true, 'Map View presets must unlock with core context');
 
-  // Geographic overview labels: desktop Home = full names, one zoom in = initials,
-  // another zoom in = hidden, and zooming out from Home must not show oversized labels.
+  // Geographic orientation labels: transparent gray typography, no badges.
+  // Desktop Home shows full stacked names; zooming out eventually becomes broad initials.
+  // One zoom in from Home becomes near initials; detailed zoom eventually hides them.
   await page.waitForTimeout(120);
-  assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 13, 'Desktop Home zoom should remain the accepted zoom 13');
+  assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 13, 'Desktop Home zoom should remain 13');
   assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'full');
   assert.strictEqual(await page.locator('.rrgh-area-label.is-full').count(), 3);
-  let desktopAreaLabelText = await page.locator('.leaflet-areaLabels-pane').innerText();
-  for (const label of ['Natural Bridge', 'Red River Gorge', 'Clifty Wilderness']) assert(desktopAreaLabelText.includes(label), label);
-  const desktopFullLabelBoxes = await page.locator('.rrgh-area-label.is-full').evaluateAll(nodes => nodes.map(node => {
-    const box = node.getBoundingClientRect();
-    return { width: box.width, height: box.height };
+  const desktopFullLabels = page.locator('.rrgh-area-label.is-full .rrgh-area-label-text');
+  const desktopFullHtml = await desktopFullLabels.evaluateAll(nodes => nodes.map(node => node.innerHTML));
+  assert.deepStrictEqual(desktopFullHtml, ['NATURAL<br>BRIDGE', 'RED<br>RIVER<br>GORGE', 'CLIFTY<br>WILDERNESS']);
+  const fullStyles = await desktopFullLabels.evaluateAll(nodes => nodes.map(node => {
+    const style = getComputedStyle(node);
+    const hostStyle = getComputedStyle(node.closest('.rrgh-area-label'));
+    return {
+      background: style.backgroundColor,
+      borderTopWidth: style.borderTopWidth,
+      fontStyle: style.fontStyle,
+      fontWeight: Number(style.fontWeight),
+      color: style.color,
+      hostBackground: hostStyle.backgroundColor
+    };
   }));
-  assert(desktopFullLabelBoxes.every(box => box.width <= 170 && box.height <= 32), 'Full area labels must stay compact rather than spanning the map');
+  for (const style of fullStyles) {
+    assert(style.background === 'rgba(0, 0, 0, 0)' || style.background === 'transparent', 'Area labels must have no block background: ' + style.background);
+    assert.strictEqual(style.borderTopWidth, '0px', 'Area labels must have no visible border');
+    assert.strictEqual(style.fontStyle, 'italic', 'Area labels must be italicized');
+    assert(style.fontWeight >= 700, 'Area labels must be bold');
+    assert(style.color.startsWith('rgba('), 'Area labels should be translucent gray typography: ' + style.color);
+    assert(style.hostBackground === 'rgba(0, 0, 0, 0)' || style.hostBackground === 'transparent', 'Leaflet label host must be transparent');
+  }
 
   await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
-  await page.waitForTimeout(120);
-  assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'hidden', 'Labels must hide when zoomed farther out than Home');
-  assert.strictEqual(await page.locator('.rrgh-area-label').count(), 0, 'No area labels should render at far-out desktop zoom');
+  await page.waitForTimeout(100);
+  assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 12);
+  assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'full', 'One desktop zoom out should keep full labels');
+  await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
+  await page.waitForTimeout(100);
+  assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 11);
+  assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'full', 'Two desktop zooms out should still keep full labels');
+  await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
+  await page.waitForTimeout(100);
+  assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 10);
+  assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'initials-broad');
+  let desktopInitials = (await page.locator('.leaflet-areaLabels-pane').innerText()).split(/\s+/).filter(Boolean);
+  for (const label of ['NB', 'RRG', 'CW']) assert(desktopInitials.includes(label), label);
 
   await homeButton.click();
   await page.waitForTimeout(120);
-  assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'full');
   await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
-  await page.waitForTimeout(120);
+  await page.waitForTimeout(100);
   assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 14);
-  assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'initials');
-  const desktopInitials = (await page.locator('.leaflet-areaLabels-pane').innerText()).split(/\s+/).filter(Boolean);
+  assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'initials-near');
+  desktopInitials = (await page.locator('.leaflet-areaLabels-pane').innerText()).split(/\s+/).filter(Boolean);
   for (const label of ['NB', 'RRG', 'CW']) assert(desktopInitials.includes(label), label);
   await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
-  await page.waitForTimeout(120);
+  await page.waitForTimeout(100);
+  assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 15);
+  assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'initials-near');
+  await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  await page.waitForTimeout(100);
+  assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 16);
   assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'hidden');
   assert.strictEqual(await page.locator('.rrgh-area-label').count(), 0, 'Area labels must disappear at detailed desktop zoom');
   await homeButton.click();
@@ -593,13 +624,20 @@ async function fullMap(browser) {
   const coordinateToolbar = coordinateCard.locator('.route-coordinate-toolbar');
   const copyCoordinatesButton = coordinateToolbar.getByRole('button', { name: 'Copy coordinates', exact: true });
   const closeCoordinatesButton = coordinateToolbar.getByRole('button', { name: 'Close coordinates', exact: true });
-  const [toolbarBox, mapPointCopyBox, mapPointCloseBox] = await Promise.all([
-    coordinateToolbar.boundingBox(), copyCoordinatesButton.boundingBox(), closeCoordinatesButton.boundingBox()
+  const mapPointHeading = coordinateToolbar.locator('.route-coordinate-heading');
+  const coordinateTitle = coordinateToolbar.locator('.route-coordinate-title');
+  assert.strictEqual(await copyCoordinatesButton.locator('span').count(), 2, 'Copy coordinates must be a two-line button');
+  assert.deepStrictEqual(await copyCoordinatesButton.locator('span').evaluateAll(nodes => nodes.map(node => node.textContent.trim())), ['Copy', 'coordinates']);
+  const [toolbarBox, mapPointCopyBox, mapPointHeadingBox, mapPointCloseBox, coordinateTitleBox] = await Promise.all([
+    coordinateToolbar.boundingBox(), copyCoordinatesButton.boundingBox(), mapPointHeading.boundingBox(),
+    closeCoordinatesButton.boundingBox(), coordinateTitle.boundingBox()
   ]);
-  assert(toolbarBox && mapPointCopyBox && mapPointCloseBox);
-  assert(mapPointCopyBox.x <= toolbarBox.x + 6, 'Copy coordinates should sit at the upper-left edge of Map Point');
-  assert(mapPointCloseBox.x + mapPointCloseBox.width >= toolbarBox.x + toolbarBox.width - 6, 'Close should sit at the upper-right edge of Map Point');
-  assert(mapPointCloseBox.x - (mapPointCopyBox.x + mapPointCopyBox.width) > 40, 'Copy and Close controls need clear horizontal separation');
+  assert(toolbarBox && mapPointCopyBox && mapPointHeadingBox && mapPointCloseBox && coordinateTitleBox);
+  assert(mapPointCopyBox.height >= 52 && mapPointCopyBox.width >= 68 && mapPointCopyBox.width <= 84, 'Copy coordinates should be a prominent near-square/tall control');
+  assert(mapPointHeadingBox.x >= mapPointCopyBox.x + mapPointCopyBox.width + 4, 'The entire Map Point information block must sit to the right of Copy coordinates');
+  assert(mapPointCloseBox.x + mapPointCloseBox.width >= toolbarBox.x + toolbarBox.width - 6, 'Close must remain isolated at the upper-right');
+  const titleText = (await coordinateTitle.innerText()).replace(/\s+/g, ' ').trim();
+  assert(/^Map point — Elevation /.test(titleText), 'Map Point title must place elevation on the same line after an em dash; text=' + titleText);
 
   let sunlightTodayText = await coordinateCard.locator('[data-coordinate-sun-today]').innerText();
   assert(sunlightTodayText.includes('Sunrise'));
@@ -1320,11 +1358,11 @@ async function mobile(browser) {
   await page.waitForTimeout(120);
   const mobileStartZoom = Number(await map.getAttribute('data-current-zoom'));
   assert.strictEqual(await map.getAttribute('data-home-view'), 'gorge-overview', 'Mobile Home/start must use the Gorge overview');
-  assert.strictEqual(mobileStartZoom, 11, 'Mobile Home/start must be exactly one zoom step closer at the requested 5 km / 3 mi view');
+  assert.strictEqual(mobileStartZoom, 11, 'Mobile Home/start must stay at the requested 5 km / 3 mi view');
   assert.strictEqual(await map.getAttribute('data-area-label-mode'), 'full');
-  assert.strictEqual(await page.locator('.rrgh-area-label.is-full').count(), 3, 'Mobile Home should show three compact full area names');
-  let areaLabelText = await page.locator('.leaflet-areaLabels-pane').innerText();
-  for (const label of ['Natural Bridge', 'Red River Gorge', 'Clifty Wilderness']) assert(areaLabelText.includes(label), label);
+  assert.strictEqual(await page.locator('.rrgh-area-label.is-full').count(), 3, 'Mobile Home should show the three full stacked area names');
+  const mobileFullHtml = await page.locator('.rrgh-area-label.is-full .rrgh-area-label-text').evaluateAll(nodes => nodes.map(node => node.innerHTML));
+  assert.deepStrictEqual(mobileFullHtml, ['NATURAL<br>BRIDGE', 'RED<br>RIVER<br>GORGE', 'CLIFTY<br>WILDERNESS']);
 
   const scaleTextsAtHome = await page.locator('.leaflet-control-scale-line').evaluateAll(nodes => nodes.map(node => node.textContent.trim()));
   assert(scaleTextsAtHome.includes('5 km'), 'Mobile Home metric scale should be 5 km; got ' + scaleTextsAtHome.join(' / '));
@@ -1333,16 +1371,32 @@ async function mobile(browser) {
   await page.locator('[data-map-action="zoom-in"]').first().evaluate(button => button.click());
   await page.waitForTimeout(150);
   assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), 12);
-  assert.strictEqual(await map.getAttribute('data-area-label-mode'), 'initials');
-  areaLabelText = await page.locator('.leaflet-areaLabels-pane').innerText();
+  assert.strictEqual(await map.getAttribute('data-area-label-mode'), 'initials-near', 'One mobile zoom in from Home must become acronyms');
+  let areaLabelText = await page.locator('.leaflet-areaLabels-pane').innerText();
   for (const label of ['NB', 'RRG', 'CW']) assert(areaLabelText.split(/\s+/).includes(label), label);
 
   await page.locator('[data-map-action="zoom-in"]').first().evaluate(button => button.click());
   await page.waitForTimeout(150);
   assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), 13);
+  assert.strictEqual(await map.getAttribute('data-area-label-mode'), 'initials-near');
+  await page.locator('[data-map-action="zoom-in"]').first().evaluate(button => button.click());
+  await page.waitForTimeout(150);
+  assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), 14);
   assert.strictEqual(await map.getAttribute('data-area-label-mode'), 'hidden');
   assert.strictEqual(await page.locator('.rrgh-area-label').count(), 0, 'Mobile area labels must disappear at detailed zoom');
 
+  await mobileTopbar.locator('[data-map-action="home"]').click();
+  await page.waitForTimeout(150);
+  await page.locator('[data-map-action="zoom-out"]').first().evaluate(button => button.click());
+  await page.waitForTimeout(150);
+  assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), 10);
+  assert.strictEqual(await map.getAttribute('data-area-label-mode'), 'full', 'One mobile zoom out should retain full names');
+  await page.locator('[data-map-action="zoom-out"]').first().evaluate(button => button.click());
+  await page.waitForTimeout(150);
+  assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), 9);
+  assert.strictEqual(await map.getAttribute('data-area-label-mode'), 'initials-broad', 'Broader mobile view should use acronyms');
+  areaLabelText = await page.locator('.leaflet-areaLabels-pane').innerText();
+  for (const label of ['NB', 'RRG', 'CW']) assert(areaLabelText.split(/\s+/).includes(label), label);
   await mobileTopbar.locator('[data-map-action="home"]').click();
   await page.waitForTimeout(150);
   assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), 11);
