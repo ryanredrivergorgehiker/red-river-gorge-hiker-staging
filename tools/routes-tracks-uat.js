@@ -593,13 +593,13 @@ async function fullMap(browser) {
   const coordinateToolbar = coordinateCard.locator('.route-coordinate-toolbar');
   const copyCoordinatesButton = coordinateToolbar.getByRole('button', { name: 'Copy coordinates', exact: true });
   const closeCoordinatesButton = coordinateToolbar.getByRole('button', { name: 'Close coordinates', exact: true });
-  const [toolbarBox, copyBox, closeBox] = await Promise.all([
+  const [toolbarBox, mapPointCopyBox, mapPointCloseBox] = await Promise.all([
     coordinateToolbar.boundingBox(), copyCoordinatesButton.boundingBox(), closeCoordinatesButton.boundingBox()
   ]);
-  assert(toolbarBox && copyBox && closeBox);
-  assert(copyBox.x <= toolbarBox.x + 6, 'Copy coordinates should sit at the upper-left edge of Map Point');
-  assert(closeBox.x + closeBox.width >= toolbarBox.x + toolbarBox.width - 6, 'Close should sit at the upper-right edge of Map Point');
-  assert(closeBox.x - (copyBox.x + copyBox.width) > 40, 'Copy and Close controls need clear horizontal separation');
+  assert(toolbarBox && mapPointCopyBox && mapPointCloseBox);
+  assert(mapPointCopyBox.x <= toolbarBox.x + 6, 'Copy coordinates should sit at the upper-left edge of Map Point');
+  assert(mapPointCloseBox.x + mapPointCloseBox.width >= toolbarBox.x + toolbarBox.width - 6, 'Close should sit at the upper-right edge of Map Point');
+  assert(mapPointCloseBox.x - (mapPointCopyBox.x + mapPointCopyBox.width) > 40, 'Copy and Close controls need clear horizontal separation');
 
   let sunlightTodayText = await coordinateCard.locator('[data-coordinate-sun-today]').innerText();
   assert(sunlightTodayText.includes('Sunrise'));
