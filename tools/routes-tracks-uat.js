@@ -722,7 +722,7 @@ async function fullMap(browser) {
 
   assert.strictEqual(await coordinateCard.locator('.route-coordinate-sun-table tbody tr').count(), 10, 'Map Point must show the next 10 days');
   const sunlightHeaders = await coordinateCard.locator('.route-coordinate-sun-table thead th').allInnerTexts();
-  assert.deepStrictEqual(sunlightHeaders.map(value => value.trim()), ['Date', 'Sunrise', 'First direct sun', 'Last direct sun', 'Sunset']);
+  assert.deepStrictEqual(sunlightHeaders.map(value => value.trim()), ['DATE', 'SUNRISE', 'FIRST DIRECT SUN', 'LAST DIRECT SUN', 'SUNSET']);
   assert((await coordinateCard.locator('.route-coordinate-sun-table tbody tr').first().locator('th').innerText()).includes('Today'), 'First sunlight row must explicitly identify Today');
   const sunTable = coordinateCard.locator('.route-coordinate-sun-table');
   const [sunTableBox, expandedCardBox, directHeaderStyle] = await Promise.all([
@@ -1480,7 +1480,7 @@ async function mobile(browser) {
     { timeout: 10000 }
   );
   const mobileHeaders = await mobileCoordinateCard.locator('.route-coordinate-sun-table thead th').allInnerTexts();
-  assert.deepStrictEqual(mobileHeaders.map(value => value.trim()), ['Date', 'Sunrise', 'First sun', 'Last sun', 'Sunset']);
+  assert.deepStrictEqual(mobileHeaders.map(value => value.trim()), ['DATE', 'SUNRISE', 'FIRST SUN', 'LAST SUN', 'SUNSET']);
   const [mobileCardBox, mobileTableBox, mobileHeaderBoxes] = await Promise.all([
     mobileCoordinateCard.boundingBox(),
     mobileCoordinateCard.locator('.route-coordinate-sun-table').boundingBox(),
