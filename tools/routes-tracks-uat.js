@@ -72,14 +72,14 @@ const KENTUCKY_ROADS = {
     {
       type: 'Feature',
       properties: {
-        LSt_Name: 'KY 715',
-        St_Name: 'KY 715',
-        RoadClass: 'State Route',
-        SpeedLimit: 55,
+        LSt_Name: 'Osborne Bend Road',
+        St_Name: 'Osborne Bend Road',
+        RoadClass: 'Local Road',
+        SpeedLimit: 25,
         OneWay: 'N'
       },
       geometry: { type: 'LineString', coordinates: [
-        [-83.61975, 37.80645],
+        [-83.61975, 37.80670],
         [-83.61955, 37.8058],
         [-83.6193, 37.8051]
       ] }
@@ -599,7 +599,9 @@ async function fullMap(browser) {
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Undo', exact: true }).locator('svg').count(), 1, 'Undo must use an icon');
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Redo', exact: true }).locator('svg').count(), 1, 'Redo must use an icon');
   await planPanel.getByRole('button', { name: 'Measure distance', exact: true }).click();
+  assert.strictEqual(await planPanel.getAttribute('data-minimized'), 'true', 'Choosing Measure distance should automatically minimize the Plan panel');
   assert((await planPanel.locator('[data-plan-help]').innerText()).includes('Click or tap points to measure straight-line distance.'));
+  await planPanel.getByRole('button', { name: 'Expand planning controls', exact: true }).click();
   await planPanel.getByRole('button', { name: 'Measure distance', exact: true }).click();
   await planOpenButton.click();
 
@@ -613,16 +615,13 @@ async function fullMap(browser) {
   const buildTrailReadyButton = planPanel.getByRole('button', { name: 'Build trail route', exact: true });
   assert.strictEqual(await buildTrailReadyButton.isDisabled(), false, 'Build trail route must unlock when the graph is ready');
   await buildTrailReadyButton.click();
+  assert(await planPanel.isVisible(), 'Choosing Build trail route must keep the planning panel visible');
+  assert.strictEqual(await planPanel.getAttribute('data-minimized'), 'true', 'Choosing Build trail route should automatically minimize the Plan panel');
   const buildHelp = await planPanel.locator('[data-plan-help]').innerText();
   assert(buildHelp.includes('snap to the network'));
   assert(buildHelp.includes('Drag a planned segment to adjust or resnap it.'));
   assert(buildHelp.includes('Right-click or press and hold'));
-
-  const planMinimize = planPanel.getByRole('button', { name: 'Minimize planning controls', exact: true });
-  assert.strictEqual(await planMinimize.count(), 1, 'Active planning panel must offer Minimize, not Close');
-  await planMinimize.click();
-  assert(await planPanel.isVisible(), 'Minimizing Build trail route must keep the planning panel visible');
-  assert.strictEqual(await planPanel.getAttribute('data-minimized'), 'true');
+  assert.strictEqual(await planPanel.getByRole('button', { name: 'Expand planning controls', exact: true }).count(), 1, 'Auto-minimized active planning panel must offer Expand');
   assert(await planPanel.locator('[data-plan-live-stats]').isVisible(), 'Minimized planning panel must keep live totals visible');
   assert.strictEqual(await planPanel.locator('.route-plan-mode-buttons').isHidden(), true, 'Minimized panel should hide setup controls');
   assert.strictEqual((await planPanel.locator('[data-plan-panel-title]').innerText()).trim(), '', 'Minimized planner should not spend space repeating the active tool title');
@@ -690,6 +689,10 @@ async function fullMap(browser) {
   const oilGasKindToggles = page.locator('[data-oil-gas-kind]');
   assert.strictEqual(await oilGasKindToggles.count(), 7, 'Oil & Gas master should expose seven type subfilters');
   assert.strictEqual(await oilGasKindToggles.evaluateAll(nodes => nodes.every(node => !node.checked)), true, 'Oil/gas type filters should remain off until the master is enabled');
+  const oilGasOptions = page.locator('[data-oil-gas-options]');
+  const oilGasDisclosure = page.locator('[data-oil-gas-options-toggle]');
+  assert(await oilGasOptions.isHidden(), 'Oil & Gas well types must be collapsed by default');
+  assert.strictEqual(await oilGasDisclosure.getAttribute('aria-expanded'), 'false');
   assert(!providerRequests.some(url => url.includes('KYOilGasWells_static_WGS84')), 'No KGS oil/gas request may occur until the user enables the layer');
   assert.strictEqual(await page.locator('[data-opacity="rrg-lidar-sun"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="usfs-trails"]').inputValue(), '100');
@@ -700,6 +703,14 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-fine-tune-layer="ky-hillshade"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true);
   await page.locator('.route-layer-panel > summary').click();
+  await oilGasDisclosure.click();
+  assert(await oilGasOptions.isVisible(), 'Oil & Gas disclosure should reveal the type filters');
+  assert.strictEqual(await oilGasDisclosure.getAttribute('aria-expanded'), 'true');
+  const oilGasSwatchCenters = await page.locator('[data-oil-gas-options] .route-layer-swatch').evaluateAll(nodes => nodes.map(node => {
+    const r = node.getBoundingClientRect();
+    return r.x + r.width / 2;
+  }));
+  assert(Math.max(...oilGasSwatchCenters) - Math.min(...oilGasSwatchCenters) <= 2, 'Oil & Gas child legend symbols should align in one vertical column');
   await page.locator('.route-layer-fine-tune > summary').click();
   const oilGasFineToggle = page.locator('[data-fine-tune-layer="kgs-oil-gas-wells"]');
   assert.strictEqual(await oilGasFineToggle.isChecked(), false);
@@ -740,6 +751,12 @@ async function fullMap(browser) {
   assert.strictEqual(providerRequests.filter(url => url.includes('KYOilGasWells_static_WGS84/MapServer/1/query')).length, kgsRequestCountBeforePopup, 'Opening a well popup must not auto-pan/requery and destroy the popup');
   const oilPopupText = await oilPopup.innerText();
   for (const expected of ['KENTUCKY GEOLOGICAL SURVEY','Oil well','KGS record','123456','Original operator','Most recent operator','Total depth','View full KGS well report']) assert(oilPopupText.includes(expected), expected);
+  assert(!oilPopupText.includes('Farm / lease'), 'RRGH must not display farm/lease labels in KGS well popups');
+  assert(!oilPopupText.includes('Sample Lease'), 'RRGH must not display farm/lease names in KGS well popups');
+  assert(!providerRequests.some(url => {
+    if (!url.includes('KYOilGasWells_static_WGS84/MapServer/1/query')) return false;
+    try { return (new URL(url).searchParams.get('outFields') || '').includes('farm_name'); } catch { return false; }
+  }), 'RRGH must not request the KGS farm_name field');
   assert((await oilPopup.getByRole('link', { name: /View full KGS well report/ }).getAttribute('href')).includes('wellReport.asp?id=123456'));
   await oilGasToggle.uncheck();
   assert.strictEqual(await mapContainer.getAttribute('data-oil-gas-load-state'), 'off');
@@ -1197,6 +1214,7 @@ async function fullMap(browser) {
   await page.getByRole('button', { name: 'Plan', exact: true }).click();
   assert(await page.locator('[data-map-sheet="plan"]').isVisible());
   await page.getByRole('button', { name: 'Measure distance', exact: true }).click();
+  assert.strictEqual(await page.locator('[data-map-sheet="plan"]').getAttribute('data-minimized'), 'true', 'Measure selection should immediately expose the map by minimizing the panel');
   await mapContainer.click({ position: { x: box.width * 0.22, y: box.height * 0.26 } });
   await mapContainer.click({ position: { x: box.width * 0.31, y: box.height * 0.26 } });
   await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Measured distance'), { timeout: 3000 });
@@ -1215,8 +1233,10 @@ async function fullMap(browser) {
 
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   if (await page.locator('[data-map-sheet="plan"]').isHidden()) await planOpenButton.click();
+  if (await page.locator('[data-map-sheet="plan"]').getAttribute('data-minimized') === 'true') await planOpenButton.click();
   assert.strictEqual(await page.locator('[data-plan-pan-pad]').isHidden(), true);
   await page.getByRole('button', { name: 'Build trail route', exact: true }).click();
+  assert.strictEqual(await page.locator('[data-map-sheet="plan"]').getAttribute('data-minimized'), 'true', 'Build trail route selection should immediately minimize the panel');
   const panPad = page.locator('[data-plan-pan-pad]');
   assert.strictEqual(await panPad.count(), 1);
   assert.strictEqual(await panPad.isVisible(), true);
@@ -1291,10 +1311,10 @@ async function fullMap(browser) {
     };
   };
 
-  assert(Number(await mapContainer.getAttribute('data-named-road-gap-bridge-count')) >= 1, 'Short separated segments of the same named Kentucky road should be healed in the planner graph');
+  assert(Number(await mapContainer.getAttribute('data-ky-road-endpoint-bridge-count')) >= 1, 'Short aligned Kentucky road segments should be healed even when the road name changes at a county-side boundary');
 
   const bridgeGapA = projectFromHomeNorthWest(37.8075, -83.61985);
-  const bridgeGapB = projectFromHomeNorthWest(37.80645, -83.61975);
+  const bridgeGapB = projectFromHomeNorthWest(37.80670, -83.61975);
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await mapContainer.click({ position: bridgeGapA });
   await mapContainer.click({ position: bridgeGapB });
@@ -1842,13 +1862,13 @@ async function mobile(browser) {
   assert(await mobilePlanPanel.isVisible());
   const mobileBuildButton = mobilePlanPanel.getByRole('button', { name: 'Build trail route', exact: true });
   await mobileBuildButton.click();
+  assert.strictEqual(await mobilePlanPanel.getAttribute('data-minimized'), 'true', 'Mobile Build trail route should automatically minimize immediately after selection');
   const mobilePanPad = page.locator('[data-plan-pan-pad]');
-  const [mobilePanPadBox, scaleBoxDuringPlan] = await Promise.all([mobilePanPad.boundingBox(), mobileScale.boundingBox()]);
-  assert(mobilePanPadBox && scaleBoxDuringPlan);
-  assert(mobilePanPadBox.width <= 100 && mobilePanPadBox.height <= 100, 'Mobile pan pad should be compact; size=' + mobilePanPadBox.width + 'x' + mobilePanPadBox.height);
-  assert(mobilePanPadBox.x - box.x <= 28, 'Mobile pan pad should stay at the left edge of the map');
-  assert(mobilePanPadBox.y >= scaleBoxDuringPlan.y + scaleBoxDuringPlan.height - 4 && mobilePanPadBox.y <= scaleBoxDuringPlan.y + scaleBoxDuringPlan.height + 28, 'Mobile pan pad should sit immediately below the scale');
-  await mobilePlanPanel.getByRole('button', { name: 'Minimize planning controls', exact: true }).click();
+  const mobilePanPadBox = await mobilePanPad.boundingBox();
+  assert(mobilePanPadBox);
+  assert(mobilePanPadBox.width <= 72 && mobilePanPadBox.height <= 72, 'Mobile pan pad should be very compact; size=' + mobilePanPadBox.width + 'x' + mobilePanPadBox.height);
+  assert(mobilePanPadBox.x + mobilePanPadBox.width >= box.x + box.width - 14, 'Mobile pan pad should sit at the upper-right edge of the map');
+  assert(mobilePanPadBox.y >= box.y && mobilePanPadBox.y <= box.y + 18, 'Mobile pan pad should sit at the upper-right top edge of the map');
   const compactPlanBox = await mobilePlanPanel.boundingBox();
   assert(compactPlanBox && compactPlanBox.height <= 92, 'Minimized mobile planner must be a compact status strip; height=' + (compactPlanBox && compactPlanBox.height));
   assert.strictEqual((await mobilePlanPanel.locator('[data-plan-panel-title]').innerText()).trim(), '', 'Minimized mobile planner must not repeat Build trail route');
@@ -1993,6 +2013,7 @@ async function legal(browser) {
     'does not intentionally transmit or store the precise device coordinates',
     'does not send the search text to a general-purpose external geocoding service',
     'optional Oil & Gas Wells layer',
+    'does not request or display KGS farm/lease-name fields',
     'off by default in every Map View',
     'Kentucky Geological Survey / University of Kentucky',
     'sends the current map viewport',
