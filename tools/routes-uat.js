@@ -321,9 +321,11 @@ async function mapControlsAndAccessibility(browser) {
     return button && !button.disabled;
   }, { timeout: 10000 });
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 12);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 11);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 13);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 12);
   assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 0);
+  assert.strictEqual(await page.locator('[data-map-layer="kgs-oil-gas-wells"]').isChecked(), false);
+  assert.strictEqual(await page.locator('[data-opacity="kgs-oil-gas-wells"]').isDisabled(), true);
   assert.strictEqual(await page.locator('[data-plan-pan]').count(), 0);
   assert.strictEqual(await page.locator('[data-plan-pan-pad]').count(), 1);
   assert.strictEqual(await page.locator('[data-plan-pan-direction]').count(), 4);
