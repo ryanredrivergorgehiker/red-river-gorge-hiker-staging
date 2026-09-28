@@ -448,6 +448,41 @@ async function fullMap(browser) {
   assert.strictEqual(await shareButtonReady.isDisabled(), false, 'Share must unlock after initial map state restoration');
   assert.strictEqual(await page.locator('[data-map-preset]').evaluateAll(nodes => nodes.every(node => !node.disabled)), true, 'Map View presets must unlock with core context');
 
+  // Geographic overview labels: desktop Home = full names, one zoom in = initials,
+  // another zoom in = hidden, and zooming out from Home must not show oversized labels.
+  await page.waitForTimeout(120);
+  assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 13, 'Desktop Home zoom should remain the accepted zoom 13');
+  assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'full');
+  assert.strictEqual(await page.locator('.rrgh-area-label.is-full').count(), 3);
+  let desktopAreaLabelText = await page.locator('.leaflet-areaLabels-pane').innerText();
+  for (const label of ['Natural Bridge', 'Red River Gorge', 'Clifty Wilderness']) assert(desktopAreaLabelText.includes(label), label);
+  const desktopFullLabelBoxes = await page.locator('.rrgh-area-label.is-full').evaluateAll(nodes => nodes.map(node => {
+    const box = node.getBoundingClientRect();
+    return { width: box.width, height: box.height };
+  }));
+  assert(desktopFullLabelBoxes.every(box => box.width <= 170 && box.height <= 32), 'Full area labels must stay compact rather than spanning the map');
+
+  await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
+  await page.waitForTimeout(120);
+  assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'hidden', 'Labels must hide when zoomed farther out than Home');
+  assert.strictEqual(await page.locator('.rrgh-area-label').count(), 0, 'No area labels should render at far-out desktop zoom');
+
+  await homeButton.click();
+  await page.waitForTimeout(120);
+  assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'full');
+  await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  await page.waitForTimeout(120);
+  assert.strictEqual(Number(await mapContainer.getAttribute('data-current-zoom')), 14);
+  assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'initials');
+  const desktopInitials = (await page.locator('.leaflet-areaLabels-pane').innerText()).split(/\s+/).filter(Boolean);
+  for (const label of ['NB', 'RRG', 'CW']) assert(desktopInitials.includes(label), label);
+  await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  await page.waitForTimeout(120);
+  assert.strictEqual(await mapContainer.getAttribute('data-area-label-mode'), 'hidden');
+  assert.strictEqual(await page.locator('.rrgh-area-label').count(), 0, 'Area labels must disappear at detailed desktop zoom');
+  await homeButton.click();
+  await page.waitForTimeout(120);
+
   await exploreButton.click();
   assert(await page.locator('[data-map-sheet="explore"]').isVisible(), 'Explore must open as soon as RRGH route data is ready');
   await exploreButton.click();
@@ -555,18 +590,43 @@ async function fullMap(browser) {
   await page.mouse.click(sunlightMapBox.x + sunlightMapBox.width * 0.58, sunlightMapBox.y + sunlightMapBox.height * 0.46, { button: 'right' });
   const coordinateCard = page.locator('[data-coordinate-card]');
   assert(await coordinateCard.isVisible(), 'Map Point card must open in Sunlight mode');
-  assert((await coordinateCard.locator('[data-coordinate-sun-today]').innerText()).includes('Sunrise'));
-  assert((await coordinateCard.locator('[data-coordinate-sun-today]').innerText()).includes('Sunset'));
+  const coordinateToolbar = coordinateCard.locator('.route-coordinate-toolbar');
+  const copyCoordinatesButton = coordinateToolbar.getByRole('button', { name: 'Copy coordinates', exact: true });
+  const closeCoordinatesButton = coordinateToolbar.getByRole('button', { name: 'Close coordinates', exact: true });
+  const [toolbarBox, copyBox, closeBox] = await Promise.all([
+    coordinateToolbar.boundingBox(), copyCoordinatesButton.boundingBox(), closeCoordinatesButton.boundingBox()
+  ]);
+  assert(toolbarBox && copyBox && closeBox);
+  assert(copyBox.x <= toolbarBox.x + 6, 'Copy coordinates should sit at the upper-left edge of Map Point');
+  assert(closeBox.x + closeBox.width >= toolbarBox.x + toolbarBox.width - 6, 'Close should sit at the upper-right edge of Map Point');
+  assert(closeBox.x - (copyBox.x + copyBox.width) > 40, 'Copy and Close controls need clear horizontal separation');
+
+  let sunlightTodayText = await coordinateCard.locator('[data-coordinate-sun-today]').innerText();
+  assert(sunlightTodayText.includes('Sunrise'));
+  assert(sunlightTodayText.includes('First direct sun'));
+  assert(sunlightTodayText.includes('Last direct sun'));
+  assert(sunlightTodayText.includes('Sunset'));
   assert.strictEqual(await coordinateCard.locator('[data-coordinate-sun-details]').getAttribute('open'), '');
   await page.waitForFunction(
     () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-sunlight-terrain-ready') === 'true',
     { timeout: 10000 }
   );
+
+  const elevationText = (await coordinateCard.locator('[data-coordinate-elevation]').innerText()).trim();
+  assert(/^Elevation [\d,]+ ft · [\d,]+ m$/.test(elevationText), 'Every Map Point should show resolved elevation; text=' + elevationText);
+  sunlightTodayText = await coordinateCard.locator('[data-coordinate-sun-today]').innerText();
+  assert(/Sunrise .+ · First direct sun .+ · Last direct sun .+ · Sunset .+/.test(sunlightTodayText), 'Collapsed Sunlight today summary must retain all four times; text=' + sunlightTodayText);
+
   assert.strictEqual(await coordinateCard.locator('.route-coordinate-sun-table tbody tr').count(), 10, 'Map Point must show the next 10 days');
   const sunlightHeaders = await coordinateCard.locator('.route-coordinate-sun-table thead th').evaluateAll(nodes => nodes.map(node => node.textContent.trim()));
   assert.deepStrictEqual(sunlightHeaders, ['Date', 'Sunrise', 'First direct sun', 'Last direct sun', 'Sunset']);
+  await coordinateCard.locator('[data-coordinate-sun-details] > summary').click();
+  assert.strictEqual(await coordinateCard.locator('[data-coordinate-sun-details]').getAttribute('open'), null, 'Next 10 days may be collapsed independently');
+  sunlightTodayText = await coordinateCard.locator('[data-coordinate-sun-today]').innerText();
+  assert(sunlightTodayText.includes('First direct sun') && sunlightTodayText.includes('Last direct sun'), 'Today summary must keep direct-light times while 10-day table is collapsed');
+
   const sunlightCardText = await coordinateCard.innerText();
-  assert(sunlightCardText.includes('Kentucky KyFromAbove Phase 2 Bare Earth DEM'));
+  assert(sunlightCardText.includes('Terrain / elevation source: Kentucky KyFromAbove Phase 2 Bare Earth DEM.'));
   assert(sunlightCardText.includes('trees, cliffs/overhangs, clouds and local obstructions'));
   assert(providerRequests.some(url => new URL(url).hostname === 'kyraster.ky.gov'), 'Terrain-aware Sunlight should query the Kentucky bare-earth elevation service');
   await coordinateCard.locator('[data-coordinate-close]').click();
@@ -1259,13 +1319,34 @@ async function mobile(browser) {
   );
   await page.waitForTimeout(120);
   const mobileStartZoom = Number(await map.getAttribute('data-current-zoom'));
-  assert.strictEqual(await map.getAttribute('data-home-view'), 'gorge-overview', 'Mobile Home/start must use the broader Gorge overview');
-  assert(mobileStartZoom <= 11 && mobileStartZoom >= 8, 'Mobile overview should start broad enough to see the Gorge; zoom=' + mobileStartZoom);
-  assert.strictEqual(await page.locator('.rrgh-area-label').count(), 3, 'Broad mobile overview should show three geographic orientation labels');
-  const areaLabelText = await page.locator('.leaflet-areaLabels-pane').innerText();
-  assert(areaLabelText.includes('NATURAL BRIDGE'));
-  assert(areaLabelText.includes('RED RIVER GORGE'));
-  assert(areaLabelText.includes('CLIFTY WILDERNESS'));
+  assert.strictEqual(await map.getAttribute('data-home-view'), 'gorge-overview', 'Mobile Home/start must use the Gorge overview');
+  assert.strictEqual(mobileStartZoom, 11, 'Mobile Home/start must be exactly one zoom step closer at the requested 5 km / 3 mi view');
+  assert.strictEqual(await map.getAttribute('data-area-label-mode'), 'full');
+  assert.strictEqual(await page.locator('.rrgh-area-label.is-full').count(), 3, 'Mobile Home should show three compact full area names');
+  let areaLabelText = await page.locator('.leaflet-areaLabels-pane').innerText();
+  for (const label of ['Natural Bridge', 'Red River Gorge', 'Clifty Wilderness']) assert(areaLabelText.includes(label), label);
+
+  const scaleTextsAtHome = await page.locator('.leaflet-control-scale-line').evaluateAll(nodes => nodes.map(node => node.textContent.trim()));
+  assert(scaleTextsAtHome.includes('5 km'), 'Mobile Home metric scale should be 5 km; got ' + scaleTextsAtHome.join(' / '));
+  assert(scaleTextsAtHome.includes('3 mi'), 'Mobile Home imperial scale should be 3 mi; got ' + scaleTextsAtHome.join(' / '));
+
+  await page.locator('[data-map-action="zoom-in"]').first().evaluate(button => button.click());
+  await page.waitForTimeout(150);
+  assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), 12);
+  assert.strictEqual(await map.getAttribute('data-area-label-mode'), 'initials');
+  areaLabelText = await page.locator('.leaflet-areaLabels-pane').innerText();
+  for (const label of ['NB', 'RRG', 'CW']) assert(areaLabelText.split(/\s+/).includes(label), label);
+
+  await page.locator('[data-map-action="zoom-in"]').first().evaluate(button => button.click());
+  await page.waitForTimeout(150);
+  assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), 13);
+  assert.strictEqual(await map.getAttribute('data-area-label-mode'), 'hidden');
+  assert.strictEqual(await page.locator('.rrgh-area-label').count(), 0, 'Mobile area labels must disappear at detailed zoom');
+
+  await mobileTopbar.locator('[data-map-action="home"]').click();
+  await page.waitForTimeout(150);
+  assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), 11);
+  assert.strictEqual(await map.getAttribute('data-area-label-mode'), 'full');
 
   const mobilePresets = page.locator('[data-map-preset]');
   assert.strictEqual(await mobilePresets.count(), 4);
