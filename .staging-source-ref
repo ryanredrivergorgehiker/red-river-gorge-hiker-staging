@@ -1,8 +1,8 @@
-93471e7b36a1abfa7d91ec059305dc46c8d49311
-purpose=Owner refinement continuation: transparent gray italic bold all-caps area typography with broad-acronym/full-name/near-acronym/hidden zoom progression; compact Map Point header with tall two-line Copy button, Map point + elevation inline, stacked Sunlight today summary at right, narrower 10-day table with wrapped headers/source notes; dominant orange selected Map Point symbol mirrored in card and automatically panned into a safe visible map area; active Measure/Build trail route panel minimizes instead of closing and retains live distance/elevation totals while pins update; Search and Explore remain disabled until core map readiness; mobile Map Point X pinned upper-right; prior accepted Terrain, Sunlight, mobile Home, Layers, scale, route taxonomy and production state retained; production unchanged
-source_ci=36445060376 SUCCESS
-routes_uat=36446234129 SUCCESS
-routes_tracks_uat=36446566364 SUCCESS
-brand_uat=36446234229 SUCCESS
-analytics_uat=36446233955 SUCCESS
-roku_uat=36446233963 SUCCESS
+9bc721f137e41d8fcc656a2ab0ea8a11ac092a54
+purpose=Owner visual correction continuation: desktop instructions moved below the map into a stable full-width row; transparent gray italic bold all-caps geographic labels made more visible with RED RIVER GORGE lowered and NB/RRG/CW near-zoom progression retained; mobile Home framing shifted east with mobile-specific label dimensions so NATURAL BRIDGE and CLIFTY WILDERNESS remain inside the viewport; selected Map Point symbols reduced on map and card; Sunlight today moved beneath the Map Point header; collapsed card made compact while expanded 10-day view may widen; Today identified in the first row; mobile direct-sun headers shortened cleanly without word-breaking; prior accepted Terrain, Sunlight calculations, active Plan minimize, readiness gates, route taxonomy, mobile pan/scroll gutters and production state retained; production unchanged
+source_ci=36452917596 SUCCESS
+routes_uat=36453043501 SUCCESS
+routes_tracks_uat=36454995778 SUCCESS
+brand_uat=36453048369 SUCCESS
+analytics_uat=36453055673 SUCCESS
+roku_uat=36453059937 SUCCESS
