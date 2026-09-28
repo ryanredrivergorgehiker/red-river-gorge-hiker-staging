@@ -66,6 +66,7 @@ const KENTUCKY_ROADS = {
         [-83.6208, 37.8103],
         [-83.62045, 37.8094],
         [-83.62005, 37.8085],
+        [-83.62050, 37.8075],
         [-83.61985, 37.8075]
       ] }
     },
@@ -79,8 +80,8 @@ const KENTUCKY_ROADS = {
         OneWay: 'N'
       },
       geometry: { type: 'LineString', coordinates: [
-        [-83.61975, 37.80670],
-        [-83.61955, 37.8058],
+        [-83.61975, 37.80690],
+        [-83.61955, 37.8061],
         [-83.6193, 37.8051]
       ] }
     }
@@ -598,6 +599,11 @@ async function fullMap(browser) {
   assert((await planPanel.locator('[data-plan-help]').innerText()).includes('Choose a planning tool.'));
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Undo', exact: true }).locator('svg').count(), 1, 'Undo must use an icon');
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Redo', exact: true }).locator('svg').count(), 1, 'Redo must use an icon');
+  const planChildClasses = await planPanel.evaluate(panel => Array.from(panel.children).map(child => child.className));
+  const modeIndex = planChildClasses.indexOf('route-plan-mode-buttons');
+  const actionsIndex = planChildClasses.indexOf('route-plan-actions');
+  const helpIndex = planChildClasses.indexOf('route-plan-help');
+  assert(modeIndex >= 0 && actionsIndex > modeIndex && helpIndex > actionsIndex, 'Undo / Redo / Export GPX / Clear must appear immediately below Measure distance / Build trail route');
   await planPanel.getByRole('button', { name: 'Measure distance', exact: true }).click();
   assert.strictEqual(await planPanel.getAttribute('data-minimized'), 'true', 'Choosing Measure distance should automatically minimize the Plan panel');
   assert((await planPanel.locator('[data-plan-help]').innerText()).includes('Click or tap points to measure straight-line distance.'));
@@ -1311,16 +1317,16 @@ async function fullMap(browser) {
     };
   };
 
-  assert(Number(await mapContainer.getAttribute('data-ky-road-endpoint-bridge-count')) >= 1, 'Short aligned Kentucky road segments should be healed even when the road name changes at a county-side boundary');
+  assert(Number(await mapContainer.getAttribute('data-ky-road-mutual-endpoint-bridge-count')) >= 1, 'A short unambiguous Kentucky road-source gap should heal even when one fragment turns sharply at the bridge and the road name changes');
 
   const bridgeGapA = projectFromHomeNorthWest(37.8075, -83.61985);
-  const bridgeGapB = projectFromHomeNorthWest(37.80670, -83.61975);
+  const bridgeGapB = projectFromHomeNorthWest(37.80690, -83.61975);
   await page.locator('[data-map-tool="clear"]').evaluate(button => button.click());
   await mapContainer.click({ position: bridgeGapA });
   await mapContainer.click({ position: bridgeGapB });
   await page.waitForTimeout(140);
   const bridgeGapStatus = await page.locator('[data-map-status]').innerText();
-  assert(bridgeGapStatus.includes('1 snapped segment'), 'A short gap between two pieces of the same KY 715 road should remain a direct snapped route; status=' + bridgeGapStatus);
+  assert(bridgeGapStatus.includes('1 snapped segment'), 'The Lower Swift / Osborne Bend defect class must snap across a short bridge gap even when one source fragment turns sharply and the adjacent road name changes; status=' + bridgeGapStatus);
   const bridgeGapDistance = (await page.locator('[data-plan-stats-distance]').innerText()).trim();
   assert(!bridgeGapDistance.includes('mi') || Number.parseFloat(bridgeGapDistance) < 0.5, 'Short bridge connection must not become a multi-mile detour; distance=' + bridgeGapDistance);
   await page.locator('[data-map-tool="clear"]').evaluate(button => button.click());
