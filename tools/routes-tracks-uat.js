@@ -662,17 +662,26 @@ async function fullMap(browser) {
   const coordinateCard = page.locator('[data-coordinate-card]');
   assert(await coordinateCard.isVisible(), 'Map Point card must open in Sunlight mode');
   const coordinateToolbar = coordinateCard.locator('.route-coordinate-toolbar');
-  const copyCoordinatesButton = coordinateToolbar.getByRole('button', { name: 'Copy coordinates', exact: true });
+  const copyCoordinatesButton = coordinateToolbar.getByRole('button', { name: 'Copy Coordinates', exact: true });
   const closeCoordinatesButton = coordinateToolbar.getByRole('button', { name: 'Close coordinates', exact: true });
   const mapPointHeading = coordinateToolbar.locator('.route-coordinate-heading');
   const coordinateTitle = coordinateToolbar.locator('.route-coordinate-title');
-  assert.strictEqual(await copyCoordinatesButton.locator('span').count(), 2, 'Copy coordinates must be a two-line button');
-  assert.deepStrictEqual(await copyCoordinatesButton.locator('span').evaluateAll(nodes => nodes.map(node => node.textContent.trim())), ['Copy', 'coordinates']);
-  const [toolbarBox, mapPointCopyBox, mapPointHeadingBox, mapPointCloseBox, coordinateTitleBox] = await Promise.all([
+  const decimalCoordinates = coordinateToolbar.locator('[data-coordinate-dd]');
+  assert.strictEqual(await copyCoordinatesButton.locator('span').count(), 2, 'Copy Coordinates must be a two-line button');
+  assert.deepStrictEqual(await copyCoordinatesButton.locator('span').evaluateAll(nodes => nodes.map(node => node.textContent.trim())), ['Copy', 'Coordinates']);
+  const [toolbarBox, mapPointCopyBox, mapPointHeadingBox, mapPointCloseBox, coordinateTitleBox, decimalCoordinatesBox, copyFit] = await Promise.all([
     coordinateToolbar.boundingBox(), copyCoordinatesButton.boundingBox(), mapPointHeading.boundingBox(),
-    closeCoordinatesButton.boundingBox(), coordinateTitle.boundingBox()
+    closeCoordinatesButton.boundingBox(), coordinateTitle.boundingBox(), decimalCoordinates.boundingBox(),
+    copyCoordinatesButton.evaluate(node => ({
+      scrollWidth: node.scrollWidth,
+      clientWidth: node.clientWidth,
+      fontSizes: Array.from(node.querySelectorAll('span')).map(span => Number.parseFloat(getComputedStyle(span).fontSize))
+    }))
   ]);
-  assert(toolbarBox && mapPointCopyBox && mapPointHeadingBox && mapPointCloseBox && coordinateTitleBox);
+  assert(toolbarBox && mapPointCopyBox && mapPointHeadingBox && mapPointCloseBox && coordinateTitleBox && decimalCoordinatesBox);
+  assert(copyFit.scrollWidth <= copyFit.clientWidth + 1, 'Copy Coordinates text must fit cleanly inside the desktop button');
+  assert(copyFit.fontSizes.every(size => size <= 10.5), 'Copy Coordinates desktop text should be slightly smaller; sizes=' + copyFit.fontSizes.join(','));
+  assert(decimalCoordinatesBox.y >= coordinateTitleBox.y + coordinateTitleBox.height + 3, 'Map Point title/icon row needs visible breathing room above decimal coordinates');
   assert(mapPointCopyBox.height >= 52 && mapPointCopyBox.width >= 68 && mapPointCopyBox.width <= 84, 'Copy coordinates should be a prominent near-square/tall control');
   assert(mapPointHeadingBox.x >= mapPointCopyBox.x + mapPointCopyBox.width + 2, 'The Map Point information block must sit to the right of Copy coordinates');
   assert(mapPointCloseBox.x + mapPointCloseBox.width >= toolbarBox.x + toolbarBox.width - 6, 'Close must remain isolated at the upper-right');
@@ -1709,10 +1718,24 @@ async function mobile(browser) {
   assert(await page.locator('[data-coordinate-card]').isVisible(), 'Real mobile press-and-hold should open coordinates');
   assert.strictEqual(await page.evaluate(() => window.getSelection()?.toString() || ''), '', 'Real mobile press-and-hold must not highlight map text');
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  const mobileCopyBox = await page.locator('[data-coordinate-copy]').boundingBox();
-  const mobileCloseBox = await page.locator('[data-coordinate-close]').boundingBox();
-  assert(mobileCopyBox && mobileCloseBox);
-  assert(mobileCloseBox.x > mobileCopyBox.x + mobileCopyBox.width - 1, 'Mobile coordinate × should sit to the right of Copy coordinates');
+  const mobileCopy = page.locator('[data-coordinate-copy]');
+  assert.strictEqual((await mobileCopy.innerText()).replace(/\s+/g, ' ').trim(), 'Copy Coordinates', 'Mobile copy button must use capitalized Coordinates');
+  const [mobileCopyBox, mobileCloseBox, mobileTitleBox, mobileDdBox, mobileCopyFit] = await Promise.all([
+    mobileCopy.boundingBox(),
+    page.locator('[data-coordinate-close]').boundingBox(),
+    page.locator('.route-coordinate-title').boundingBox(),
+    page.locator('[data-coordinate-dd]').boundingBox(),
+    mobileCopy.evaluate(node => ({
+      scrollWidth: node.scrollWidth,
+      clientWidth: node.clientWidth,
+      fontSizes: Array.from(node.querySelectorAll('span')).map(span => Number.parseFloat(getComputedStyle(span).fontSize))
+    }))
+  ]);
+  assert(mobileCopyBox && mobileCloseBox && mobileTitleBox && mobileDdBox);
+  assert(mobileCopyFit.scrollWidth <= mobileCopyFit.clientWidth + 1, 'Mobile Copy Coordinates text must fit inside its button');
+  assert(mobileCopyFit.fontSizes.every(size => size <= 9.5), 'Mobile Copy Coordinates text should be reduced enough to fit; sizes=' + mobileCopyFit.fontSizes.join(','));
+  assert(mobileDdBox.y >= mobileTitleBox.y + mobileTitleBox.height + 3, 'Mobile Map Point title/icon row needs visible breathing room above decimal coordinates');
+  assert(mobileCloseBox.x > mobileCopyBox.x + mobileCopyBox.width - 1, 'Mobile coordinate × should sit to the right of Copy Coordinates');
   assert(Math.abs(mobileCloseBox.y - mobileCopyBox.y) <= 12, 'Mobile Copy and Close controls should share the same top row');
   assert(mobileCopyBox.height > mobileCloseBox.height + 10, 'Copy coordinates should remain the taller, more prominent control');
   await page.locator('[data-coordinate-close]').click();
