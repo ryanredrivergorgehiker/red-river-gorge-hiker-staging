@@ -1315,7 +1315,7 @@ async function fullMap(browser) {
 
   const bridgeGapA = projectFromHomeNorthWest(37.8075, -83.61985);
   const bridgeGapB = projectFromHomeNorthWest(37.80670, -83.61975);
-  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await page.locator('[data-map-tool="clear"]').evaluate(button => button.click());
   await mapContainer.click({ position: bridgeGapA });
   await mapContainer.click({ position: bridgeGapB });
   await page.waitForTimeout(140);
@@ -1323,7 +1323,7 @@ async function fullMap(browser) {
   assert(bridgeGapStatus.includes('1 snapped segment'), 'A short gap between two pieces of the same KY 715 road should remain a direct snapped route; status=' + bridgeGapStatus);
   const bridgeGapDistance = (await page.locator('[data-plan-stats-distance]').innerText()).trim();
   assert(!bridgeGapDistance.includes('mi') || Number.parseFloat(bridgeGapDistance) < 0.5, 'Short bridge connection must not become a multi-mile detour; distance=' + bridgeGapDistance);
-  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await page.locator('[data-map-tool="clear"]').evaluate(button => button.click());
 
   const trailABase = projectFromHomeNorthWest(37.8103, -83.6208);
   const trailBBase = projectFromHomeNorthWest(37.8085, -83.62005);
@@ -1335,7 +1335,7 @@ async function fullMap(browser) {
   let trailA = null;
   let trailB = null;
   for (const [dx, dy] of snapOffsets) {
-    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    await page.locator('[data-map-tool="clear"]').evaluate(button => button.click());
     const candidateA = { x: trailABase.x + dx, y: trailABase.y + dy };
     const candidateB = { x: trailBBase.x + dx, y: trailBBase.y + dy };
     const insideMap = point =>
@@ -1375,8 +1375,8 @@ async function fullMap(browser) {
   assert(providerRequests.some(url => url.includes('elevation.nationalmap.gov') && url.includes('/getSamples?')), 'Build trail route should request USGS 3DEP elevation samples');
   const initialPlanDistance = (await page.locator('[data-plan-stats-distance]').innerText()).trim();
 
-  const undo = page.getByRole('button', { name: 'Undo', exact: true });
-  const redo = page.getByRole('button', { name: 'Redo', exact: true });
+  const undo = page.locator('[data-plan-action="undo"]');
+  const redo = page.locator('[data-plan-action="redo"]');
   const offTrailCandidates = [
     { x: homeBox.width * 0.78, y: homeBox.height * 0.22 },
     { x: homeBox.width * 0.70, y: homeBox.height * 0.70 },
@@ -1405,7 +1405,7 @@ async function fullMap(browser) {
 
     if (counts && counts.snapped + counts.offTrail > 1) {
       assert.strictEqual(await undo.isDisabled(), false, 'A snapped candidate should remain undoable while searching for a clear off-trail point');
-      await undo.click();
+      await undo.evaluate(button => button.click());
       await page.waitForTimeout(80);
     }
   }
@@ -1442,7 +1442,7 @@ async function fullMap(browser) {
       || editStatus.includes('1 snapped segment(s), 0 off-trail segment(s)'),
     'Right-click should delete the selected off-trail leg; status=' + editStatus
   );
-  await undo.click();
+  await undo.evaluate(button => button.click());
   await page.waitForTimeout(120);
   editStatus = await page.locator('[data-map-status]').innerText();
   assert(editStatus.includes('1 off-trail segment'), 'Undo should restore the deleted off-trail segment; status=' + editStatus);
@@ -1488,7 +1488,11 @@ async function fullMap(browser) {
   // off-trail leg onto mapped network, which was just verified.
 
   // The earlier off-trail leg already proved right-click delete + Undo.
-  // Here, prove the drag/resnap action participates cleanly in history:
+  // Here, expand the auto-minimized planner and prove its visible history/export controls.
+  if (await page.locator('[data-map-sheet="plan"]').getAttribute('data-minimized') === 'true') await planOpenButton.click();
+  assert.strictEqual(await page.locator('[data-map-sheet="plan"]').getAttribute('data-minimized'), null);
+  assert.strictEqual(await undo.isVisible(), true);
+  assert.strictEqual(await redo.isVisible(), true);
   // Undo restores the off-trail state and Redo restores the snapped state.
   assert.strictEqual(await undo.isDisabled(), false);
   await undo.hover();
@@ -1504,7 +1508,7 @@ async function fullMap(browser) {
   editStatus = await page.locator('[data-map-status]').innerText();
   assert(editStatus.includes('2 snapped segment(s), 0 off-trail segment(s)'), 'Redo should restore the resnapped state; status=' + editStatus);
 
-  const exportGpx = page.getByRole('button', { name: 'Export GPX', exact: true });
+  const exportGpx = page.locator('[data-map-tool="save"]');
   assert.strictEqual(await exportGpx.isDisabled(), false);
   const [download] = await Promise.all([page.waitForEvent('download'), exportGpx.click()]);
   assert(/^RRGH-planned-route-.*\.gpx$/.test(download.suggestedFilename()));
