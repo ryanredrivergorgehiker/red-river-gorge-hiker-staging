@@ -1091,6 +1091,9 @@ async function fullMap(browser) {
   assert(homeBox);
   const homeZoom = Number(await mapContainer.getAttribute('data-current-zoom'));
   assert.strictEqual(homeZoom, 13);
+  await page.waitForFunction(() => Boolean(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-north-west')), { timeout: 3000 });
+  const planningNorthWestValue = await mapContainer.getAttribute('data-map-north-west');
+  const [planningNorthWestLat, planningNorthWestLng] = planningNorthWestValue.split(',').map(Number);
 
   // Planner click classification is the behavior under test below. Make popups
   // non-interactive for this section so a coordinate probe cannot accidentally
@@ -1125,11 +1128,11 @@ async function fullMap(browser) {
         y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale
       };
     };
-    const northWest = project(homeNorthWestLat, homeNorthWestLng);
+    const northWest = project(planningNorthWestLat, planningNorthWestLng);
     const point = project(lat, lng);
     return {
-      x: homeBox.x + (point.x - northWest.x),
-      y: homeBox.y + (point.y - northWest.y)
+      x: point.x - northWest.x,
+      y: point.y - northWest.y
     };
   };
 
@@ -1147,12 +1150,12 @@ async function fullMap(browser) {
     const candidateA = { x: trailABase.x + dx, y: trailABase.y + dy };
     const candidateB = { x: trailBBase.x + dx, y: trailBBase.y + dy };
     const insideMap = point =>
-      point.x >= homeBox.x + 4 && point.x <= homeBox.x + homeBox.width - 4
-      && point.y >= homeBox.y + 4 && point.y <= homeBox.y + homeBox.height - 4;
+      point.x >= 4 && point.x <= homeBox.width - 4
+      && point.y >= 4 && point.y <= homeBox.height - 4;
     if (!insideMap(candidateA) || !insideMap(candidateB)) continue;
-    await page.mouse.click(candidateA.x, candidateA.y);
+    await mapContainer.click({ position: candidateA });
     await page.keyboard.press('Escape');
-    await page.mouse.click(candidateB.x, candidateB.y);
+    await mapContainer.click({ position: candidateB });
     await page.keyboard.press('Escape');
     await page.waitForTimeout(100);
     const currentPlannerUrl = page.url();
@@ -1186,12 +1189,12 @@ async function fullMap(browser) {
   const undo = page.getByRole('button', { name: 'Undo', exact: true });
   const redo = page.getByRole('button', { name: 'Redo', exact: true });
   const offTrailCandidates = [
-    { x: homeBox.x + homeBox.width * 0.78, y: homeBox.y + homeBox.height * 0.22 },
-    { x: homeBox.x + homeBox.width * 0.70, y: homeBox.y + homeBox.height * 0.70 },
-    { x: homeBox.x + homeBox.width * 0.52, y: homeBox.y + homeBox.height * 0.20 },
-    { x: homeBox.x + homeBox.width * 0.84, y: homeBox.y + homeBox.height * 0.52 },
-    { x: homeBox.x + homeBox.width * 0.58, y: homeBox.y + homeBox.height * 0.66 },
-    { x: homeBox.x + homeBox.width * 0.38, y: homeBox.y + homeBox.height * 0.22 }
+    { x: homeBox.width * 0.78, y: homeBox.height * 0.22 },
+    { x: homeBox.width * 0.70, y: homeBox.height * 0.70 },
+    { x: homeBox.width * 0.52, y: homeBox.height * 0.20 },
+    { x: homeBox.width * 0.84, y: homeBox.height * 0.52 },
+    { x: homeBox.width * 0.58, y: homeBox.height * 0.66 },
+    { x: homeBox.width * 0.38, y: homeBox.height * 0.22 }
   ];
 
   const plannerCounts = statusText => {
@@ -1201,7 +1204,7 @@ async function fullMap(browser) {
 
   let offTrail = null;
   for (const candidate of offTrailCandidates) {
-    await page.mouse.click(candidate.x, candidate.y);
+    await mapContainer.click({ position: candidate });
     await page.waitForTimeout(120);
     const plannerStatus = await page.locator('[data-map-status]').innerText();
     const counts = plannerCounts(plannerStatus);
