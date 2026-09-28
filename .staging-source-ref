@@ -1,8 +1,8 @@
-23f49e8f5f8e79590823bc95670e810df947c8ab
-purpose=Emergency staging performance rollback. Removes the trailhead road-to-trail graph scan introduced after a409dac because that startup routine performed a large nested scan across real planner nodes and could block the browser main thread during map initialization. This source is file-for-file identical to responsive candidate a409dacfa228e6881d3478bb398a5d699209505b; Undo, Redo, Export GPX and Clear remain directly below Measure distance / Build trail route. Production unchanged.
-source_ci=36492764216 SUCCESS
-content_equivalent_to=a409dacfa228e6881d3478bb398a5d699209505b
-routes_uat_source_ref_commit=fef0f325ffdc40c20845ad7c12450d7d2635e123
-brand_uat_source_ref_commit=9525b26c4097a79faa052c4bcd39814885d83996
-analytics_uat_source_ref_commit=db9e675890fa3c1a9edb077980a8d2e8db0a5163
-roku_uat_source_ref_commit=3f7df364cb67d793473fdecb4dd8f7ff321843c6
+276780fe18366cbfa7668c87f012e08366f87f23
+purpose=Targeted snapping rollback only. Removes the two broad Kentucky road endpoint scanning strategies added during the recent Lower Swift / Osborne Bend experiments: the cross-name/aligned endpoint scan and the mutual-nearest endpoint scan. Retains the older same-road named-gap healing, existing detour guard, all accepted map/UI work, and the owner-requested Plan layout with Undo, Redo, Export GPX and Clear directly below Measure distance / Build trail route. Production unchanged.
+source_ci=36493711688 SUCCESS
+routes_uat_source_ref_commit=39cf7cbf38356c36d2fbca4dd3afbb86a7f94742
+routes_tracks_uat_harness_commit=39c6385dbf1b3398f71cb5ceff1329822500315e
+brand_uat_source_ref_commit=762ade7719c74c96ae711d1c0a787299e9a1e4a0
+analytics_uat_source_ref_commit=b7164a4382e49556fbbfea64e01ed44aee55e201
+roku_uat_source_ref_commit=530b1a53c1be28bd5612cbeb668f911265c61246
