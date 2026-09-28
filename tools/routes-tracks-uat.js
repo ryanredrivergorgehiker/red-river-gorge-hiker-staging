@@ -10,7 +10,7 @@ const SHARED = 'rrgh-analytics-consent-v1';
 const REGION = 'rrgh-region-country-v1';
 const GPX_SHA = '2469c85ebaddd3e701ba6dc8eea3664d90a0667dcd86f2aab43ae1445986830d';
 const GEO_SHA = '123fdb57e1142299f86c714367cc466b70f18fa90cfbaabb92b0d9ced157dc66';
-const PROVIDERS = new Set(['kygisserver.ky.gov', 'basemap.nationalmap.gov', 'elevation.nationalmap.gov', 'apps.fs.usda.gov', 'overpass.maprva.org', 'overpass.private.coffee', 'overpass-api.de', 'maps.mail.ru']);
+const PROVIDERS = new Set(['kygisserver.ky.gov', 'kyraster.ky.gov', 'basemap.nationalmap.gov', 'elevation.nationalmap.gov', 'apps.fs.usda.gov', 'overpass.maprva.org', 'overpass.private.coffee', 'overpass-api.de', 'maps.mail.ru']);
 
 const TRANSPARENT_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X3JmAAAAAElFTkSuQmCC',
@@ -177,12 +177,39 @@ async function installProviderStubs(page, providerRequests, slowPrimaryOverpass 
     route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG })
   );
 
+  await page.route('https://kyraster.ky.gov/**', async route => {
+    const request = route.request();
+    const requestUrl = new URL(request.url());
+    if (!requestUrl.pathname.includes('/ImageServer/getSamples')) return route.abort();
+    let geometryRaw = requestUrl.searchParams.get('geometry');
+    if (request.method() === 'POST') {
+      geometryRaw = new URLSearchParams(request.postData() || '').get('geometry');
+    }
+    let points = [];
+    try {
+      points = JSON.parse(geometryRaw || '{}').points || [];
+    } catch {}
+    const samples = points.map((point, index) => ({
+      location: { x: point[0], y: point[1], spatialReference: { wkid: 4326 } },
+      value: index === 0 ? 300 : 300 + Math.max(0, Math.sin(index * 0.17)) * 4
+    }));
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ samples })
+    });
+  });
+
   await page.route('https://elevation.nationalmap.gov/**', async route => {
     const requestUrl = new URL(route.request().url());
     if (!requestUrl.pathname.includes('/3DEPElevation/ImageServer/getSamples')) return route.abort();
+    let geometryRaw = requestUrl.searchParams.get('geometry');
+    if (route.request().method() === 'POST') {
+      geometryRaw = new URLSearchParams(route.request().postData() || '').get('geometry');
+    }
     let points = [];
     try {
-      points = JSON.parse(requestUrl.searchParams.get('geometry') || '{}').points || [];
+      points = JSON.parse(geometryRaw || '{}').points || [];
     } catch {}
     const samples = points.map((point, index) => ({
       location: { x: point[0], y: point[1], spatialReference: { wkid: 4326 } },
@@ -369,6 +396,13 @@ async function fullMap(browser) {
   page.on('pageerror', error => pageErrors.push(String(error)));
   await installProviderStubs(page, providerRequests, true);
 
+  let releaseRouteGeometry;
+  const routeGeometryGate = new Promise(resolve => { releaseRouteGeometry = resolve; });
+  await page.route('**/data/routes/skybridge-arch-v1.geojson', async route => {
+    await routeGeometryGate;
+    await route.continue();
+  });
+
   let releaseInformalCache;
   const informalCacheGate = new Promise(resolve => { releaseInformalCache = resolve; });
   await page.route('**/data/map/osm-informal-trails.geojson', async route => {
@@ -380,35 +414,73 @@ async function fullMap(browser) {
   assert(response && response.ok());
   await page.waitForSelector('.leaflet-container', { timeout: 10000 });
 
-  // Search/Home/Layers remain usable while the planning trail graph loads, but
-  // Explore and Plan must stay disabled until Community / Informal trails are ready.
-  await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
-  await page.waitForFunction(
-    () => document.querySelector('[data-map-status]')?.textContent?.includes('Core Red River Gorge hiking view restored'),
-    { timeout: 1500 }
-  );
-  const exploreButton = page.getByRole('button', { name: 'Explore', exact: true });
+  // Feature-specific readiness: everything begins disabled while route geometry is gated.
+  const mapContainer = page.locator('[data-rrgh-route-map]');
+  const searchButton = page.locator('.route-map-utility-tools').getByRole('button', { name: 'Search map', exact: true });
+  const exploreButton = page.locator('.route-map-tools-desktop').getByRole('button', { name: 'Explore', exact: true });
   const planOpenButton = page.locator('.route-map-tools-desktop').getByRole('button', { name: 'Plan', exact: true });
-  assert.strictEqual(await exploreButton.isDisabled(), true, 'Explore must be disabled while informal trails are loading');
-  assert.strictEqual(await planOpenButton.isDisabled(), true, 'Plan must be disabled while informal trails are loading');
-  assert.strictEqual(await page.locator('[data-rrgh-route-map]').getAttribute('data-trail-planning-ready'), 'false');
+  const shareButtonReady = page.locator('.route-map-tools-desktop').getByRole('button', { name: 'Share', exact: true });
+  const homeButton = page.getByRole('button', { name: 'Reset map view', exact: true }).first();
+  assert.strictEqual(await searchButton.isDisabled(), true, 'Search must begin disabled before route geometry is ready');
+  assert.strictEqual(await exploreButton.isDisabled(), true, 'Explore must begin disabled before route geometry is ready');
+  assert.strictEqual(await planOpenButton.isDisabled(), true, 'Plan must begin disabled before core map context is ready');
+  assert.strictEqual(await shareButtonReady.isDisabled(), true, 'Share must begin disabled before initial map state is restored');
+  assert.strictEqual(await homeButton.isDisabled(), true, 'Home must begin disabled before core map context is ready');
+  assert.strictEqual(await page.locator('[data-map-preset]').evaluateAll(nodes => nodes.every(node => node.disabled)), true, 'Map View presets must begin disabled');
+  assert.strictEqual(await page.locator('[data-route-category-filter]').evaluateAll(nodes => nodes.every(node => node.disabled)), true, 'Route filters must begin disabled');
 
+  releaseRouteGeometry();
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-route-data-ready') === 'true',
+    { timeout: 10000 }
+  );
+  assert.strictEqual(await searchButton.isDisabled(), false, 'Search must unlock with RRGH route geometry');
+  assert.strictEqual(await exploreButton.isDisabled(), false, 'Explore must unlock with RRGH route geometry');
+  assert.strictEqual(await page.locator('[data-route-category-filter]').evaluateAll(nodes => nodes.every(node => !node.disabled)), true, 'Route filters must unlock with route geometry');
+
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-core-ready') === 'true'
+      && document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-share-ready') === 'true',
+    { timeout: 10000 }
+  );
+  assert.strictEqual(await homeButton.isDisabled(), false, 'Home must unlock with core map context');
+  assert.strictEqual(await planOpenButton.isDisabled(), false, 'Plan panel must unlock with core map context');
+  assert.strictEqual(await shareButtonReady.isDisabled(), false, 'Share must unlock after initial map state restoration');
+  assert.strictEqual(await page.locator('[data-map-preset]').evaluateAll(nodes => nodes.every(node => !node.disabled)), true, 'Map View presets must unlock with core context');
+
+  await exploreButton.click();
+  assert(await page.locator('[data-map-sheet="explore"]').isVisible(), 'Explore must open as soon as RRGH route data is ready');
+  await exploreButton.click();
+  assert(await page.locator('[data-map-sheet="explore"]').isHidden(), 'Explore must close on second click');
+
+  await planOpenButton.click();
+  const planPanel = page.locator('[data-map-sheet="plan"]');
+  assert(await planPanel.isVisible(), 'Plan panel must open before the optional informal-trail graph finishes');
+  assert.strictEqual(await planPanel.getByRole('button', { name: 'Measure distance', exact: true }).isDisabled(), false, 'Measure must be ready with core map context');
+  assert.strictEqual(await planPanel.getByRole('button', { name: 'Build trail route', exact: true }).isDisabled(), true, 'Build trail route must remain disabled until planning graph is ready');
+  assert((await planPanel.locator('[data-plan-help]').innerText()).includes('Choose a planning tool.'));
+  assert.strictEqual(await planPanel.getByRole('button', { name: 'Undo', exact: true }).locator('svg').count(), 1, 'Undo must use an icon');
+  assert.strictEqual(await planPanel.getByRole('button', { name: 'Redo', exact: true }).locator('svg').count(), 1, 'Redo must use an icon');
+  await planPanel.getByRole('button', { name: 'Measure distance', exact: true }).click();
+  assert((await planPanel.locator('[data-plan-help]').innerText()).includes('Click or tap points to measure straight-line distance.'));
+  await planPanel.getByRole('button', { name: 'Measure distance', exact: true }).click();
+  await planOpenButton.click();
+
+  assert.strictEqual(await mapContainer.getAttribute('data-trail-planning-ready'), 'false');
   releaseInformalCache();
   await page.waitForFunction(
     () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-trail-planning-ready') === 'true',
     { timeout: 10000 }
   );
-  assert.strictEqual(await exploreButton.isDisabled(), false, 'Explore must enable after trail data loads');
-  assert.strictEqual(await planOpenButton.isDisabled(), false, 'Plan must enable after trail data loads');
-
-  await exploreButton.click();
-  assert(await page.locator('[data-map-sheet="explore"]').isVisible(), 'Explore must open after trails are ready');
-  await exploreButton.click();
-  assert(await page.locator('[data-map-sheet="explore"]').isHidden(), 'Explore must close on second click after trails are ready');
   await planOpenButton.click();
-  assert(await page.locator('[data-map-sheet="plan"]').isVisible(), 'Plan must open after trails are ready');
+  assert.strictEqual(await planPanel.getByRole('button', { name: 'Build trail route', exact: true }).isDisabled(), false, 'Build trail route must unlock when the graph is ready');
+  await planPanel.getByRole('button', { name: 'Build trail route', exact: true }).click();
+  const buildHelp = await planPanel.locator('[data-plan-help]').innerText();
+  assert(buildHelp.includes('snap to the network'));
+  assert(buildHelp.includes('Drag a planned segment to adjust or resnap it.'));
+  assert(buildHelp.includes('Right-click or press and hold'));
+  await planPanel.getByRole('button', { name: 'Build trail route', exact: true }).click();
   await planOpenButton.click();
-  assert(await page.locator('[data-map-sheet="plan"]').isHidden(), 'Plan must close on second click after trails are ready');
 
   await page.waitForFunction(() => {
     const map = document.querySelector('[data-rrgh-route-map]');
@@ -418,7 +490,6 @@ async function fullMap(browser) {
       && Boolean(map?.getAttribute('data-current-zoom'));
   }, { timeout: 10000 });
 
-  const mapContainer = page.locator('[data-rrgh-route-map]');
   const body = await page.locator('body').innerText();
   assert(body.includes('Property boundaries are not shown; this map does not establish legal access.'));
   assert(body.includes('Before you go: check closures, road access & conditions'));
@@ -463,6 +534,43 @@ async function fullMap(browser) {
   await page.locator('.route-layer-panel > summary').click();
   assert.strictEqual(await page.locator('[data-map-layer="ky-counties"]').count(), 0);
   assert.strictEqual(await page.locator('.leaflet-control-scale').count(), 1);
+
+  // Four Map View presets, including terrain-aware Sunlight.
+  assert.strictEqual(await page.locator('[data-map-preset]').count(), 4);
+  const sunlightPreset = page.locator('[data-map-preset="sunlight"]');
+  const sunlightTeaser = (await sunlightPreset.locator('[data-sunlight-preset-times]').innerText()).trim();
+  assert(/^Today · Sunrise .+ · Sunset .+$/.test(sunlightTeaser), 'Sunlight teaser should show today sunrise/sunset; text=' + sunlightTeaser);
+  assert(!sunlightTeaser.includes('calculating'), 'Sunlight teaser must be populated before use');
+  await sunlightPreset.click();
+  assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '25');
+  assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').inputValue(), '75');
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '100');
+  assert.strictEqual(await page.locator('[data-map-layer="rrg-lidar-sun"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-sun-kind-toggle="sunrise"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-sun-kind-toggle="sunset"]').isChecked(), true);
+  assert.strictEqual(await page.locator('.route-map-stage').getAttribute('data-sunlight-mode'), 'true');
+
+  const sunlightMapBox = await mapContainer.boundingBox();
+  assert(sunlightMapBox);
+  await page.mouse.click(sunlightMapBox.x + sunlightMapBox.width * 0.58, sunlightMapBox.y + sunlightMapBox.height * 0.46, { button: 'right' });
+  const coordinateCard = page.locator('[data-coordinate-card]');
+  assert(await coordinateCard.isVisible(), 'Map Point card must open in Sunlight mode');
+  assert((await coordinateCard.locator('[data-coordinate-sun-today]').innerText()).includes('Sunrise'));
+  assert((await coordinateCard.locator('[data-coordinate-sun-today]').innerText()).includes('Sunset'));
+  assert.strictEqual(await coordinateCard.locator('[data-coordinate-sun-details]').getAttribute('open'), '');
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-sunlight-terrain-ready') === 'true',
+    { timeout: 10000 }
+  );
+  assert.strictEqual(await coordinateCard.locator('.route-coordinate-sun-table tbody tr').count(), 10, 'Map Point must show the next 10 days');
+  const sunlightCardText = await coordinateCard.innerText();
+  assert(sunlightCardText.includes('First direct sun'));
+  assert(sunlightCardText.includes('Last direct sun'));
+  assert(sunlightCardText.includes('Kentucky KyFromAbove Phase 2 Bare Earth DEM'));
+  assert(sunlightCardText.includes('trees, cliffs/overhangs, clouds and local obstructions'));
+  assert(providerRequests.some(url => new URL(url).hostname === 'kyraster.ky.gov'), 'Terrain-aware Sunlight should query the Kentucky bare-earth elevation service');
+  await coordinateCard.locator('[data-coordinate-close]').click();
+  await page.locator('[data-map-preset="hiking"]').click();
 
   const cacheData = await page.evaluate(async () => {
     const response = await fetch('/data/map/osm-informal-trails.geojson', { cache: 'no-cache' });
@@ -548,6 +656,7 @@ async function fullMap(browser) {
   assert((await safetyLink.getAttribute('href')).endsWith('/copyright-and-terms/#outdoor-safety-location-disclaimer'));
 
   const startZoom = Number(await mapContainer.getAttribute('data-current-zoom'));
+  assert.strictEqual(await mapContainer.getAttribute('data-home-view'), 'detail', 'Desktop Home should retain the accepted detail start');
   assert.strictEqual(startZoom, 13, 'Core Gorge landing view should start at zoom 13');
   await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
   await page.waitForFunction(
@@ -1007,6 +1116,9 @@ async function fullMap(browser) {
   // Here, prove the drag/resnap action participates cleanly in history:
   // Undo restores the off-trail state and Redo restores the snapped state.
   assert.strictEqual(await undo.isDisabled(), false);
+  await undo.hover();
+  const undoTooltip = await undo.evaluate(element => getComputedStyle(element, '::after').content);
+  assert(undoTooltip.includes('Undo'), 'Enabled Undo icon should expose a hover tooltip');
   await undo.click();
   await page.waitForTimeout(150);
   editStatus = await page.locator('[data-map-status]').innerText();
@@ -1141,6 +1253,32 @@ async function mobile(browser) {
   assert(await page.locator('[data-map-mobile-status]').isVisible());
 
   const map = page.locator('[data-rrgh-route-map]');
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-core-ready') === 'true',
+    { timeout: 10000 }
+  );
+  await page.waitForTimeout(120);
+  const mobileStartZoom = Number(await map.getAttribute('data-current-zoom'));
+  assert.strictEqual(await map.getAttribute('data-home-view'), 'gorge-overview', 'Mobile Home/start must use the broader Gorge overview');
+  assert(mobileStartZoom <= 11 && mobileStartZoom >= 8, 'Mobile overview should start broad enough to see the Gorge; zoom=' + mobileStartZoom);
+  assert.strictEqual(await page.locator('.rrgh-area-label').count(), 3, 'Broad mobile overview should show three geographic orientation labels');
+  const areaLabelText = await page.locator('.leaflet-areaLabels-pane').innerText();
+  assert(areaLabelText.includes('NATURAL BRIDGE'));
+  assert(areaLabelText.includes('RED RIVER GORGE'));
+  assert(areaLabelText.includes('CLIFTY WILDERNESS'));
+
+  const mobilePresets = page.locator('[data-map-preset]');
+  assert.strictEqual(await mobilePresets.count(), 4);
+  const presetBoxes = await mobilePresets.evaluateAll(nodes => nodes.map(node => {
+    const box = node.getBoundingClientRect();
+    return { x: box.x, y: box.y, width: box.width, height: box.height };
+  }));
+  assert(Math.abs(presetBoxes[0].y - presetBoxes[1].y) <= 2, 'First two mobile Map View buttons should share row one');
+  assert(Math.abs(presetBoxes[2].y - presetBoxes[3].y) <= 2, 'Aerial and Sunlight should share row two');
+  assert(presetBoxes[2].y > presetBoxes[0].y + 10, 'Mobile Map View should render as a 2x2 grid');
+  const mobileSunlightTeaser = await page.locator('[data-map-preset="sunlight"] [data-sunlight-preset-times]').innerText();
+  assert(mobileSunlightTeaser.includes('Sunrise') && mobileSunlightTeaser.includes('Sunset'));
+
   let box = await map.boundingBox();
   const topbarBox = await page.locator('.route-map-mobile-topbar').boundingBox();
   const mobileStatusBox = await page.locator('[data-map-mobile-status]').boundingBox();
