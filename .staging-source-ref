@@ -1,8 +1,8 @@
-15367fc74b01b03a42071ffd2cb50a869c2369a8
-purpose=Owner-requested Map Point micro-polish only: Copy Coordinates now uses a capital C on desktop and mobile; button label typography is reduced slightly so both words fit cleanly inside the existing button; added deliberate vertical breathing room between the Map Point title/icon row and decimal coordinates on desktop and mobile; no other map, Sunlight, planning, label, route, analytics, or production behavior changed
-source_ci=36463792928 SUCCESS
-routes_uat=36463938911 SUCCESS
-routes_tracks_uat=36463938934 SUCCESS
-brand_uat=36463975837 SUCCESS
-analytics_uat=36463980959 SUCCESS
-roku_uat=36463987834 SUCCESS
+cc774af3b6ca62de1dc734aca5b1c2402f9b980e
+purpose=Owner-requested area-label stacking tweak only: RED RIVER GORGE, CLIFTY WILDERNESS, and NATURAL BRIDGE now render above all route, recreation, trailhead/start, landmark, Map Point, and planning panes whenever their existing zoom rules make them visible; existing full-name/acronym/hidden zoom behavior and all other map behavior remain unchanged
+source_ci=36465105529 SUCCESS
+routes_uat=36465236616 SUCCESS
+routes_tracks_uat=36465236279 SUCCESS
+brand_uat=36465242302 SUCCESS
+analytics_uat=36465246297 SUCCESS
+roku_uat=36465252224 SUCCESS
