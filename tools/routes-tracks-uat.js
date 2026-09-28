@@ -1475,7 +1475,7 @@ async function mobile(browser) {
     const rect = element.getBoundingClientRect();
     const clientX = rect.left + rect.width * position.x;
     const clientY = rect.top + rect.height * position.y;
-    const touch = new Touch({
+    const touch = {
       identifier: 7,
       target: element,
       clientX,
@@ -1483,19 +1483,15 @@ async function mobile(browser) {
       pageX: clientX + window.scrollX,
       pageY: clientY + window.scrollY,
       screenX: clientX,
-      screenY: clientY,
-      radiusX: 1,
-      radiusY: 1,
-      rotationAngle: 0,
-      force: 1
+      screenY: clientY
+    };
+    const event = new Event('touchstart', { bubbles: true, cancelable: true });
+    Object.defineProperties(event, {
+      touches: { value: [touch] },
+      targetTouches: { value: [touch] },
+      changedTouches: { value: [touch] }
     });
-    element.dispatchEvent(new TouchEvent('touchstart', {
-      bubbles: true,
-      cancelable: true,
-      touches: [touch],
-      targetTouches: [touch],
-      changedTouches: [touch]
-    }));
+    element.dispatchEvent(event);
   }, { x: 0.52, y: 0.44 });
   await page.waitForTimeout(700);
   const mobileCoordinateCard = page.locator('[data-coordinate-card]');
@@ -1504,7 +1500,7 @@ async function mobile(browser) {
     const rect = element.getBoundingClientRect();
     const clientX = rect.left + rect.width * position.x;
     const clientY = rect.top + rect.height * position.y;
-    const touch = new Touch({
+    const touch = {
       identifier: 7,
       target: element,
       clientX,
@@ -1512,19 +1508,15 @@ async function mobile(browser) {
       pageX: clientX + window.scrollX,
       pageY: clientY + window.scrollY,
       screenX: clientX,
-      screenY: clientY,
-      radiusX: 1,
-      radiusY: 1,
-      rotationAngle: 0,
-      force: 0
+      screenY: clientY
+    };
+    const event = new Event('touchend', { bubbles: true, cancelable: true });
+    Object.defineProperties(event, {
+      touches: { value: [] },
+      targetTouches: { value: [] },
+      changedTouches: { value: [touch] }
     });
-    element.dispatchEvent(new TouchEvent('touchend', {
-      bubbles: true,
-      cancelable: true,
-      touches: [],
-      targetTouches: [],
-      changedTouches: [touch]
-    }));
+    element.dispatchEvent(event);
   }, { x: 0.52, y: 0.44 });
   await page.waitForFunction(
     () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-sunlight-terrain-ready') === 'true',
