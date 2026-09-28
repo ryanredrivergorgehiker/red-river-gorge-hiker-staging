@@ -1,8 +1,8 @@
-9bc721f137e41d8fcc656a2ab0ea8a11ac092a54
-purpose=Owner visual correction continuation: desktop instructions moved below the map into a stable full-width row; transparent gray italic bold all-caps geographic labels made more visible with RED RIVER GORGE lowered and NB/RRG/CW near-zoom progression retained; mobile Home framing shifted east with mobile-specific label dimensions so NATURAL BRIDGE and CLIFTY WILDERNESS remain inside the viewport; selected Map Point symbols reduced on map and card; Sunlight today moved beneath the Map Point header; collapsed card made compact while expanded 10-day view may widen; Today identified in the first row; mobile direct-sun headers shortened cleanly without word-breaking; prior accepted Terrain, Sunlight calculations, active Plan minimize, readiness gates, route taxonomy, mobile pan/scroll gutters and production state retained; production unchanged
-source_ci=36452917596 SUCCESS
-routes_uat=36453043501 SUCCESS
-routes_tracks_uat=36454995778 SUCCESS
-brand_uat=36453048369 SUCCESS
-analytics_uat=36453055673 SUCCESS
-roku_uat=36453059937 SUCCESS
+72e7206cc927ff7a82de09d9fde2ceb43bfa17af
+purpose=Owner Map Point correction only: mobile and desktop Map Point card tightened to content instead of wide empty columns; Sunlight Today given deliberate spacing; First direct sun and Last direct sun headers rendered as controlled three-line stacks; mobile table sized to content with no forced full-width stretch; mobile touch-and-hold captures before Leaflet handling, suppresses native text selection/callout, opens Map Point on a real stationary hold, and still cancels on movement so normal panning remains intact; prior accepted map labels, desktop below-map instructions, Terrain/Sunlight calculations, route planning behavior, readiness gates, route taxonomy and production state retained; production unchanged
+source_ci=36460426194 SUCCESS
+routes_uat=36460552420 SUCCESS
+routes_tracks_uat=36460888346 SUCCESS
+brand_uat=36461207557 SUCCESS
+analytics_uat=36461212042 SUCCESS
+roku_uat=36461218871 SUCCESS
