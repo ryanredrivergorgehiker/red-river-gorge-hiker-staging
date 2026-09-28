@@ -692,9 +692,9 @@ async function fullMap(browser) {
   const routePaneZ = Number(await page.locator('.leaflet-routes-pane').evaluate(node => getComputedStyle(node).zIndex));
   const areaPaneZ = Number(await page.locator('.leaflet-areaLabels-pane').evaluate(node => getComputedStyle(node).zIndex));
   assert(oilGasPaneZ > routePaneZ && oilGasPaneZ < areaPaneZ, 'Oil/gas wells must sit above interactive route panes for clicks while staying below area labels');
-  const mapBoxForOil = await mapContainer.boundingBox();
-  assert(mapBoxForOil);
-  await page.mouse.click(mapBoxForOil.x + mapBoxForOil.width / 2, mapBoxForOil.y + mapBoxForOil.height / 2);
+  const oilMarker = page.locator('.rrgh-oil-gas-marker-host').first();
+  assert(await oilMarker.isVisible(), 'KGS well must render as an individual DOM marker');
+  await oilMarker.click();
   await page.waitForTimeout(150);
   const oilPopup = page.locator('.route-oil-gas-popup');
   assert(await oilPopup.isVisible(), 'Clicking a KGS well should open its detail popup');
