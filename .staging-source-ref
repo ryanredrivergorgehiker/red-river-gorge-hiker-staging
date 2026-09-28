@@ -1,8 +1,9 @@
-37e9cca2363f0d6206661dea5104c3f19e8355da
-purpose=Owner-requested mobile Map View enhancement only: Hiking, Terrain, and Aerial now show the same secondary descriptions used on desktop, while Sunlight retains its dynamic Today/Sunrise/Sunset description; mobile buttons remain a compact equal-height 2x2 grid with fixed 64px height, smaller secondary typography, and no text overflow; no map behavior, route filters, labels, planning, Map Point behavior, analytics, or production state changed
-source_ci=36466954313 SUCCESS
-routes_uat=36467096482 SUCCESS
-routes_tracks_uat=36467096406 SUCCESS
-brand_uat=36467101180 SUCCESS
-analytics_uat=36467106588 SUCCESS
-roku_uat=36467112510 SUCCESS
+245004402bcb8375b3e8a928398bb44fef0ed12e
+purpose=Staging-only KGS Oil & Gas Wells proof of concept: optional Oil & Gas Wells layer is off by default in Hiking/Terrain/Aerial/Sunlight, independently toggleable with 90% default fine-tune opacity; live viewport-scoped statewide KGS/University of Kentucky queries begin only after user opt-in at zoom 10+, are debounced/cancellable/cached and capped at 1500 records per view with zoom-in warning when truncated; discrete DOM well markers stay clickable above interactive route panes while approved geographic area labels remain topmost; closer zoom uses result-type colors; popup exposes selected public KGS fields plus KGS well-report link and source/accuracy/access limitations; dynamic KGS attribution and explicit Privacy/Terms disclosures added; live browser probe verified direct cross-origin KGS querying from the RRGH production-equivalent origin and isolated service-failure behavior; existing Routes/Map Views/Plan/Map Point/labels/analytics/Roku behavior retained; production unchanged
+source_ci=36475202118 SUCCESS
+routes_uat=36475333256 SUCCESS
+routes_tracks_uat=36475333471 SUCCESS
+brand_uat=36475345284 SUCCESS
+analytics_uat=36475361636 SUCCESS
+roku_uat=36475373711 SUCCESS
+live_kgs_probe=PASS count=1500 load_ms=653
