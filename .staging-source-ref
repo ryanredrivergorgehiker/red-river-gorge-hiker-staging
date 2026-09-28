@@ -1,8 +1,8 @@
-a409dacfa228e6881d3478bb398a5d699209505b
-purpose=Owner-requested Routes UAT correction pass: route planning now heals short unambiguous mutual-nearest Kentucky road-source endpoint gaps when one side approaches the gap but the opposite fragment turns sharply, covering the Lower Swift Camp / Osborne Bend bridge defect class without broadly relaxing the prior alignment guard; Undo, Redo, Export GPX and Clear are moved directly below Measure distance / Build trail route. Production unchanged.
-source_ci=36488253896 SUCCESS
-routes_uat_source_ref_commit=dac9ef36a261d70600160418afa04bfd1b193dcb
-routes_tracks_uat_source_ref_commit=50aec1f2a6478856a7f4e9e52b1cfd63075e11cf
-brand_uat_source_ref_commit=ae7a664dbfc02c730efdf82b7c50a3a1db9125d5
-analytics_uat_source_ref_commit=b62694b78a15908bcbe31bd22013dfd7eac557ba
-roku_uat_source_ref_commit=81fae200d7eaf4fe2f39832a3b57fa55df5fb08f
+da7b46ae4b614487117270f31712fffe55438dd3
+purpose=Owner-requested Routes correction pass after real Lower Swift / Red River UAT: planner graph now distinguishes source kinds and heals a narrowly bounded road-to-trail source seam only near an official Forest Service trailhead, connecting the nearest mapped road node to a mapped official/community trail endpoint within 45 m while both lie within 90 m of the same trailhead. Existing Kentucky-road gap healing and short-detour guard remain. Undo, Redo, Export GPX and Clear remain directly below Measure distance / Build trail route. Production unchanged.
+source_ci=36491882089 SUCCESS
+routes_uat_source_ref_commit=03d4bd9e28e52fbcc116504804b5c33a81dbf7d6
+routes_tracks_uat_source_ref_commit=8ce9d69dbfbe4ba5b5fcbf8234b46bd222649db7
+brand_uat_source_ref_commit=4540aa4a2ac0387e89d7f272bf979a1acbdff375
+analytics_uat_source_ref_commit=01775511c20b730d88bc069490d6fc4987749cdd
+roku_uat_source_ref_commit=17d34ded43154b312e130d9799f5fcec764620e0
