@@ -462,6 +462,10 @@ async function fullMap(browser) {
   const desktopFullLabels = page.locator('.rrgh-area-label.is-full .rrgh-area-label-text');
   const desktopFullHtml = await desktopFullLabels.evaluateAll(nodes => nodes.map(node => node.innerHTML));
   assert.deepStrictEqual(desktopFullHtml, ['NATURAL<br>BRIDGE', 'RED<br>RIVER<br>GORGE', 'CLIFTY<br>WILDERNESS']);
+  const areaLabelPaneZ = Number(await page.locator('.leaflet-areaLabels-pane').evaluate(node => getComputedStyle(node).zIndex));
+  const competingPaneZ = await page.locator('.leaflet-mapPoint-pane, .leaflet-planning-pane, .leaflet-landmarks-pane, .leaflet-routeStarts-pane, .leaflet-recreation-pane, .leaflet-routes-pane').evaluateAll(nodes => nodes.map(node => Number(getComputedStyle(node).zIndex)));
+  assert(competingPaneZ.length >= 6, 'Expected all marker/route panes for stacking UAT');
+  assert(competingPaneZ.every(z => areaLabelPaneZ > z), 'Visible area labels must render above all map routes/markers; area=' + areaLabelPaneZ + ' others=' + competingPaneZ.join(','));
   const fullStyles = await desktopFullLabels.evaluateAll(nodes => nodes.map(node => {
     const style = getComputedStyle(node);
     const hostStyle = getComputedStyle(node.closest('.rrgh-area-label'));
