@@ -1318,6 +1318,11 @@ async function mobile(browser) {
   assert(scaleOffsetY >= 0 && scaleOffsetY <= 24, 'Mobile scale should sit in the map upper-left corner; y offset=' + scaleOffsetY);
 
   await page.waitForFunction(() => Boolean(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-center')), { timeout: 3000 });
+  // The broad mobile Home extent can already be constrained at the county max-bounds edge.
+  // Zoom in once before exercising free vertical panning so this tests gesture ownership,
+  // not whether the overview has spare room to move inside its legal map bounds.
+  await page.locator('[data-map-action="zoom-in"]').first().evaluate(button => button.click());
+  await page.waitForTimeout(180);
   const centerBeforeVerticalPan = await map.getAttribute('data-map-center');
   const scrollBeforeVerticalPan = await page.evaluate(() => window.scrollY);
   const cdp = await context.newCDPSession(page);
