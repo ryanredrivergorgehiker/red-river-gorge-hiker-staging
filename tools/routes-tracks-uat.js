@@ -10,7 +10,7 @@ const SHARED = 'rrgh-analytics-consent-v1';
 const REGION = 'rrgh-region-country-v1';
 const GPX_SHA = '2469c85ebaddd3e701ba6dc8eea3664d90a0667dcd86f2aab43ae1445986830d';
 const GEO_SHA = '123fdb57e1142299f86c714367cc466b70f18fa90cfbaabb92b0d9ced157dc66';
-const PROVIDERS = new Set(['kygisserver.ky.gov', 'kyraster.ky.gov', 'basemap.nationalmap.gov', 'elevation.nationalmap.gov', 'apps.fs.usda.gov', 'overpass.maprva.org', 'overpass.private.coffee', 'overpass-api.de', 'maps.mail.ru']);
+const PROVIDERS = new Set(['kygisserver.ky.gov', 'kyraster.ky.gov', 'basemap.nationalmap.gov', 'elevation.nationalmap.gov', 'apps.fs.usda.gov', 'kgs.uky.edu', 'overpass.maprva.org', 'overpass.private.coffee', 'overpass-api.de', 'maps.mail.ru']);
 
 const TRANSPARENT_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X3JmAAAAAElFTkSuQmCC',
@@ -79,6 +79,35 @@ const COUNTIES = {
     { type: 'Feature', properties: { NAME: 'Lee', ABBREVTN: 'LEE' }, geometry: { type: 'Polygon', coordinates: [[[-83.70,37.45],[-83.39,37.45],[-83.39,37.75],[-83.70,37.75],[-83.70,37.45]]] } }
   ]
 };
+
+const OIL_GAS_WELLS = {
+  features: [
+    {
+      attributes: {
+        OBJECTID: 1, record_number: 123456, original_result: 'OIL', original_result_symbol: 'OIL',
+        justified_permit: '1234567', permit: '1234567', API_Number: '16-000-00001',
+        operator: 'Historic Gorge Oil Co.', most_recent_operator: 'Current Gorge Energy LLC',
+        well_number: '1', farm_name: 'Sample Lease', date_completed: Date.UTC(1968, 5, 12),
+        surface_elevation: 1042, total_depth: 2480, tdfm_name: 'Sample total-depth formation',
+        deepest_pay_name: 'Sample producing formation', plugged: 0, date_plugged: null,
+        bore_type: 'V', county_name: 'Powell', quadrangle_name: 'Slade', purpose: 'Oil exploration'
+      },
+      geometry: { x: -83.6396027, y: 37.8196836 }
+    },
+    {
+      attributes: {
+        OBJECTID: 2, record_number: 234567, original_result: 'GAS', original_result_symbol: 'GAS',
+        permit: '2345678', operator: 'Sample Gas Co.', well_number: '2',
+        date_completed: Date.UTC(1974, 8, 2), total_depth: 3110, plugged: 1,
+        date_plugged: Date.UTC(1998, 3, 15), bore_type: 'V', county_name: 'Lee',
+        quadrangle_name: 'Beattyville', purpose: 'Gas exploration'
+      },
+      geometry: { x: -83.6472, y: 37.8128 }
+    }
+  ],
+  exceededTransferLimit: false
+};
+
 
 const RECREATION = {
   type: 'FeatureCollection',
@@ -156,7 +185,7 @@ async function preparedContext(browser, options = {}) {
   return context;
 }
 
-async function installProviderStubs(page, providerRequests, slowPrimaryOverpass = false) {
+async function installProviderStubs(page, providerRequests, slowPrimaryOverpass = false, kgsMode = 'stub') {
   page.on('request', request => {
     const url = new URL(request.url());
     if (PROVIDERS.has(url.hostname)) providerRequests.push(request.url());
@@ -221,6 +250,15 @@ async function installProviderStubs(page, providerRequests, slowPrimaryOverpass 
       body: JSON.stringify({ samples })
     });
   });
+
+  if (kgsMode !== 'live') {
+    await page.route('https://kgs.uky.edu/**', async route => {
+      const url = route.request().url();
+      if (!url.includes('KYOilGasWells_static_WGS84/MapServer/1/query')) return route.continue();
+      if (kgsMode === 'fail') return route.abort('failed');
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(OIL_GAS_WELLS) });
+    });
+  }
 
   await page.route('https://apps.fs.usda.gov/**', async route => {
     const url = route.request().url();
@@ -610,8 +648,8 @@ async function fullMap(browser) {
   assert(body.includes('How to read this map — 30-second guide'));
   assert(body.includes('Map data:'));
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 12);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 11);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 13);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 12);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0, 'Temporary exact-view copier should be removed after Home approval');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
@@ -622,16 +660,50 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-map-layer="usfs-special-management"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-land-units"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="rrg-lidar-sun"]').isChecked(), false, 'Gorge LiDAR expansion must be off by default');
+  const oilGasToggle = page.locator('[data-map-layer="kgs-oil-gas-wells"]');
+  assert.strictEqual(await oilGasToggle.isChecked(), false, 'Oil & Gas Wells must be off by default');
+  assert.strictEqual(await page.locator('[data-opacity="kgs-oil-gas-wells"]').isDisabled(), true);
+  assert(!providerRequests.some(url => url.includes('KYOilGasWells_static_WGS84')), 'No KGS oil/gas request may occur until the user enables the layer');
   assert.strictEqual(await page.locator('[data-opacity="rrg-lidar-sun"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="usfs-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="osm-informal-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="usfs-roads"]').inputValue(), '100');
-  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 11);
+  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 12);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="usgs-topo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="ky-hillshade"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true);
   await page.locator('.route-layer-panel > summary').click();
   await page.locator('.route-layer-fine-tune > summary').click();
+  const oilGasFineToggle = page.locator('[data-fine-tune-layer="kgs-oil-gas-wells"]');
+  assert.strictEqual(await oilGasFineToggle.isChecked(), false);
+  await oilGasToggle.check();
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-oil-gas-load-state') === 'loaded',
+    { timeout: 10000 }
+  );
+  assert.strictEqual(await mapContainer.getAttribute('data-oil-gas-well-count'), '2');
+  assert(providerRequests.some(url => url.includes('KYOilGasWells_static_WGS84/MapServer/1/query')), 'Enabling Oil & Gas Wells must query KGS');
+  assert.strictEqual(await oilGasFineToggle.isChecked(), true);
+  assert.strictEqual(await page.locator('[data-opacity="kgs-oil-gas-wells"]').isDisabled(), false);
+  await page.locator('[data-opacity="kgs-oil-gas-wells"]').fill('55');
+  await page.locator('[data-opacity="kgs-oil-gas-wells"]').dispatchEvent('input');
+  assert.strictEqual(await page.locator('[data-opacity="kgs-oil-gas-wells"]').inputValue(), '55');
+  const oilGasPaneZ = Number(await page.locator('.leaflet-oilGas-pane').evaluate(node => getComputedStyle(node).zIndex));
+  const routePaneZ = Number(await page.locator('.leaflet-routes-pane').evaluate(node => getComputedStyle(node).zIndex));
+  const areaPaneZ = Number(await page.locator('.leaflet-areaLabels-pane').evaluate(node => getComputedStyle(node).zIndex));
+  assert(oilGasPaneZ < routePaneZ && oilGasPaneZ < areaPaneZ, 'Oil/gas wells should remain informational beneath routes and area labels');
+  const mapBoxForOil = await mapContainer.boundingBox();
+  assert(mapBoxForOil);
+  await page.mouse.click(mapBoxForOil.x + mapBoxForOil.width / 2, mapBoxForOil.y + mapBoxForOil.height / 2);
+  await page.waitForTimeout(150);
+  const oilPopup = page.locator('.route-oil-gas-popup');
+  assert(await oilPopup.isVisible(), 'Clicking a KGS well should open its detail popup');
+  const oilPopupText = await oilPopup.innerText();
+  for (const expected of ['KENTUCKY GEOLOGICAL SURVEY','Oil well','KGS record','123456','Original operator','Most recent operator','Total depth','View full KGS well report']) assert(oilPopupText.includes(expected), expected);
+  assert((await oilPopup.getByRole('link', { name: /View full KGS well report/ }).getAttribute('href')).includes('wellReport.asp?id=123456'));
+  await oilGasToggle.uncheck();
+  assert.strictEqual(await mapContainer.getAttribute('data-oil-gas-load-state'), 'off');
+
   const reliefFineToggle = page.locator('[data-fine-tune-layer="ky-hillshade"]');
   await reliefFineToggle.check();
   assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true, 'Fine-tune checkbox must enable matching main layer');
@@ -647,6 +719,7 @@ async function fullMap(browser) {
 
   // Four Map View presets, including terrain-aware Sunlight.
   assert.strictEqual(await page.locator('[data-map-preset]').count(), 4);
+  assert.strictEqual(await oilGasToggle.isChecked(), false, 'Map View presets must not enable Oil & Gas Wells by default');
   const sunlightPreset = page.locator('[data-map-preset="sunlight"]');
   const sunlightTeaser = (await sunlightPreset.locator('[data-sunlight-preset-times]').innerText()).trim();
   assert(/^Today · Sunrise .+ · Sunset .+$/.test(sunlightTeaser), 'Sunlight teaser should show today sunrise/sunset; text=' + sunlightTeaser);
@@ -778,7 +851,60 @@ async function fullMap(browser) {
   assert.strictEqual(await mapContainer.getAttribute('data-coordinate-point-visible'), null);
   await page.locator('[data-map-preset="hiking"]').click();
 
-  const cacheData = await page.evaluate(async () => {
+  const cacheData = await page.evaluate
+async function liveKgsOilGasProbe(browser) {
+  const context = await preparedContext(browser, { viewport: { width: 1100, height: 900 } });
+  const page = await context.newPage();
+  const providerRequests = [];
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error)));
+  await installProviderStubs(page, providerRequests, false, 'live');
+
+  const target = MAIN + 'routes/map/?rrghMap=37.6500000,-83.6500000,11&rrghLayers=kgs-oil-gas-wells:1:90';
+  const response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(response && response.ok());
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-oil-gas-load-state') === 'loaded',
+    { timeout: 25000 }
+  );
+  const map = page.locator('[data-rrgh-route-map]');
+  const count = Number(await map.getAttribute('data-oil-gas-well-count'));
+  const loadMs = Number(await map.getAttribute('data-oil-gas-load-ms'));
+  assert(count > 0, 'Live KGS viewport query over Lee County should return at least one well');
+  assert(Number.isFinite(loadMs) && loadMs < 20000, 'Live KGS viewport query should complete within 20 seconds; ms=' + loadMs);
+  assert(providerRequests.some(url => url.includes('kgs.uky.edu') && url.includes('KYOilGasWells_static_WGS84/MapServer/1/query')));
+  assert.strictEqual(await map.getAttribute('data-oil-gas-load-error'), null);
+  assert.deepStrictEqual(pageErrors, []);
+  record('Live KGS Oil & Gas Wells CORS and viewport performance', 'PASS', { count, loadMs });
+  await context.close();
+}
+
+async function oilGasFailureHandling(browser) {
+  const context = await preparedContext(browser, { viewport: { width: 1100, height: 900 } });
+  const page = await context.newPage();
+  const providerRequests = [];
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error)));
+  await installProviderStubs(page, providerRequests, false, 'fail');
+  const response = await page.goto(MAIN + 'routes/map/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(response && response.ok());
+  await page.waitForFunction(() => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-core-ready') === 'true', { timeout: 10000 });
+  await page.locator('.route-layer-panel > summary').click();
+  await page.locator('[data-map-layer="kgs-oil-gas-wells"]').check();
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-oil-gas-load-state') === 'error',
+    { timeout: 10000 }
+  );
+  const map = page.locator('[data-rrgh-route-map]');
+  assert.strictEqual(await map.getAttribute('data-oil-gas-load-error'), 'true');
+  assert((await page.locator('[data-oil-gas-status]').innerText()).includes('temporarily unavailable'));
+  assert.strictEqual(await map.getAttribute('data-map-core-ready'), 'true', 'KGS failure must not break the rest of the map');
+  assert.deepStrictEqual(pageErrors, []);
+  record('KGS Oil & Gas Wells failure handling is isolated', 'PASS');
+  await context.close();
+}
+
+(async () => {
     const response = await fetch('/data/map/osm-informal-trails.geojson', { cache: 'no-cache' });
     if (!response.ok) throw new Error('OSM cache HTTP ' + response.status);
     return response.json();
@@ -1650,6 +1776,19 @@ async function mobile(browser) {
 
   await mobileTopbar.locator('[data-sheet-open="layers"]').click();
   assert(await page.locator('.route-layer-panel').isVisible());
+  const mobileOilGasToggle = page.locator('[data-map-layer="kgs-oil-gas-wells"]');
+  assert.strictEqual(await mobileOilGasToggle.isChecked(), false, 'Mobile Oil & Gas Wells must be off by default');
+  await mobileOilGasToggle.check();
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-oil-gas-load-state') === 'loaded',
+    { timeout: 10000 }
+  );
+  assert(Number(await map.getAttribute('data-oil-gas-well-count')) > 0, 'Mobile Oil & Gas layer must render KGS records when enabled');
+  assert.strictEqual(await page.locator('[data-opacity="kgs-oil-gas-wells"]').isDisabled(), false);
+  assert(/KGS well record/.test(await page.locator('[data-oil-gas-status]').innerText()), 'Mobile layer status should identify live KGS records');
+  const oilOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert(oilOverflow <= 2, 'Oil & Gas layer controls must not create mobile page overflow');
+  await mobileOilGasToggle.uncheck();
   assert(await page.locator('.route-layer-fine-tune > summary').isVisible());
   const layerSummary = page.locator('.route-layer-panel > summary');
   const stickyBefore = await layerSummary.boundingBox();
@@ -1858,6 +1997,8 @@ async function legal(browser) {
     await routeDetail(browser);
     await fullMap(browser);
     await mobile(browser);
+    await liveKgsOilGasProbe(browser);
+    await oilGasFailureHandling(browser);
     await legal(browser);
   } catch (error) {
     failure = error;
