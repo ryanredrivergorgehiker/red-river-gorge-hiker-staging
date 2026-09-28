@@ -1253,7 +1253,7 @@ async function fullMap(browser) {
     northWestBeforeArrowPan,
     { timeout: 3000 }
   );
-  assert.strictEqual(await page.getByRole('button', { name: 'Build trail route', exact: true }).getAttribute('aria-pressed'), 'true', 'Arrow panning must leave route building active');
+  assert.strictEqual(await page.locator('[data-map-tool="plan"]').getAttribute('aria-pressed'), 'true', 'Arrow panning must leave route building active');
   assert((await page.locator('[data-map-status]').innerText()).includes('Route building remains active'));
 
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
@@ -1511,8 +1511,11 @@ async function fullMap(browser) {
 
   // Share must create a stateful permalink, include a selected RRGH route,
   // preserve meaningful layer/filter state, and restore that exact view.
-  const buildTrailButton = page.getByRole('button', { name: 'Build trail route', exact: true });
-  if (await buildTrailButton.getAttribute('aria-pressed') === 'true') await buildTrailButton.click();
+  const buildTrailButton = page.locator('[data-map-tool="plan"]');
+  if (await buildTrailButton.getAttribute('aria-pressed') === 'true') {
+    if (await page.locator('[data-map-sheet="plan"]').getAttribute('data-minimized') === 'true') await planOpenButton.click();
+    await buildTrailButton.click();
+  }
   if (await page.locator('[data-map-sheet="plan"]').isVisible()) await planOpenButton.click();
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
