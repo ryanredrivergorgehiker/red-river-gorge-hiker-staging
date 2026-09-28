@@ -988,6 +988,8 @@ async function fullMap(browser) {
   assert.strictEqual(await safetyLink.count(), 1, 'Every RouteMap should expose the outdoor safety/location disclaimer link');
   assert((await safetyLink.getAttribute('href')).endsWith('/copyright-and-terms/#outdoor-safety-location-disclaimer'));
 
+  await homeButton.click();
+  await page.waitForTimeout(180);
   const startZoom = Number(await mapContainer.getAttribute('data-current-zoom'));
   assert.strictEqual(await mapContainer.getAttribute('data-home-view'), 'detail', 'Desktop Home should retain the accepted detail start');
   assert.strictEqual(startZoom, 13, 'Core Gorge landing view should start at zoom 13');
