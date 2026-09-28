@@ -1609,6 +1609,32 @@ async function mobile(browser) {
   assert(Math.abs(presetBoxes[0].y - presetBoxes[1].y) <= 2, 'First two mobile Map View buttons should share row one');
   assert(Math.abs(presetBoxes[2].y - presetBoxes[3].y) <= 2, 'Aerial and Sunlight should share row two');
   assert(presetBoxes[2].y > presetBoxes[0].y + 10, 'Mobile Map View should render as a 2x2 grid');
+  assert(presetBoxes.every(box => Math.abs(box.height - 64) <= 1), 'All four mobile Map View buttons must stay equal-height at 64px');
+  const mobilePresetDescriptions = await mobilePresets.evaluateAll(nodes => nodes.map(node => {
+    const span = node.querySelector('span');
+    const style = span ? getComputedStyle(span) : null;
+    const button = node.getBoundingClientRect();
+    const description = span?.getBoundingClientRect();
+    return {
+      preset: node.getAttribute('data-map-preset'),
+      text: span?.textContent?.trim() || '',
+      display: style?.display || '',
+      fontSize: style ? Number.parseFloat(style.fontSize) : 0,
+      buttonBottom: button.bottom,
+      descriptionBottom: description?.bottom || 0,
+      scrollHeight: node.scrollHeight,
+      clientHeight: node.clientHeight
+    };
+  }));
+  assert.strictEqual(mobilePresetDescriptions.find(item => item.preset === 'hiking')?.text, 'USGS topo · hiking context');
+  assert.strictEqual(mobilePresetDescriptions.find(item => item.preset === 'terrain')?.text, 'Kentucky + USGS topo · stronger terrain relief');
+  assert.strictEqual(mobilePresetDescriptions.find(item => item.preset === 'aerial')?.text, 'Imagery + hiking context');
+  for (const item of mobilePresetDescriptions) {
+    assert.notStrictEqual(item.display, 'none', item.preset + ' mobile description must be visible');
+    assert(item.fontSize <= 9.5, item.preset + ' mobile description should stay compact; font=' + item.fontSize);
+    assert(item.descriptionBottom <= item.buttonBottom + 1, item.preset + ' description must fit inside its button');
+    assert(item.scrollHeight <= item.clientHeight + 1, item.preset + ' button content must not overflow vertically');
+  }
   const mobileSunlightTeaser = await page.locator('[data-map-preset="sunlight"] [data-sunlight-preset-times]').innerText();
   assert(mobileSunlightTeaser.includes('Sunrise') && mobileSunlightTeaser.includes('Sunset'));
 
