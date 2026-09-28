@@ -1,8 +1,8 @@
-e333b8392c835c8a7c2e6b2139aec8ba70c547fe
-purpose=Owner-approved six-change Routes & Tracks refinement: feature-specific loading gates; Sunlight Map View with current-day sunrise/sunset teaser plus terrain-aware Map Point astronomical and first/last direct sun for 10 days using Kentucky KyFromAbove bare-earth DEM with USGS fallback; icon Undo/Redo with tooltip; concise context-sensitive Plan help; translucent zoom-dependent Natural Bridge / Red River Gorge / Clifty Wilderness orientation labels; mobile Gorge-wide overview/Home view; prior accepted mobile scroll gutters, Terrain 25/75/100, sticky Layers and desktop layout retained; production unchanged
-source_ci=36424680665 SUCCESS
-routes_uat=36425123605 SUCCESS
-routes_tracks_uat=36425726349 SUCCESS
-brand_uat=36425123608 SUCCESS
-analytics_uat=36425123576 SUCCESS
-roku_uat=36425123682 SUCCESS
+66c33198a12b32e0f957168eb84f7caeb2db6247
+purpose=Owner UAT refinement from 2026-09-28 screenshots: overview area labels now hide when zoomed too far out, show compact full names at Home/landing, switch to NB/RRG/CW one zoom in, and disappear one zoom closer; desktop Home zoom remains 13; mobile Home is pinned one step closer at zoom 11 matching the 5 km / 3 mi scale; Map Point now always resolves elevation, keeps Sunrise / First direct sun / Last direct sun / Sunset in the Today summary even when the 10-day table is collapsed, and moves Copy coordinates to the upper left with Close isolated at upper right; prior Sunlight, readiness, Plan, Terrain, sticky Layers, mobile gutters and route behavior retained; production unchanged
+source_ci=36433125384 SUCCESS
+routes_uat=36433460723 SUCCESS
+routes_tracks_uat=36433703075 SUCCESS
+brand_uat=36433460906 SUCCESS
+analytics_uat=36433461533 SUCCESS
+roku_uat=36433460834 SUCCESS
