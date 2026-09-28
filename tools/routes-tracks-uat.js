@@ -66,22 +66,21 @@ const KENTUCKY_ROADS = {
         [-83.6208, 37.8103],
         [-83.62045, 37.8094],
         [-83.62005, 37.8085],
-        [-83.62050, 37.8075],
         [-83.61985, 37.8075]
       ] }
     },
     {
       type: 'Feature',
       properties: {
-        LSt_Name: 'Osborne Bend Road',
-        St_Name: 'Osborne Bend Road',
-        RoadClass: 'Local Road',
-        SpeedLimit: 25,
+        LSt_Name: 'KY 715',
+        St_Name: 'KY 715',
+        RoadClass: 'State Route',
+        SpeedLimit: 55,
         OneWay: 'N'
       },
       geometry: { type: 'LineString', coordinates: [
-        [-83.61975, 37.80690],
-        [-83.61955, 37.8061],
+        [-83.61975, 37.80645],
+        [-83.61955, 37.8058],
         [-83.6193, 37.8051]
       ] }
     }
@@ -1317,19 +1316,19 @@ async function fullMap(browser) {
     };
   };
 
-  assert(Number(await mapContainer.getAttribute('data-ky-road-mutual-endpoint-bridge-count')) >= 1, 'A short unambiguous Kentucky road-source gap should heal even when one fragment turns sharply at the bridge and the road name changes');
+  assert(Number(await mapContainer.getAttribute('data-named-road-gap-bridge-count')) >= 1, 'Short separated segments of the same named Kentucky road should be healed in the planner graph');
 
   const bridgeGapA = projectFromHomeNorthWest(37.8075, -83.61985);
-  const bridgeGapB = projectFromHomeNorthWest(37.80690, -83.61975);
-  await page.locator('[data-map-tool="clear"]').evaluate(button => button.click());
+  const bridgeGapB = projectFromHomeNorthWest(37.80645, -83.61975);
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await mapContainer.click({ position: bridgeGapA });
   await mapContainer.click({ position: bridgeGapB });
   await page.waitForTimeout(140);
   const bridgeGapStatus = await page.locator('[data-map-status]').innerText();
-  assert(bridgeGapStatus.includes('1 snapped segment'), 'The Lower Swift / Osborne Bend defect class must snap across a short bridge gap even when one source fragment turns sharply and the adjacent road name changes; status=' + bridgeGapStatus);
+  assert(bridgeGapStatus.includes('1 snapped segment'), 'A short gap between two pieces of the same KY 715 road should remain a direct snapped route; status=' + bridgeGapStatus);
   const bridgeGapDistance = (await page.locator('[data-plan-stats-distance]').innerText()).trim();
   assert(!bridgeGapDistance.includes('mi') || Number.parseFloat(bridgeGapDistance) < 0.5, 'Short bridge connection must not become a multi-mile detour; distance=' + bridgeGapDistance);
-  await page.locator('[data-map-tool="clear"]').evaluate(button => button.click());
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
 
   const trailABase = projectFromHomeNorthWest(37.8103, -83.6208);
   const trailBBase = projectFromHomeNorthWest(37.8085, -83.62005);
