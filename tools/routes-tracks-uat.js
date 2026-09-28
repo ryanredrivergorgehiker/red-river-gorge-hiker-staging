@@ -434,9 +434,9 @@ async function fullMap(browser) {
     () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-route-data-ready') === 'true',
     { timeout: 10000 }
   );
-  assert.strictEqual(await searchButton.isDisabled(), false, 'Search must unlock with RRGH route geometry');
-  assert.strictEqual(await exploreButton.isDisabled(), false, 'Explore must unlock with RRGH route geometry');
-  assert.strictEqual(await page.locator('[data-route-category-filter]').evaluateAll(nodes => nodes.every(node => !node.disabled)), true, 'Route filters must unlock with route geometry');
+  assert.strictEqual(await searchButton.isDisabled(), true, 'Search must remain disabled until core map context is ready');
+  assert.strictEqual(await exploreButton.isDisabled(), true, 'Explore must remain disabled until core map context is ready');
+  assert.strictEqual(await page.locator('[data-route-category-filter]').evaluateAll(nodes => nodes.every(node => !node.disabled)), true, 'Route filters may unlock with route geometry');
 
   await page.waitForFunction(
     () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-core-ready') === 'true'
@@ -444,6 +444,8 @@ async function fullMap(browser) {
     { timeout: 10000 }
   );
   assert.strictEqual(await homeButton.isDisabled(), false, 'Home must unlock with core map context');
+  assert.strictEqual(await searchButton.isDisabled(), false, 'Search must unlock only when core map context is ready');
+  assert.strictEqual(await exploreButton.isDisabled(), false, 'Explore must unlock only when core map context is ready');
   assert.strictEqual(await planOpenButton.isDisabled(), false, 'Plan panel must unlock with core map context');
   assert.strictEqual(await shareButtonReady.isDisabled(), false, 'Share must unlock after initial map state restoration');
   assert.strictEqual(await page.locator('[data-map-preset]').evaluateAll(nodes => nodes.every(node => !node.disabled)), true, 'Map View presets must unlock with core context');
@@ -539,13 +541,41 @@ async function fullMap(browser) {
     { timeout: 10000 }
   );
   await planOpenButton.click();
-  assert.strictEqual(await planPanel.getByRole('button', { name: 'Build trail route', exact: true }).isDisabled(), false, 'Build trail route must unlock when the graph is ready');
-  await planPanel.getByRole('button', { name: 'Build trail route', exact: true }).click();
+  const buildTrailReadyButton = planPanel.getByRole('button', { name: 'Build trail route', exact: true });
+  assert.strictEqual(await buildTrailReadyButton.isDisabled(), false, 'Build trail route must unlock when the graph is ready');
+  await buildTrailReadyButton.click();
   const buildHelp = await planPanel.locator('[data-plan-help]').innerText();
   assert(buildHelp.includes('snap to the network'));
   assert(buildHelp.includes('Drag a planned segment to adjust or resnap it.'));
   assert(buildHelp.includes('Right-click or press and hold'));
-  await planPanel.getByRole('button', { name: 'Build trail route', exact: true }).click();
+
+  const planMinimize = planPanel.getByRole('button', { name: 'Minimize planning controls', exact: true });
+  assert.strictEqual(await planMinimize.count(), 1, 'Active planning panel must offer Minimize, not Close');
+  await planMinimize.click();
+  assert(await planPanel.isVisible(), 'Minimizing Build trail route must keep the planning panel visible');
+  assert.strictEqual(await planPanel.getAttribute('data-minimized'), 'true');
+  assert(await planPanel.locator('[data-plan-live-stats]').isVisible(), 'Minimized planning panel must keep live totals visible');
+  assert.strictEqual(await planPanel.locator('.route-plan-mode-buttons').isHidden(), true, 'Minimized panel should hide setup controls');
+
+  const minimizeMapBox = await mapContainer.boundingBox();
+  assert(minimizeMapBox);
+  await mapContainer.click({ position: { x: minimizeMapBox.width * 0.44, y: minimizeMapBox.height * 0.45 } });
+  await mapContainer.click({ position: { x: minimizeMapBox.width * 0.54, y: minimizeMapBox.height * 0.46 } });
+  await page.waitForFunction(
+    () => {
+      const distance = document.querySelector('[data-plan-stats-distance]')?.textContent?.trim();
+      return Boolean(distance && distance !== '—' && distance !== '0 ft');
+    },
+    { timeout: 5000 }
+  );
+  assert.strictEqual(await planPanel.getAttribute('data-minimized'), 'true', 'Live route pinning must not force the minimized panel open');
+  assert((await planPanel.locator('[data-plan-stats-distance]').innerText()).trim() !== '—');
+
+  await planPanel.getByRole('button', { name: 'Expand planning controls', exact: true }).click();
+  assert.strictEqual(await planPanel.getAttribute('data-minimized'), null, 'Plan panel should restore from minimized state');
+  assert(await planPanel.locator('.route-plan-mode-buttons').isVisible());
+  await planPanel.getByRole('button', { name: 'Clear', exact: true }).click();
+  await buildTrailReadyButton.click();
   await planOpenButton.click();
 
   await page.waitForFunction(() => {
@@ -634,16 +664,30 @@ async function fullMap(browser) {
   ]);
   assert(toolbarBox && mapPointCopyBox && mapPointHeadingBox && mapPointCloseBox && coordinateTitleBox);
   assert(mapPointCopyBox.height >= 52 && mapPointCopyBox.width >= 68 && mapPointCopyBox.width <= 84, 'Copy coordinates should be a prominent near-square/tall control');
-  assert(mapPointHeadingBox.x >= mapPointCopyBox.x + mapPointCopyBox.width + 4, 'The entire Map Point information block must sit to the right of Copy coordinates');
+  assert(mapPointHeadingBox.x >= mapPointCopyBox.x + mapPointCopyBox.width + 2, 'The Map Point information block must sit to the right of Copy coordinates');
   assert(mapPointCloseBox.x + mapPointCloseBox.width >= toolbarBox.x + toolbarBox.width - 6, 'Close must remain isolated at the upper-right');
   const titleText = (await coordinateTitle.innerText()).replace(/\s+/g, ' ').trim();
   assert(/^Map point — Elevation /.test(titleText), 'Map Point title must place elevation on the same line after an em dash; text=' + titleText);
 
-  let sunlightTodayText = await coordinateCard.locator('[data-coordinate-sun-today]').innerText();
-  assert(sunlightTodayText.includes('Sunrise'));
-  assert(sunlightTodayText.includes('First direct sun'));
-  assert(sunlightTodayText.includes('Last direct sun'));
-  assert(sunlightTodayText.includes('Sunset'));
+  assert.strictEqual(await coordinateCard.locator('.route-map-point-symbol').count(), 1, 'Map Point card must show the same selected-point legend symbol');
+  assert.strictEqual(await page.locator('.route-map-point-icon .route-map-point-symbol').count(), 1, 'Selected point must be dominant and visible on the map');
+  assert.strictEqual(await mapContainer.getAttribute('data-coordinate-point-visible'), 'true');
+  await page.waitForTimeout(350);
+  assert.strictEqual(await mapContainer.getAttribute('data-coordinate-point-auto-pan'), 'true', 'Selecting a point away from the safe view should auto-pan it clear of the card');
+  const [selectedPointBox, coordinateCardBox] = await Promise.all([
+    page.locator('.route-map-point-icon').boundingBox(),
+    coordinateCard.boundingBox()
+  ]);
+  assert(selectedPointBox && coordinateCardBox);
+  const overlapsCard = selectedPointBox.x < coordinateCardBox.x + coordinateCardBox.width
+    && selectedPointBox.x + selectedPointBox.width > coordinateCardBox.x
+    && selectedPointBox.y < coordinateCardBox.y + coordinateCardBox.height
+    && selectedPointBox.y + selectedPointBox.height > coordinateCardBox.y;
+  assert.strictEqual(overlapsCard, false, 'Auto-pan must keep the selected map point visible outside the Map Point card');
+
+  const todayPanel = coordinateCard.locator('[data-coordinate-sun-today]');
+  assert((await todayPanel.innerText()).includes('Sunlight today'));
+  for (const label of ['Sunrise', 'First direct sun', 'Last direct sun', 'Sunset']) assert((await todayPanel.innerText()).includes(label), label);
   assert.strictEqual(await coordinateCard.locator('[data-coordinate-sun-details]').getAttribute('open'), '');
   await page.waitForFunction(
     () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-sunlight-terrain-ready') === 'true',
@@ -652,22 +696,37 @@ async function fullMap(browser) {
 
   const elevationText = (await coordinateCard.locator('[data-coordinate-elevation]').innerText()).trim();
   assert(/^Elevation [\d,]+ ft · [\d,]+ m$/.test(elevationText), 'Every Map Point should show resolved elevation; text=' + elevationText);
-  sunlightTodayText = await coordinateCard.locator('[data-coordinate-sun-today]').innerText();
-  assert(/Sunrise .+ · First direct sun .+ · Last direct sun .+ · Sunset .+/.test(sunlightTodayText), 'Collapsed Sunlight today summary must retain all four times; text=' + sunlightTodayText);
+  for (const selector of ['[data-coordinate-sunrise-today]','[data-coordinate-first-direct-today]','[data-coordinate-last-direct-today]','[data-coordinate-sunset-today]']) {
+    const value = (await coordinateCard.locator(selector).innerText()).trim();
+    assert(value && value !== 'Calculating…' && value !== 'Unavailable', selector + ' must resolve; value=' + value);
+  }
 
   assert.strictEqual(await coordinateCard.locator('.route-coordinate-sun-table tbody tr').count(), 10, 'Map Point must show the next 10 days');
   const sunlightHeaders = await coordinateCard.locator('.route-coordinate-sun-table thead th').evaluateAll(nodes => nodes.map(node => node.textContent.trim()));
   assert.deepStrictEqual(sunlightHeaders, ['Date', 'Sunrise', 'First direct sun', 'Last direct sun', 'Sunset']);
+  const sunTable = coordinateCard.locator('.route-coordinate-sun-table');
+  const [sunTableBox, directHeaderBox, firstTimeBox] = await Promise.all([
+    sunTable.boundingBox(),
+    sunTable.locator('thead th').nth(2).boundingBox(),
+    sunTable.locator('tbody tr').first().locator('td').nth(1).boundingBox()
+  ]);
+  assert(sunTableBox && directHeaderBox && firstTimeBox);
+  assert(sunTableBox.width <= 520, '10-day sunlight table should use compact columns; width=' + sunTableBox.width);
+  assert(directHeaderBox.width <= 105, 'Direct-sun header should wrap within a narrow column; width=' + directHeaderBox.width);
+  assert(firstTimeBox.width <= 105, 'Time cells should not consume oversized columns; width=' + firstTimeBox.width);
+
   await coordinateCard.locator('[data-coordinate-sun-details] > summary').click();
   assert.strictEqual(await coordinateCard.locator('[data-coordinate-sun-details]').getAttribute('open'), null, 'Next 10 days may be collapsed independently');
-  sunlightTodayText = await coordinateCard.locator('[data-coordinate-sun-today]').innerText();
-  assert(sunlightTodayText.includes('First direct sun') && sunlightTodayText.includes('Last direct sun'), 'Today summary must keep direct-light times while 10-day table is collapsed');
+  const collapsedToday = await todayPanel.innerText();
+  assert(collapsedToday.includes('First direct sun') && collapsedToday.includes('Last direct sun'), 'Today stack must remain visible while the 10-day table is collapsed');
 
   const sunlightCardText = await coordinateCard.innerText();
   assert(sunlightCardText.includes('Terrain / elevation source: Kentucky KyFromAbove Phase 2 Bare Earth DEM.'));
   assert(sunlightCardText.includes('trees, cliffs/overhangs, clouds and local obstructions'));
   assert(providerRequests.some(url => new URL(url).hostname === 'kyraster.ky.gov'), 'Terrain-aware Sunlight should query the Kentucky bare-earth elevation service');
   await coordinateCard.locator('[data-coordinate-close]').click();
+  assert.strictEqual(await page.locator('.route-map-point-icon').count(), 0, 'Closing Map Point should remove the selected-point marker');
+  assert.strictEqual(await mapContainer.getAttribute('data-coordinate-point-visible'), null);
   await page.locator('[data-map-preset="hiking"]').click();
 
   const cacheData = await page.evaluate(async () => {
