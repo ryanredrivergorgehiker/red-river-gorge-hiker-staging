@@ -1,8 +1,9 @@
-276780fe18366cbfa7668c87f012e08366f87f23
-purpose=Targeted snapping rollback only. Removes the two broad Kentucky road endpoint scanning strategies added during the recent Lower Swift / Osborne Bend experiments: the cross-name/aligned endpoint scan and the mutual-nearest endpoint scan. Retains the older same-road named-gap healing, existing detour guard, all accepted map/UI work, and the owner-requested Plan layout with Undo, Redo, Export GPX and Clear directly below Measure distance / Build trail route. Production unchanged.
-source_ci=36493711688 SUCCESS
-routes_uat_source_ref_commit=39cf7cbf38356c36d2fbca4dd3afbb86a7f94742
-routes_tracks_uat_harness_commit=39c6385dbf1b3398f71cb5ceff1329822500315e
-brand_uat_source_ref_commit=762ade7719c74c96ae711d1c0a787299e9a1e4a0
-analytics_uat_source_ref_commit=b7164a4382e49556fbbfea64e01ed44aee55e201
-roku_uat_source_ref_commit=530b1a53c1be28bd5612cbeb668f911265c61246
+1618d6df90dbdb343807c33ccc4e031c89effd7a
+purpose=Owner-approved Plan usability pass only. Adds Ctrl/Cmd+Z Undo plus Ctrl/Cmd+Y and Ctrl/Cmd+Shift+Z Redo for active planning/measurement work; measurement history now participates in Undo/Redo. Adds Escape guarded exit and an explicit Plan × close control. If planning work exists, Escape/× asks before deleting; Enter confirms the focused OK action, Escape cancels the warning. Clear uses the same warning when work exists but leaves Plan open after confirmation. Shortcuts do not override editable form controls. No snapping/network code changed; accepted Lower Swift / Osborne Bend defect remains frozen.
+source_ci=36499249148 SUCCESS
+routes_uat_source_ref_commit=e7673b95d4161817a11e6b4f8aa3cbaf4caba759
+routes_tracks_uat_harness_commit=bacdd046ebabab1d3ea175dc1b6e371722563878
+brand_uat_source_ref_commit=39f4c7982e92076120608df582518fee8e72bc7d
+analytics_uat_source_ref_commit=be53172d3a4030f9eccbe0313800ebdc9b59fcfa
+roku_uat_source_ref_commit=06844ebb3505edcf7a7ec1494b19b651cae88c6d
+production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
