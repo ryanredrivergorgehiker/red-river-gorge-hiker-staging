@@ -375,9 +375,11 @@ async function routeDetail(browser) {
   for (let i = 1; i < utilityButtons.length; i += 1) {
     assert(Math.abs(utilityButtons[i].left - utilityButtons[i-1].right) <= 2, 'Top utilities should form one connected control bar');
   }
-  const toolsBox = await page.locator('.route-map-tools-desktop').boundingBox();
+  const stageBox = await page.locator('.route-map-stage').boundingBox();
   const statusBox = await page.locator('[data-map-status]').boundingBox();
-  assert(toolsBox && statusBox && statusBox.y + statusBox.height <= toolsBox.y + 2, 'Bottom status should sit above Explore/Plan controls');
+  assert(stageBox && statusBox, 'Map stage and desktop instructions must both render');
+  assert(statusBox.y >= stageBox.y + stageBox.height - 2, 'Desktop instructions must sit below the map rather than overlaying map content');
+  assert(Math.abs(statusBox.x - stageBox.x) <= 2 && Math.abs(statusBox.width - stageBox.width) <= 4, 'Desktop instructions must span the map width');
 
   assert.deepStrictEqual(pageErrors, []);
   await shot(page, 'desktop-route-detail-hiker-first');
@@ -478,8 +480,16 @@ async function fullMap(browser) {
     assert.strictEqual(style.fontStyle, 'italic', 'Area labels must be italicized');
     assert(style.fontWeight >= 700, 'Area labels must be bold');
     assert(style.color.startsWith('rgba('), 'Area labels should be translucent gray typography: ' + style.color);
+    const alpha = Number(style.color.match(/rgba\([^)]*,\s*([0-9.]+)\)$/)?.[1] ?? 1);
+    assert(alpha >= 0.7, 'Home-view area labels must be visibly darker than the prior candidate; color=' + style.color);
     assert(style.hostBackground === 'rgba(0, 0, 0, 0)' || style.hostBackground === 'transparent', 'Leaflet label host must be transparent');
   }
+  const desktopFullBoxes = await page.locator('.rrgh-area-label.is-full').evaluateAll(nodes => nodes.map(node => {
+    const r = node.getBoundingClientRect();
+    return { x:r.x, y:r.y, width:r.width, height:r.height };
+  }));
+  assert.strictEqual(desktopFullBoxes.length, 3);
+  assert(desktopFullBoxes[1].y >= desktopFullBoxes[2].y + 45, 'RED RIVER GORGE should sit substantially lower than CLIFTY WILDERNESS at desktop Home');
 
   await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
   await page.waitForTimeout(100);
@@ -670,7 +680,14 @@ async function fullMap(browser) {
   assert(/^Map point — Elevation /i.test(titleText), 'Map Point title must place elevation on the same line after an em dash; text=' + titleText);
 
   assert.strictEqual(await coordinateCard.locator('.route-map-point-symbol').count(), 1, 'Map Point card must show the same selected-point legend symbol');
-  assert.strictEqual(await page.locator('.route-map-point-icon .route-map-point-symbol').count(), 1, 'Selected point must be dominant and visible on the map');
+  assert.strictEqual(await page.locator('.route-map-point-icon .route-map-point-symbol').count(), 1, 'Selected point must remain unmistakable on the map');
+  const [cardPointSymbolBox, mapPointSymbolBox] = await Promise.all([
+    coordinateCard.locator('.route-map-point-symbol').boundingBox(),
+    page.locator('.route-map-point-icon .route-map-point-symbol').boundingBox()
+  ]);
+  assert(cardPointSymbolBox && mapPointSymbolBox);
+  assert(cardPointSymbolBox.width <= 18 && cardPointSymbolBox.height <= 18, 'Map Point card symbol must be deliberately small');
+  assert(mapPointSymbolBox.width <= 20 && mapPointSymbolBox.height <= 20, 'Selected map marker must be small rather than visually dominant');
   assert.strictEqual(await mapContainer.getAttribute('data-coordinate-point-visible'), 'true');
   await page.waitForTimeout(350);
   assert.strictEqual(await mapContainer.getAttribute('data-coordinate-point-auto-pan'), 'true', 'Selecting a point away from the safe view should auto-pan it clear of the card');
@@ -688,6 +705,8 @@ async function fullMap(browser) {
   const todayPanel = coordinateCard.locator('[data-coordinate-sun-today]');
   assert(/sunlight today/i.test(await todayPanel.innerText()));
   for (const label of ['Sunrise', 'First direct sun', 'Last direct sun', 'Sunset']) assert((await todayPanel.innerText()).includes(label), label);
+  const [todayBox, toolbarBoxAfterOpen] = await Promise.all([todayPanel.boundingBox(), coordinateToolbar.boundingBox()]);
+  assert(todayBox && toolbarBoxAfterOpen && todayBox.y >= toolbarBoxAfterOpen.y + toolbarBoxAfterOpen.height - 2, 'Sunlight Today must sit below the Map Point header instead of occupying the upper-right');
   assert.strictEqual(await coordinateCard.locator('[data-coordinate-sun-details]').getAttribute('open'), '');
   await page.waitForFunction(
     () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-sunlight-terrain-ready') === 'true',
@@ -702,23 +721,27 @@ async function fullMap(browser) {
   }
 
   assert.strictEqual(await coordinateCard.locator('.route-coordinate-sun-table tbody tr').count(), 10, 'Map Point must show the next 10 days');
-  const sunlightHeaders = await coordinateCard.locator('.route-coordinate-sun-table thead th').evaluateAll(nodes => nodes.map(node => node.textContent.trim()));
-  assert.deepStrictEqual(sunlightHeaders, ['Date', 'Sunrise', 'First direct sun', 'Last direct sun', 'Sunset']);
+  const sunlightHeaders = await coordinateCard.locator('.route-coordinate-sun-table thead th').allInnerTexts();
+  assert.deepStrictEqual(sunlightHeaders.map(value => value.trim()), ['Date', 'Sunrise', 'First direct sun', 'Last direct sun', 'Sunset']);
+  assert((await coordinateCard.locator('.route-coordinate-sun-table tbody tr').first().locator('th').innerText()).includes('Today'), 'First sunlight row must explicitly identify Today');
   const sunTable = coordinateCard.locator('.route-coordinate-sun-table');
-  const [sunTableBox, directHeaderBox, firstTimeBox] = await Promise.all([
+  const [sunTableBox, expandedCardBox, directHeaderStyle] = await Promise.all([
     sunTable.boundingBox(),
-    sunTable.locator('thead th').nth(2).boundingBox(),
-    sunTable.locator('tbody tr').first().locator('td').nth(1).boundingBox()
+    coordinateCard.boundingBox(),
+    sunTable.locator('thead th').nth(2).evaluate(node => ({ whiteSpace:getComputedStyle(node).whiteSpace, height:node.getBoundingClientRect().height }))
   ]);
-  assert(sunTableBox && directHeaderBox && firstTimeBox);
-  assert(sunTableBox.width <= 520, '10-day sunlight table should use compact columns; width=' + sunTableBox.width);
-  assert(directHeaderBox.width <= 105, 'Direct-sun header should wrap within a narrow column; width=' + directHeaderBox.width);
-  assert(firstTimeBox.width <= 105, 'Time cells should not consume oversized columns; width=' + firstTimeBox.width);
+  assert(sunTableBox && expandedCardBox);
+  assert(sunTableBox.width <= expandedCardBox.width, 'Expanded 10-day table must remain inside the Map Point card');
+  assert.strictEqual(directHeaderStyle.whiteSpace, 'nowrap', 'Desktop direct-sun headers should not wrap awkwardly');
+  assert(directHeaderStyle.height <= 30, 'Desktop sunlight headers should remain compact');
 
   await coordinateCard.locator('[data-coordinate-sun-details] > summary').click();
   assert.strictEqual(await coordinateCard.locator('[data-coordinate-sun-details]').getAttribute('open'), null, 'Next 10 days may be collapsed independently');
   const collapsedToday = await todayPanel.innerText();
   assert(collapsedToday.includes('First direct sun') && collapsedToday.includes('Last direct sun'), 'Today stack must remain visible while the 10-day table is collapsed');
+  const collapsedCardBox = await coordinateCard.boundingBox();
+  assert(collapsedCardBox && collapsedCardBox.width <= 560, 'Collapsed Map Point card should be genuinely compact');
+  assert(expandedCardBox.width >= collapsedCardBox.width + 80, 'Expanded 10-day view may use more width while collapsed Map Point stays compact');
 
   const sunlightCardText = await coordinateCard.innerText();
   assert(sunlightCardText.includes('Terrain / elevation source: Kentucky KyFromAbove Phase 2 Bare Earth DEM.'));
@@ -1425,10 +1448,61 @@ async function mobile(browser) {
   assert.strictEqual(await page.locator('.rrgh-area-label.is-full').count(), 3, 'Mobile Home should show the three full stacked area names');
   const mobileFullHtml = await page.locator('.rrgh-area-label.is-full .rrgh-area-label-text').evaluateAll(nodes => nodes.map(node => node.innerHTML));
   assert.deepStrictEqual(mobileFullHtml, ['NATURAL<br>BRIDGE', 'RED<br>RIVER<br>GORGE', 'CLIFTY<br>WILDERNESS']);
+  const [mobileMapHomeBox, mobileFullBoxes] = await Promise.all([
+    map.boundingBox(),
+    page.locator('.rrgh-area-label.is-full').evaluateAll(nodes => nodes.map(node => {
+      const r = node.getBoundingClientRect();
+      return { x:r.x, right:r.right, y:r.y, bottom:r.bottom };
+    }))
+  ]);
+  assert(mobileMapHomeBox);
+  for (const box of mobileFullBoxes) {
+    assert(box.x >= mobileMapHomeBox.x - 1, 'Mobile Home area label must not clip off the left edge');
+    assert(box.right <= mobileMapHomeBox.x + mobileMapHomeBox.width + 1, 'Mobile Home area label must not clip off the right edge');
+  }
 
   const scaleTextsAtHome = await page.locator('.leaflet-control-scale-line').evaluateAll(nodes => nodes.map(node => node.textContent.trim()));
   assert(scaleTextsAtHome.includes('5 km'), 'Mobile Home metric scale should be 5 km; got ' + scaleTextsAtHome.join(' / '));
   assert(scaleTextsAtHome.includes('3 mi'), 'Mobile Home imperial scale should be 3 mi; got ' + scaleTextsAtHome.join(' / '));
+
+  await page.locator('[data-map-preset="sunlight"]').click();
+  const mobileMapPointBox = await map.boundingBox();
+  assert(mobileMapPointBox);
+  await page.mouse.click(
+    mobileMapPointBox.x + mobileMapPointBox.width * 0.52,
+    mobileMapPointBox.y + mobileMapPointBox.height * 0.44,
+    { button: 'right' }
+  );
+  const mobileCoordinateCard = page.locator('[data-coordinate-card]');
+  assert(await mobileCoordinateCard.isVisible(), 'Mobile Map Point card must open for responsive layout UAT');
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-sunlight-terrain-ready') === 'true',
+    { timeout: 10000 }
+  );
+  const mobileHeaders = await mobileCoordinateCard.locator('.route-coordinate-sun-table thead th').allInnerTexts();
+  assert.deepStrictEqual(mobileHeaders.map(value => value.trim()), ['Date', 'Sunrise', 'First sun', 'Last sun', 'Sunset']);
+  const [mobileCardBox, mobileTableBox, mobileHeaderBoxes] = await Promise.all([
+    mobileCoordinateCard.boundingBox(),
+    mobileCoordinateCard.locator('.route-coordinate-sun-table').boundingBox(),
+    mobileCoordinateCard.locator('.route-coordinate-sun-table thead th').evaluateAll(nodes => nodes.map(node => {
+      const r = node.getBoundingClientRect();
+      return { width:r.width, height:r.height, whiteSpace:getComputedStyle(node).whiteSpace, wordBreak:getComputedStyle(node).wordBreak };
+    }))
+  ]);
+  assert(mobileCardBox && mobileTableBox);
+  assert(mobileTableBox.width <= mobileCardBox.width + 1, 'Mobile sunlight table must fit inside the Map Point card without the prior oversized header layout');
+  for (const header of mobileHeaderBoxes) {
+    assert(header.height <= 30, 'Mobile sunlight header should remain one clean line; height=' + header.height);
+    assert.strictEqual(header.whiteSpace, 'nowrap');
+    assert(header.wordBreak !== 'break-all', 'Mobile sunlight headers must not break individual words');
+  }
+  const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert(mobileOverflow <= 2, 'Mobile Map Point must not create horizontal page overflow: ' + mobileOverflow);
+  assert((await mobileCoordinateCard.locator('.route-coordinate-sun-table tbody tr').first().locator('th').innerText()).includes('Today'));
+  await mobileCoordinateCard.locator('[data-coordinate-close]').click();
+  await page.locator('[data-map-preset="hiking"]').click();
+  await mobileTopbar.locator('[data-map-action="home"]').click();
+  await page.waitForTimeout(150);
 
   await page.locator('[data-map-action="zoom-in"]').first().evaluate(button => button.click());
   await page.waitForTimeout(150);
