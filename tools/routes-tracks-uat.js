@@ -1006,10 +1006,13 @@ async function fullMap(browser) {
   assert(/-83\./.test(await page.locator('[data-coordinate-dd]').innerText()));
   assert((await page.locator('[data-coordinate-utm]').innerText()).includes('UTM'));
   const copyBox = await page.locator('[data-coordinate-copy]').boundingBox();
+  const headingBox = await page.locator('.route-coordinate-heading').boundingBox();
   const closeBox = await page.locator('[data-coordinate-close]').boundingBox();
-  assert(copyBox && closeBox);
-  assert(closeBox.x > copyBox.x + copyBox.width - 1, 'Coordinate × should sit to the right of Copy coordinates');
-  assert(Math.abs((closeBox.y + closeBox.height / 2) - (copyBox.y + copyBox.height / 2)) <= 5, 'Coordinate actions should remain on one row');
+  const coordinateCardBox2 = await page.locator('[data-coordinate-card]').boundingBox();
+  assert(copyBox && headingBox && closeBox && coordinateCardBox2);
+  assert(headingBox.x >= copyBox.x + copyBox.width + 2, 'Map Point information must sit to the right of Copy coordinates');
+  assert(closeBox.x + closeBox.width >= coordinateCardBox2.x + coordinateCardBox2.width - 8, 'Coordinate × should remain isolated at the card upper-right');
+  assert(closeBox.y <= copyBox.y + 12, 'Coordinate × should align to the top edge rather than consuming a separate action row');
   await page.locator('[data-coordinate-close]').click();
   assert(await page.locator('[data-coordinate-card]').isHidden(), 'Coordinate card × should dismiss the card');
 
