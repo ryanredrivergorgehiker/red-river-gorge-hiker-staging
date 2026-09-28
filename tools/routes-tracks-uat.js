@@ -1483,11 +1483,17 @@ async function mobile(browser) {
   assert(scaleTextsAtHome.includes('3 mi'), 'Mobile Home imperial scale should be 3 mi; got ' + scaleTextsAtHome.join(' / '));
 
   await page.locator('[data-map-preset="sunlight"]').click();
+  await map.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(120);
   const mobileMapPointBox = await map.boundingBox();
-  assert(mobileMapPointBox);
+  const mobileViewport = page.viewportSize();
+  assert(mobileMapPointBox && mobileViewport);
+  const visibleMapTop = Math.max(0, mobileMapPointBox.y);
+  const visibleMapBottom = Math.min(mobileViewport.height, mobileMapPointBox.y + mobileMapPointBox.height);
+  assert(visibleMapBottom - visibleMapTop >= 120, 'Mobile map must have a substantial visible touch target');
   const holdPoint = {
     x: mobileMapPointBox.x + mobileMapPointBox.width * 0.52,
-    y: mobileMapPointBox.y + mobileMapPointBox.height * 0.44,
+    y: visibleMapTop + (visibleMapBottom - visibleMapTop) * 0.44,
     radiusX: 2, radiusY: 2, rotationAngle: 0, force: 1, id: 7
   };
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [holdPoint] });
@@ -1685,9 +1691,14 @@ async function mobile(browser) {
   await page.waitForTimeout(120);
   box = await map.boundingBox();
   assert(box);
+  const coordinateViewport = page.viewportSize();
+  assert(coordinateViewport);
+  const coordinateVisibleTop = Math.max(0, box.y);
+  const coordinateVisibleBottom = Math.min(coordinateViewport.height, box.y + box.height);
+  assert(coordinateVisibleBottom - coordinateVisibleTop >= 120, 'Map must be visibly on-screen before long-hold coordinate UAT');
   const coordinateTarget = {
     x: box.x + box.width * 0.62,
-    y: box.y + box.height * 0.56
+    y: coordinateVisibleTop + (coordinateVisibleBottom - coordinateVisibleTop) * 0.56
   };
   const coordinateHoldPoint = {
     x: coordinateTarget.x, y: coordinateTarget.y,
