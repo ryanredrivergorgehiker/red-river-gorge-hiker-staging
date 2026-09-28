@@ -592,12 +592,23 @@ async function fullMap(browser) {
 
   await planOpenButton.click();
   const planPanel = page.locator('[data-map-sheet="plan"]');
+  const planConfirmDialog = page.locator('[data-plan-confirm]');
+  const planConfirmMessage = page.locator('[data-plan-confirm-message]');
+  const planConfirmOk = page.locator('[data-plan-confirm-ok]');
+  const clearPlanningWork = async () => {
+    await page.locator('[data-map-tool="clear"]').evaluate(button => button.click());
+    if (await planConfirmDialog.isVisible()) {
+      await planConfirmOk.click();
+      await planConfirmDialog.waitFor({ state: 'hidden' });
+    }
+  };
   assert(await planPanel.isVisible(), 'Plan panel must open before the optional informal-trail graph finishes');
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Measure distance', exact: true }).isDisabled(), false, 'Measure must be ready with core map context');
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Build trail route', exact: true }).isDisabled(), true, 'Build trail route must remain disabled until planning graph is ready');
   assert((await planPanel.locator('[data-plan-help]').innerText()).includes('Choose a planning tool.'));
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Undo', exact: true }).locator('svg').count(), 1, 'Undo must use an icon');
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Redo', exact: true }).locator('svg').count(), 1, 'Redo must use an icon');
+  assert.strictEqual(await planPanel.getByRole('button', { name: 'Close planning controls', exact: true }).count(), 1, 'Plan must provide an explicit close control');
   const planChildClasses = await planPanel.evaluate(panel => Array.from(panel.children).map(child => child.className));
   const modeIndex = planChildClasses.indexOf('route-plan-mode-buttons');
   const actionsIndex = planChildClasses.indexOf('route-plan-actions');
@@ -654,7 +665,7 @@ async function fullMap(browser) {
   await planPanel.getByRole('button', { name: 'Expand planning controls', exact: true }).click();
   assert.strictEqual(await planPanel.getAttribute('data-minimized'), null, 'Plan panel should restore from minimized state');
   assert(await planPanel.locator('.route-plan-mode-buttons').isVisible());
-  await planPanel.getByRole('button', { name: 'Clear', exact: true }).click();
+  await clearPlanningWork();
   await buildTrailReadyButton.click();
   await planOpenButton.click();
 
@@ -1236,6 +1247,29 @@ async function fullMap(browser) {
   assert(providerRequests.some(url => url.includes('elevation.nationalmap.gov') && url.includes('/getSamples?')), 'Measure should request USGS 3DEP elevation samples');
   assert((await page.locator('.rrgh-planning-distance-label.is-measure-segment').first().innerText()).includes('ft'), 'Measure segment label should include elevation change after 3DEP returns');
 
+  await page.keyboard.press('Control+z');
+  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('first point set'), { timeout: 2000 });
+  await page.keyboard.press('Control+Shift+z');
+  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Measured distance'), { timeout: 2000 });
+  await page.keyboard.press('Control+z');
+  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('first point set'), { timeout: 2000 });
+  await page.keyboard.press('Control+y');
+  await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Measured distance'), { timeout: 2000 });
+
+  await page.keyboard.press('Escape');
+  assert(await planConfirmDialog.isVisible(), 'Escape with a measurement must ask before deleting it');
+  assert((await planConfirmMessage.innerText()).includes('Are you sure you want to delete your measurement?'));
+  await page.waitForFunction(() => document.activeElement?.matches?.('[data-plan-confirm-ok]'), { timeout: 2000 });
+  await page.keyboard.press('Escape');
+  await planConfirmDialog.waitFor({ state: 'hidden' });
+  assert((await page.locator('[data-map-status]').innerText()).includes('Measured distance'), 'Escaping the warning should keep the measurement');
+
+  await page.keyboard.press('Escape');
+  assert(await planConfirmDialog.isVisible(), 'A second Escape should reopen the guarded Plan exit');
+  await page.keyboard.press('Enter');
+  await planConfirmDialog.waitFor({ state: 'hidden' });
+  assert(await planPanel.isHidden(), 'Enter on the focused OK button should clear the measurement and exit Plan');
+
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   if (await page.locator('[data-map-sheet="plan"]').isHidden()) await planOpenButton.click();
   if (await page.locator('[data-map-sheet="plan"]').getAttribute('data-minimized') === 'true') await planOpenButton.click();
@@ -1320,7 +1354,7 @@ async function fullMap(browser) {
 
   const bridgeGapA = projectFromHomeNorthWest(37.8075, -83.61985);
   const bridgeGapB = projectFromHomeNorthWest(37.80645, -83.61975);
-  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await clearPlanningWork();
   await mapContainer.click({ position: bridgeGapA });
   await mapContainer.click({ position: bridgeGapB });
   await page.waitForTimeout(140);
@@ -1328,7 +1362,22 @@ async function fullMap(browser) {
   assert(bridgeGapStatus.includes('1 snapped segment'), 'A short gap between two pieces of the same KY 715 road should remain a direct snapped route; status=' + bridgeGapStatus);
   const bridgeGapDistance = (await page.locator('[data-plan-stats-distance]').innerText()).trim();
   assert(!bridgeGapDistance.includes('mi') || Number.parseFloat(bridgeGapDistance) < 0.5, 'Short bridge connection must not become a multi-mile detour; distance=' + bridgeGapDistance);
-  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+
+  if (await planPanel.getAttribute('data-minimized') === 'true') await planOpenButton.click();
+  await planPanel.getByRole('button', { name: 'Close planning controls', exact: true }).click();
+  assert(await planConfirmDialog.isVisible(), 'Closing Plan with a built path must ask before deleting it');
+  assert((await planConfirmMessage.innerText()).includes('Are you sure you want to delete your built path?'));
+  await planConfirmDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await planConfirmDialog.waitFor({ state: 'hidden' });
+  assert(await planPanel.isVisible(), 'Cancel must keep Plan open');
+  assert((await page.locator('[data-map-status]').innerText()).includes('1 snapped segment'), 'Cancel must preserve the built route');
+
+  await clearPlanningWork();
+  assert(await planPanel.isVisible(), 'Clear should delete work without exiting Plan');
+  await planPanel.getByRole('button', { name: 'Close planning controls', exact: true }).click();
+  assert(await planPanel.isHidden(), 'Close should exit immediately once Plan is empty');
+  await planOpenButton.click();
+  await buildTrailReadyButton.click();
 
   const trailABase = projectFromHomeNorthWest(37.8103, -83.6208);
   const trailBBase = projectFromHomeNorthWest(37.8085, -83.62005);
@@ -1340,7 +1389,7 @@ async function fullMap(browser) {
   let trailA = null;
   let trailB = null;
   for (const [dx, dy] of snapOffsets) {
-    await page.locator('[data-map-tool="clear"]').evaluate(button => button.click());
+    await clearPlanningWork();
     const candidateA = { x: trailABase.x + dx, y: trailABase.y + dy };
     const candidateB = { x: trailBBase.x + dx, y: trailBBase.y + dy };
     const insideMap = point =>
@@ -1348,9 +1397,7 @@ async function fullMap(browser) {
       && point.y >= 4 && point.y <= homeBox.height - 4;
     if (!insideMap(candidateA) || !insideMap(candidateB)) continue;
     await mapContainer.click({ position: candidateA });
-    await page.keyboard.press('Escape');
     await mapContainer.click({ position: candidateB });
-    await page.keyboard.press('Escape');
     await page.waitForTimeout(100);
     const currentPlannerUrl = page.url();
     assert(/\/routes\/map\/?(?:[#?].*)?$/.test(new URL(currentPlannerUrl).pathname + new URL(currentPlannerUrl).search + new URL(currentPlannerUrl).hash), 'Planner coordinate probes must remain on the map page; url=' + currentPlannerUrl);
