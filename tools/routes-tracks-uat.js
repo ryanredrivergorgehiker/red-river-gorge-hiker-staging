@@ -705,8 +705,14 @@ async function fullMap(browser) {
   const todayPanel = coordinateCard.locator('[data-coordinate-sun-today]');
   assert(/sunlight today/i.test(await todayPanel.innerText()));
   for (const label of ['Sunrise', 'First direct sun', 'Last direct sun', 'Sunset']) assert((await todayPanel.innerText()).includes(label), label);
-  const [todayBox, toolbarBoxAfterOpen] = await Promise.all([todayPanel.boundingBox(), coordinateToolbar.boundingBox()]);
-  assert(todayBox && toolbarBoxAfterOpen && todayBox.y >= toolbarBoxAfterOpen.y + toolbarBoxAfterOpen.height - 2, 'Sunlight Today must sit below the Map Point header instead of occupying the upper-right');
+  const [todayBox, toolbarBoxAfterOpen, todayTitleBox, todaySunriseBox] = await Promise.all([
+    todayPanel.boundingBox(),
+    coordinateToolbar.boundingBox(),
+    todayPanel.locator('strong').first().boundingBox(),
+    todayPanel.locator('span').first().boundingBox()
+  ]);
+  assert(todayBox && toolbarBoxAfterOpen && todayTitleBox && todaySunriseBox && todayBox.y >= toolbarBoxAfterOpen.y + toolbarBoxAfterOpen.height - 2, 'Sunlight Today must sit below the Map Point header instead of occupying the upper-right');
+  assert(todaySunriseBox.x >= todayTitleBox.x + todayTitleBox.width + 8, 'Sunlight Today needs visible breathing room before Sunrise');
   assert.strictEqual(await coordinateCard.locator('[data-coordinate-sun-details]').getAttribute('open'), '');
   await page.waitForFunction(
     () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-sunlight-terrain-ready') === 'true',
@@ -721,27 +727,34 @@ async function fullMap(browser) {
   }
 
   assert.strictEqual(await coordinateCard.locator('.route-coordinate-sun-table tbody tr').count(), 10, 'Map Point must show the next 10 days');
-  const sunlightHeaders = await coordinateCard.locator('.route-coordinate-sun-table thead th').allInnerTexts();
-  assert.deepStrictEqual(sunlightHeaders.map(value => value.trim()), ['DATE', 'SUNRISE', 'FIRST DIRECT SUN', 'LAST DIRECT SUN', 'SUNSET']);
+  const sunlightHeaderModel = await coordinateCard.locator('.route-coordinate-sun-table thead th').evaluateAll(nodes => nodes.map(node => ({
+    label: node.getAttribute('aria-label') || node.textContent.trim(),
+    stack: Array.from(node.querySelectorAll('.route-sun-header-stack > span')).map(line => line.textContent.trim())
+  })));
+  assert.deepStrictEqual(sunlightHeaderModel.map(item => item.label), ['Date', 'Sunrise', 'First direct sun', 'Last direct sun', 'Sunset']);
+  assert.deepStrictEqual(sunlightHeaderModel[2].stack, ['First', 'direct', 'sun']);
+  assert.deepStrictEqual(sunlightHeaderModel[3].stack, ['Last', 'direct', 'sun']);
   assert(/today/i.test(await coordinateCard.locator('.route-coordinate-sun-table tbody tr').first().locator('th').innerText()), 'First sunlight row must explicitly identify Today');
   const sunTable = coordinateCard.locator('.route-coordinate-sun-table');
-  const [sunTableBox, expandedCardBox, directHeaderStyle] = await Promise.all([
+  const [sunTableBox, expandedCardBox, firstDirectHeaderBox, lastDirectHeaderBox] = await Promise.all([
     sunTable.boundingBox(),
     coordinateCard.boundingBox(),
-    sunTable.locator('thead th').nth(2).evaluate(node => ({ whiteSpace:getComputedStyle(node).whiteSpace, height:node.getBoundingClientRect().height }))
+    sunTable.locator('thead th').nth(2).boundingBox(),
+    sunTable.locator('thead th').nth(3).boundingBox()
   ]);
-  assert(sunTableBox && expandedCardBox);
+  assert(sunTableBox && expandedCardBox && firstDirectHeaderBox && lastDirectHeaderBox);
   assert(sunTableBox.width <= expandedCardBox.width, 'Expanded 10-day table must remain inside the Map Point card');
-  assert.strictEqual(directHeaderStyle.whiteSpace, 'nowrap', 'Desktop direct-sun headers should not wrap awkwardly');
-  assert(directHeaderStyle.height <= 30, 'Desktop sunlight headers should remain compact');
+  assert(expandedCardBox.width <= 520, 'Desktop Map Point card should stay compact; width=' + expandedCardBox.width);
+  assert(sunTableBox.width <= 485, 'Desktop sunlight table should size to its content instead of stretching wide; width=' + sunTableBox.width);
+  assert(firstDirectHeaderBox.width <= 80 && lastDirectHeaderBox.width <= 80, 'Direct-sun columns should stay narrow after three-line headings');
 
   await coordinateCard.locator('[data-coordinate-sun-details] > summary').click();
   assert.strictEqual(await coordinateCard.locator('[data-coordinate-sun-details]').getAttribute('open'), null, 'Next 10 days may be collapsed independently');
   const collapsedToday = await todayPanel.innerText();
   assert(collapsedToday.includes('First direct sun') && collapsedToday.includes('Last direct sun'), 'Today stack must remain visible while the 10-day table is collapsed');
   const collapsedCardBox = await coordinateCard.boundingBox();
-  assert(collapsedCardBox && collapsedCardBox.width <= 560, 'Collapsed Map Point card should be genuinely compact');
-  assert(expandedCardBox.width >= collapsedCardBox.width + 80, 'Expanded 10-day view may use more width while collapsed Map Point stays compact');
+  assert(collapsedCardBox && collapsedCardBox.width <= 500, 'Collapsed Map Point card should be genuinely compact');
+  assert(collapsedCardBox.width <= expandedCardBox.width + 2, 'Collapsing the 10-day table must not make the Map Point card wider');
 
   const sunlightCardText = await coordinateCard.innerText();
   assert(sunlightCardText.includes('Terrain / elevation source: Kentucky KyFromAbove Phase 2 Bare Earth DEM.'));
@@ -1416,6 +1429,7 @@ async function fullMap(browser) {
 async function mobile(browser) {
   const context = await preparedContext(browser, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await context.newPage();
+  const cdp = await context.newCDPSession(page);
   const providerRequests = [];
   await installProviderStubs(page, providerRequests);
 
@@ -1471,74 +1485,60 @@ async function mobile(browser) {
   await page.locator('[data-map-preset="sunlight"]').click();
   const mobileMapPointBox = await map.boundingBox();
   assert(mobileMapPointBox);
-  await map.evaluate((element, position) => {
-    const rect = element.getBoundingClientRect();
-    const clientX = rect.left + rect.width * position.x;
-    const clientY = rect.top + rect.height * position.y;
-    const touch = {
-      identifier: 7,
-      target: element,
-      clientX,
-      clientY,
-      pageX: clientX + window.scrollX,
-      pageY: clientY + window.scrollY,
-      screenX: clientX,
-      screenY: clientY
-    };
-    const event = new Event('touchstart', { bubbles: true, cancelable: true });
-    Object.defineProperties(event, {
-      touches: { value: [touch] },
-      targetTouches: { value: [touch] },
-      changedTouches: { value: [touch] }
-    });
-    element.dispatchEvent(event);
-  }, { x: 0.52, y: 0.44 });
-  await page.waitForTimeout(700);
+  const holdPoint = {
+    x: mobileMapPointBox.x + mobileMapPointBox.width * 0.52,
+    y: mobileMapPointBox.y + mobileMapPointBox.height * 0.44,
+    radiusX: 2, radiusY: 2, rotationAngle: 0, force: 1, id: 7
+  };
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [holdPoint] });
+  await page.waitForTimeout(650);
   const mobileCoordinateCard = page.locator('[data-coordinate-card]');
-  assert(await mobileCoordinateCard.isVisible(), 'Mobile press-and-hold must open the Map Point card for responsive layout UAT');
-  await map.evaluate((element, position) => {
-    const rect = element.getBoundingClientRect();
-    const clientX = rect.left + rect.width * position.x;
-    const clientY = rect.top + rect.height * position.y;
-    const touch = {
-      identifier: 7,
-      target: element,
-      clientX,
-      clientY,
-      pageX: clientX + window.scrollX,
-      pageY: clientY + window.scrollY,
-      screenX: clientX,
-      screenY: clientY
-    };
-    const event = new Event('touchend', { bubbles: true, cancelable: true });
-    Object.defineProperties(event, {
-      touches: { value: [] },
-      targetTouches: { value: [] },
-      changedTouches: { value: [touch] }
-    });
-    element.dispatchEvent(event);
-  }, { x: 0.52, y: 0.44 });
+  assert(await mobileCoordinateCard.isVisible(), 'A real mobile touch hold must open the Map Point card');
+  assert.strictEqual(await page.evaluate(() => window.getSelection()?.toString() || ''), '', 'Mobile long hold must not select map text');
+  const mapSelectionStyle = await map.evaluate(element => ({
+    userSelect: getComputedStyle(element).userSelect,
+    webkitUserSelect: getComputedStyle(element).webkitUserSelect
+  }));
+  assert.strictEqual(mapSelectionStyle.userSelect, 'none', 'Map must suppress text selection during touch hold');
+  assert.strictEqual(mapSelectionStyle.webkitUserSelect, 'none', 'Map must suppress WebKit text selection during touch hold');
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await page.waitForFunction(
     () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-sunlight-terrain-ready') === 'true',
     { timeout: 10000 }
   );
-  const mobileHeaders = await mobileCoordinateCard.locator('.route-coordinate-sun-table thead th').allInnerTexts();
-  assert.deepStrictEqual(mobileHeaders.map(value => value.trim()), ['DATE', 'SUNRISE', 'FIRST SUN', 'LAST SUN', 'SUNSET']);
+  const mobileHeaderModel = await mobileCoordinateCard.locator('.route-coordinate-sun-table thead th').evaluateAll(nodes => nodes.map(node => ({
+    label: node.getAttribute('aria-label') || node.textContent.trim(),
+    stack: Array.from(node.querySelectorAll('.route-sun-header-stack > span')).map(line => line.textContent.trim())
+  })));
+  assert.deepStrictEqual(mobileHeaderModel.map(item => item.label), ['Date', 'Sunrise', 'First direct sun', 'Last direct sun', 'Sunset']);
+  assert.deepStrictEqual(mobileHeaderModel[2].stack, ['First', 'direct', 'sun']);
+  assert.deepStrictEqual(mobileHeaderModel[3].stack, ['Last', 'direct', 'sun']);
+  const mobileTodayLayout = await mobileCoordinateCard.locator('[data-coordinate-sun-today]').evaluate(node => {
+    const title = node.querySelector(':scope > strong').getBoundingClientRect();
+    const metrics = Array.from(node.querySelectorAll(':scope > span')).map(span => {
+      const r = span.getBoundingClientRect();
+      return { x:r.x, y:r.y, width:r.width, height:r.height };
+    });
+    return { title:{x:title.x,y:title.y,width:title.width,height:title.height}, metrics };
+  });
+  assert.strictEqual(mobileTodayLayout.metrics.length, 4);
+  assert(Math.abs(mobileTodayLayout.metrics[0].y - mobileTodayLayout.metrics[1].y) <= 3, 'Mobile Today row one must contain Sunrise and First direct sun');
+  assert(Math.abs(mobileTodayLayout.metrics[2].y - mobileTodayLayout.metrics[3].y) <= 3, 'Mobile Today row two must contain Last direct sun and Sunset');
+  assert(mobileTodayLayout.metrics[2].y >= mobileTodayLayout.metrics[0].y + 18, 'Mobile Today metrics need two clearly separated rows');
   const [mobileCardBox, mobileTableBox, mobileHeaderBoxes] = await Promise.all([
     mobileCoordinateCard.boundingBox(),
     mobileCoordinateCard.locator('.route-coordinate-sun-table').boundingBox(),
     mobileCoordinateCard.locator('.route-coordinate-sun-table thead th').evaluateAll(nodes => nodes.map(node => {
       const r = node.getBoundingClientRect();
-      return { width:r.width, height:r.height, whiteSpace:getComputedStyle(node).whiteSpace, wordBreak:getComputedStyle(node).wordBreak };
+      return { width:r.width, height:r.height, wordBreak:getComputedStyle(node).wordBreak };
     }))
   ]);
   assert(mobileCardBox && mobileTableBox);
-  assert(mobileTableBox.width <= mobileCardBox.width + 1, 'Mobile sunlight table must fit inside the Map Point card without the prior oversized header layout');
-  for (const header of mobileHeaderBoxes) {
-    assert(header.height <= 30, 'Mobile sunlight header should remain one clean line; height=' + header.height);
-    assert.strictEqual(header.whiteSpace, 'nowrap');
-    assert(header.wordBreak !== 'break-all', 'Mobile sunlight headers must not break individual words');
-  }
+  assert(mobileCardBox.width <= 380, 'Mobile Map Point card must stay inside the 390px viewport; width=' + mobileCardBox.width);
+  assert(mobileTableBox.width <= mobileCardBox.width - 8, 'Mobile sunlight table must fit comfortably inside the Map Point card');
+  assert(mobileHeaderBoxes[2].height >= 24 && mobileHeaderBoxes[2].height <= 42, 'First direct sun should be a deliberate three-line header');
+  assert(mobileHeaderBoxes[3].height >= 24 && mobileHeaderBoxes[3].height <= 42, 'Last direct sun should be a deliberate three-line header');
+  for (const header of mobileHeaderBoxes) assert(header.wordBreak !== 'break-all', 'Mobile sunlight headers must never break individual words');
   const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert(mobileOverflow <= 2, 'Mobile Map Point must not create horizontal page overflow: ' + mobileOverflow);
   assert(/today/i.test(await mobileCoordinateCard.locator('.route-coordinate-sun-table tbody tr').first().locator('th').innerText()));
@@ -1639,7 +1639,6 @@ async function mobile(browser) {
   await page.waitForTimeout(180);
   const centerBeforeVerticalPan = await map.getAttribute('data-map-center');
   const scrollBeforeVerticalPan = await page.evaluate(() => window.scrollY);
-  const cdp = await context.newCDPSession(page);
   const panX = box.x + box.width * 0.52;
   const panStartY = box.y + box.height * 0.42;
   const touchPoint = (y) => ({ x: panX, y, radiusX: 2, radiusY: 2, rotationAngle: 0, force: 1, id: 11 });
@@ -1690,30 +1689,15 @@ async function mobile(browser) {
     x: box.x + box.width * 0.62,
     y: box.y + box.height * 0.56
   };
-  await page.evaluate(({ x, y }) => {
-    const target = document.querySelector('[data-rrgh-route-map]');
-    const touch = new Touch({ identifier: 7, target, clientX: x, clientY: y, pageX: x, pageY: y, screenX: x, screenY: y });
-    target.dispatchEvent(new TouchEvent('touchstart', {
-      bubbles: true,
-      cancelable: true,
-      touches: [touch],
-      targetTouches: [touch],
-      changedTouches: [touch]
-    }));
-  }, coordinateTarget);
-  await page.waitForTimeout(700);
-  assert(await page.locator('[data-coordinate-card]').isVisible(), 'Mobile press-and-hold should open coordinates');
-  await page.evaluate(({ x, y }) => {
-    const target = document.querySelector('[data-rrgh-route-map]');
-    const touch = new Touch({ identifier: 7, target, clientX: x, clientY: y, pageX: x, pageY: y, screenX: x, screenY: y });
-    target.dispatchEvent(new TouchEvent('touchend', {
-      bubbles: true,
-      cancelable: true,
-      touches: [],
-      targetTouches: [],
-      changedTouches: [touch]
-    }));
-  }, coordinateTarget);
+  const coordinateHoldPoint = {
+    x: coordinateTarget.x, y: coordinateTarget.y,
+    radiusX: 2, radiusY: 2, rotationAngle: 0, force: 1, id: 17
+  };
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [coordinateHoldPoint] });
+  await page.waitForTimeout(650);
+  assert(await page.locator('[data-coordinate-card]').isVisible(), 'Real mobile press-and-hold should open coordinates');
+  assert.strictEqual(await page.evaluate(() => window.getSelection()?.toString() || ''), '', 'Real mobile press-and-hold must not highlight map text');
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   const mobileCopyBox = await page.locator('[data-coordinate-copy]').boundingBox();
   const mobileCloseBox = await page.locator('[data-coordinate-close]').boundingBox();
   assert(mobileCopyBox && mobileCloseBox);
