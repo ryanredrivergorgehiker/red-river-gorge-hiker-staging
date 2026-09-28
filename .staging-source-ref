@@ -1,8 +1,8 @@
-32eae7a7e606b005596a3406a8f0fb024876b4bf
-purpose=Owner mobile touch refinement: retain full map panning for touches begun in the map interior; add transparent 24px mobile-only left/right page-scroll gutters as non-Leaflet siblings so gutter drags scroll the page without panning map content; prior upper-left scale, Terrain 25/75/100, sticky Layers, mobile control flow and desktop layout retained; production unchanged
-source_ci=36347772339 SUCCESS
-routes_uat=36347797200 SUCCESS
-routes_tracks_uat=36347797221 SUCCESS
-brand_uat=36347797154 SUCCESS
-analytics_uat=36347797216 SUCCESS
-roku_uat=36347797234 SUCCESS
+e333b8392c835c8a7c2e6b2139aec8ba70c547fe
+purpose=Owner-approved six-change Routes & Tracks refinement: feature-specific loading gates; Sunlight Map View with current-day sunrise/sunset teaser plus terrain-aware Map Point astronomical and first/last direct sun for 10 days using Kentucky KyFromAbove bare-earth DEM with USGS fallback; icon Undo/Redo with tooltip; concise context-sensitive Plan help; translucent zoom-dependent Natural Bridge / Red River Gorge / Clifty Wilderness orientation labels; mobile Gorge-wide overview/Home view; prior accepted mobile scroll gutters, Terrain 25/75/100, sticky Layers and desktop layout retained; production unchanged
+source_ci=36424680665 SUCCESS
+routes_uat=36425123605 SUCCESS
+routes_tracks_uat=36425726349 SUCCESS
+brand_uat=36425123608 SUCCESS
+analytics_uat=36425123576 SUCCESS
+roku_uat=36425123682 SUCCESS
