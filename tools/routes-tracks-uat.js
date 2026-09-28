@@ -563,9 +563,9 @@ async function fullMap(browser) {
     { timeout: 10000 }
   );
   assert.strictEqual(await coordinateCard.locator('.route-coordinate-sun-table tbody tr').count(), 10, 'Map Point must show the next 10 days');
+  const sunlightHeaders = await coordinateCard.locator('.route-coordinate-sun-table thead th').evaluateAll(nodes => nodes.map(node => node.textContent.trim()));
+  assert.deepStrictEqual(sunlightHeaders, ['Date', 'Sunrise', 'First direct sun', 'Last direct sun', 'Sunset']);
   const sunlightCardText = await coordinateCard.innerText();
-  assert(sunlightCardText.includes('First direct sun'));
-  assert(sunlightCardText.includes('Last direct sun'));
   assert(sunlightCardText.includes('Kentucky KyFromAbove Phase 2 Bare Earth DEM'));
   assert(sunlightCardText.includes('trees, cliffs/overhangs, clouds and local obstructions'));
   assert(providerRequests.some(url => new URL(url).hostname === 'kyraster.ky.gov'), 'Terrain-aware Sunlight should query the Kentucky bare-earth elevation service');
