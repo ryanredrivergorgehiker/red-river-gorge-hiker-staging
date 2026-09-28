@@ -1944,7 +1944,12 @@ async function legal(browser) {
     'does not automatically send your device’s precise “My location” coordinates',
     'If you choose “My location,”',
     'does not intentionally transmit or store the precise device coordinates',
-    'does not send the search text to a general-purpose external geocoding service'
+    'does not send the search text to a general-purpose external geocoding service',
+    'optional Oil & Gas Wells layer',
+    'off by default in every Map View',
+    'Kentucky Geological Survey / University of Kentucky',
+    'sends the current map viewport',
+    'transforms the returned public well records for web display'
   ]) assert(body.includes(expected), expected);
 
   response = await page.goto(MAIN + 'search-and-rescue/#current-conditions', { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -1973,7 +1978,10 @@ async function legal(browser) {
     'Community / Informal Trails',
     'route planner may snap to displayed community/informal paths',
     'snap to mapped road-centerline geometry from USDA Forest Service and Kentucky public road datasets',
-    'Open Database License (ODbL)'
+    'Open Database License (ODbL)',
+    'optional Oil & Gas Wells layer',
+    'public Kentucky Geological Survey / University of Kentucky well records',
+    'does not establish present ownership, mineral rights, operator responsibility, legal access'
   ]) assert(body.includes(expected), expected);
 
   response = await page.goto(MAIN + 'copyright-and-terms/#outdoor-safety-location-disclaimer', { waitUntil: 'domcontentloaded', timeout: 60000 });
