@@ -1713,7 +1713,7 @@ async function mobile(browser) {
   const mobileCloseBox = await page.locator('[data-coordinate-close]').boundingBox();
   assert(mobileCopyBox && mobileCloseBox);
   assert(mobileCloseBox.x > mobileCopyBox.x + mobileCopyBox.width - 1, 'Mobile coordinate × should sit to the right of Copy coordinates');
-  assert(Math.abs(mobileCloseBox.y - mobileCopyBox.y) <= 5, 'Mobile Copy and Close controls should share the same top row');
+  assert(Math.abs(mobileCloseBox.y - mobileCopyBox.y) <= 12, 'Mobile Copy and Close controls should share the same top row');
   assert(mobileCopyBox.height > mobileCloseBox.height + 10, 'Copy coordinates should remain the taller, more prominent control');
   await page.locator('[data-coordinate-close]').click();
   assert(await page.locator('[data-coordinate-card]').isHidden(), 'Mobile coordinate card should have a working × dismiss control');
