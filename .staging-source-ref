@@ -1,8 +1,8 @@
-cc774af3b6ca62de1dc734aca5b1c2402f9b980e
-purpose=Owner-requested area-label stacking tweak only: RED RIVER GORGE, CLIFTY WILDERNESS, and NATURAL BRIDGE now render above all route, recreation, trailhead/start, landmark, Map Point, and planning panes whenever their existing zoom rules make them visible; existing full-name/acronym/hidden zoom behavior and all other map behavior remain unchanged
-source_ci=36465105529 SUCCESS
-routes_uat=36465236616 SUCCESS
-routes_tracks_uat=36465236279 SUCCESS
-brand_uat=36465242302 SUCCESS
-analytics_uat=36465246297 SUCCESS
-roku_uat=36465252224 SUCCESS
+37e9cca2363f0d6206661dea5104c3f19e8355da
+purpose=Owner-requested mobile Map View enhancement only: Hiking, Terrain, and Aerial now show the same secondary descriptions used on desktop, while Sunlight retains its dynamic Today/Sunrise/Sunset description; mobile buttons remain a compact equal-height 2x2 grid with fixed 64px height, smaller secondary typography, and no text overflow; no map behavior, route filters, labels, planning, Map Point behavior, analytics, or production state changed
+source_ci=36466954313 SUCCESS
+routes_uat=36467096482 SUCCESS
+routes_tracks_uat=36467096406 SUCCESS
+brand_uat=36467101180 SUCCESS
+analytics_uat=36467106588 SUCCESS
+roku_uat=36467112510 SUCCESS
