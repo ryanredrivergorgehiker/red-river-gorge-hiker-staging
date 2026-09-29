@@ -1,10 +1,10 @@
-98a9870905a24f68bbb0f80caa6d656b3aac887c
-purpose=Corrected Local / other roads staging POC. Replaces the non-queryable cached Commonwealth street source Ky_TCM_Street_Base layer 71 with Kentucky's query-capable dynamic Cartobase Local Roads layer Ky_Cartobase_WGS84WM/MapServer/12. The layer remains display-only, checked by default, zoom-gated at 13+, viewport-bounded, debounced, abortable and cache-limited with an 800-feature ceiling. Client payload is minimized to OBJECTID,RD_NAME plus geometry; local-road geometry is non-interactive so it cannot consume Plan/map clicks. Styling is a thin muted line; no local-road geometry enters addSnapLine or the planner graph. Clifty School Road near 37.822129,-83.541391 remains the first owner acceptance location. Privacy language remains consistent with the minimized road-name/geometry payload and preserves the approved September 25, 2026 effective date. Production unchanged.
-source_ci=36583200334 SUCCESS
-routes_uat=36583363585 SUCCESS
-brand_uat=36583381192 SUCCESS
-analytics_uat=36583396072 SUCCESS
-roku_uat=36583415157 SUCCESS
-routes_tracks_live_service_probe=SUCCESS
-routes_tracks_full_uat_note=The current full browser UAT reaches and passes the live Kentucky local-road service probe and repository/build checks, but an unrelated pre-existing Plan-close timing assertion remains flaky in the harness; no source Plan behavior was changed by this local-road correction.
+d0da9546cc0e61425b7af5ef59acffb3959d4c3c
+purpose=Census TIGERweb Local Roads + RRGH-hosted OpenStreetMap road context staging candidate. Primary visible Local / other roads source is U.S. Census Bureau TIGERweb/tigerWMS_PhysicalFeatures/MapServer/5 (Local Roads; January 1, 2026) with viewport-only OID,NAME,BASENAME plus geometry. Normal supplemental OSM display is limited to cached highway=track and highway=service (excluding service driveways/parking aisles); broader cached residential/unclassified/living_street/road/track/service geometry is retained only as a display fallback if TIGERweb is unavailable. All visible local-road geometry remains non-interactive, display-only, zoom-gated at 13+, viewport-bounded, debounced, abortable, cache-limited and capped at 800 features; none enters addSnapLine or the planner graph. Live audit at 37.822129,-83.541391 found TIGER OID 110206092934 Cliffty School Rd about 21 m from the acceptance point and OID 110206092766 Clifty School Rd farther east; current TIGER did not return candidate OIDs 110206092933 or 110206092773. OSM audit found Cliffty School Road residential geometry about 13 m from the acceptance point and Old Clifty School Road as highway=track in the broader area. Privacy effective date remains September 25, 2026. Production unchanged.
+source_ci=36598873596 SUCCESS
+local_road_source_audit=36599905139 SUCCESS
+routes_tracks_uat=36599810876 SUCCESS
+routes_uat=36600203093 SUCCESS
+brand_uat=36599817035 SUCCESS
+analytics_uat=36599822050 SUCCESS
+roku_uat=36599826839 SUCCESS
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
