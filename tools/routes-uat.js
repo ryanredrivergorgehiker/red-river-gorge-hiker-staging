@@ -34,6 +34,17 @@ const ROADS = {
     ] }
   }]
 };
+const TIGER_LOCAL_ROADS = {
+  type: 'FeatureCollection',
+  features: [{
+    type: 'Feature',
+    properties: { OID: '110206092933', OBJECTID: 71001, NAME: 'Cliffty School Rd', BASENAME: 'Cliffty School', MTFCC: 'S1400' },
+    geometry: { type: 'LineString', coordinates: [
+      [-83.534169, 37.818022], [-83.5395192, 37.8220013], [-83.5412758, 37.8220356], [-83.5415103, 37.8219694], [-83.5434416, 37.8218673]
+    ] }
+  }]
+};
+
 const KENTUCKY_ROADS = {
   type: 'FeatureCollection',
   features: [{
@@ -107,18 +118,22 @@ async function contextFor(browser, options = {}) {
   return context;
 }
 
-async function installStubs(page) {
+async function installStubs(page, tigerMode = 'stub') {
   await page.route('https://kygisserver.ky.gov/**', async route => {
     const url = route.request().url();
     if (url.includes('Ky_CountyLines_WGS84WM') && url.includes('/query?')) {
       await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(COUNTIES) });
     } else if (url.includes('Ky_911_Road_Centerlines_WGS84WM') && url.includes('/query?')) {
       await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(KENTUCKY_ROADS) });
-    } else if (url.includes('Ky_Cartobase_WGS84WM/MapServer/12/query?')) {
-      await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify({ type: 'FeatureCollection', features: [] }) });
     } else {
       await route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG });
     }
+  });
+  await page.route('https://tigerweb.geo.census.gov/**', async route => {
+    const url = route.request().url();
+    if (!url.includes('TIGERweb/tigerWMS_PhysicalFeatures/MapServer/5/query?')) return route.abort();
+    if (tigerMode === 'fail') return route.abort('failed');
+    return route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(TIGER_LOCAL_ROADS) });
   });
   await page.route('https://basemap.nationalmap.gov/**', route =>
     route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG })
@@ -401,7 +416,7 @@ async function mapControlsAndAccessibility(browser) {
 async function cachedOsmLocalRoadAcceptance(browser) {
   const context = await contextFor(browser, { viewport: { width: 1200, height: 900 } });
   const page = await context.newPage();
-  await installStubs(page);
+  await installStubs(page, 'fail');
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(String(error)));
 
@@ -422,12 +437,13 @@ async function cachedOsmLocalRoadAcceptance(browser) {
   );
   assert(Number(await map.getAttribute('data-local-road-osm-feature-count')) > 0, 'OSM Local / other roads should render cached viewport geometry');
   assert.strictEqual(
-    await map.getAttribute('data-local-road-kentucky-feature-count'),
+    await map.getAttribute('data-local-road-tiger-feature-count'),
     '0',
-    'This acceptance check intentionally stubs Kentucky local roads empty so OSM coverage is proved independently'
+    'This acceptance check intentionally fails TIGERweb so the broader cached OSM fallback is proved independently'
   );
   const status = await page.locator('[data-local-roads-status]').innerText();
-  assert(status.includes('cached OpenStreetMap context'), status);
+  assert.strictEqual(await map.getAttribute('data-local-road-osm-mode'), 'fallback');
+  assert(status.includes('cached OpenStreetMap fallback road context'), status);
   assert(status.includes('does not establish public access, maintenance, legal travel, or current drivability'), status);
   assert.deepStrictEqual(pageErrors, []);
 
@@ -570,11 +586,20 @@ async function liveLocalRoadSourceAudit() {
       .sort((a, b) => a.distance_m - b.distance_m);
   };
 
+  const tigerService = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_PhysicalFeatures/MapServer/5';
   const cartobaseService = 'https://kygisserver.ky.gov/arcgis/rest/services/WGS84WM_Services/Ky_Cartobase_WGS84WM/MapServer/12';
   const road911Service = 'https://kygisserver.ky.gov/arcgis/rest/services/WGS84WM_Services/Ky_911_Road_Centerlines_WGS84WM/MapServer/0';
 
+  const tiger = await arcgis(tigerService, 'OID,OBJECTID,NAME,BASENAME,MTFCC');
   const cartobase = await arcgis(cartobaseService, '*');
   const road911 = await arcgis(road911Service, '*');
+  const tigerNearest = summarizeArcgis(tiger.data, ['NAME', 'BASENAME']).slice(0, 20);
+  const knownTigerOids = new Set(['110206092766','110206092933','110206092934','110206092773']);
+  const tigerClifty = tigerNearest.filter(item =>
+    knownTigerOids.has(String(item?.properties?.OID || ''))
+    || /(?:old\s+)?clif{1,2}ty\s+school/i.test(String(item.name || ''))
+  );
+  assert(tigerClifty.length >= 1, 'Live TIGERweb must return Clifty/Cliffty School Road at the owner acceptance area');
   const cartobaseNearest = summarizeArcgis(cartobase.data, ['RD_NAME', 'NAME', 'ROADNAME']).slice(0, 20);
   const road911Nearest = summarizeArcgis(road911.data, ['LSt_Name', 'St_Name', 'FULLNAME', 'ROADNAME']).slice(0, 20);
 
@@ -639,6 +664,12 @@ async function liveLocalRoadSourceAudit() {
     generatedAt: new Date().toISOString(),
     target,
     bbox,
+    tigerweb: {
+      service: tigerService,
+      feature_count: Array.isArray(tiger.data?.features) ? tiger.data.features.length : 0,
+      nearest: tigerNearest,
+      clifty_named: tigerClifty
+    },
     cartobase: {
       service: cartobaseService,
       feature_count: Array.isArray(cartobase.data?.features) ? cartobase.data.features.length : 0,
@@ -663,6 +694,9 @@ async function liveLocalRoadSourceAudit() {
 
   fs.writeFileSync(path.join(EVIDENCE, 'local-road-source-audit.json'), JSON.stringify(audit, null, 2));
   record('Live Local / other roads source coverage audit', 'PASS', {
+    tigerFeatures: audit.tigerweb.feature_count,
+    tigerNearest: tigerNearest[0] || null,
+    tigerClifty: tigerClifty.slice(0, 5),
     cartobaseFeatures: audit.cartobase.feature_count,
     cartobaseNearest: cartobaseNearest[0] || null,
     road911Features: audit.kentucky_911.feature_count,
