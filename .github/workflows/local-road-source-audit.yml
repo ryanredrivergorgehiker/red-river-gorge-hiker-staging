@@ -1,0 +1,25 @@
+name: Local-road source audit
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - tools/local-road-source-audit.js
+      - .github/workflows/local-road-source-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Audit live road sources at Clifty School Road
+        run: node tools/local-road-source-audit.js
