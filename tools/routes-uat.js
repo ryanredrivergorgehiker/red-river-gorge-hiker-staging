@@ -397,6 +397,47 @@ async function mapControlsAndAccessibility(browser) {
   await context.close();
 }
 
+
+async function cachedOsmLocalRoadAcceptance(browser) {
+  const context = await contextFor(browser, { viewport: { width: 1200, height: 900 } });
+  const page = await context.newPage();
+  await installStubs(page);
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error)));
+
+  const target = MAIN + 'routes/map/?rrghMap=37.8221290,-83.5413910,15';
+  const response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(response && response.ok());
+  await page.waitForSelector('.leaflet-container', { timeout: 10000 });
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-local-road-load-state') === 'loaded',
+    { timeout: 10000 }
+  );
+
+  const map = page.locator('[data-rrgh-route-map]');
+  assert.strictEqual(
+    await map.getAttribute('data-local-road-osm-clifty-found'),
+    'true',
+    'The RRGH-hosted OSM road cache must supply Clifty/Cliffty School Road at the owner acceptance location'
+  );
+  assert(Number(await map.getAttribute('data-local-road-osm-feature-count')) > 0, 'OSM Local / other roads should render cached viewport geometry');
+  assert.strictEqual(
+    await map.getAttribute('data-local-road-kentucky-feature-count'),
+    '0',
+    'This acceptance check intentionally stubs Kentucky local roads empty so OSM coverage is proved independently'
+  );
+  const status = await page.locator('[data-local-roads-status]').innerText();
+  assert(status.includes('cached OpenStreetMap context'), status);
+  assert(status.includes('does not establish public access, maintenance, legal travel, or current drivability'), status);
+  assert.deepStrictEqual(pageErrors, []);
+
+  await shot(page, 'cached-osm-local-road-clifty-acceptance');
+  record('Cached OSM Local / other roads covers Clifty owner acceptance location', 'PASS', {
+    osmFeatureCount: Number(await map.getAttribute('data-local-road-osm-feature-count'))
+  });
+  await context.close();
+}
+
 async function legalExploreAndMobile(browser) {
   const context = await contextFor(browser, { viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();
@@ -539,9 +580,9 @@ async function liveLocalRoadSourceAudit() {
 
   const overpassQuery = `[out:json][timeout:30];way["highway"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});out tags geom;`;
   const overpassEndpoints = [
-    'https://overpass.maprva.org/api/interpreter',
+    'https://overpass-api.de/api/interpreter',
     'https://overpass.private.coffee/api/interpreter',
-    'https://overpass-api.de/api/interpreter'
+    'https://overpass.maprva.org/api/interpreter'
   ];
   let osm = null;
   let osmEndpoint = null;
@@ -571,7 +612,9 @@ async function liveLocalRoadSourceAudit() {
   const osmWays = osm.elements
     .filter(element => element?.type === 'way' && Array.isArray(element.geometry))
     .map(element => {
-      const coords = element.geometry.map(point => [point.lon, point.lat]);
+      const coords = element.geometry
+        .filter(point => point && Number.isFinite(point.lon) && Number.isFinite(point.lat))
+        .map(point => [point.lon, point.lat]);
       return {
         id: element.id,
         distance_m: Math.round(lineDistance(coords)),
@@ -642,6 +685,7 @@ async function liveLocalRoadSourceAudit() {
     await routeLibrary(browser);
     await routeArtifactsAndContent(browser);
     await mapControlsAndAccessibility(browser);
+    await cachedOsmLocalRoadAcceptance(browser);
     await legalExploreAndMobile(browser);
   } catch (error) {
     failure = error;
