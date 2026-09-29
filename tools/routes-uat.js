@@ -453,6 +453,183 @@ async function legalExploreAndMobile(browser) {
   await mobile.close();
 }
 
+
+async function liveLocalRoadSourceAudit() {
+  const target = { lat: 37.822129, lon: -83.541391 };
+  const bbox = { south: 37.815, west: -83.550, north: 37.829, east: -83.532 };
+
+  const toXY = (lat, lon) => {
+    const lat0 = target.lat * Math.PI / 180;
+    return {
+      x: (lon - target.lon) * 111320 * Math.cos(lat0),
+      y: (lat - target.lat) * 110540
+    };
+  };
+  const segmentDistance = (a, b) => {
+    const p = { x: 0, y: 0 };
+    const aa = toXY(a[1], a[0]);
+    const bb = toXY(b[1], b[0]);
+    const vx = bb.x - aa.x;
+    const vy = bb.y - aa.y;
+    const denom = vx * vx + vy * vy;
+    const t = denom ? Math.max(0, Math.min(1, (-(aa.x * vx + aa.y * vy)) / denom)) : 0;
+    const x = aa.x + t * vx;
+    const y = aa.y + t * vy;
+    return Math.hypot(x - p.x, y - p.y);
+  };
+  const lineDistance = coords => {
+    if (!Array.isArray(coords) || coords.length === 0) return Infinity;
+    if (typeof coords[0]?.[0] === 'number') {
+      if (coords.length === 1) {
+        const p = toXY(coords[0][1], coords[0][0]);
+        return Math.hypot(p.x, p.y);
+      }
+      let best = Infinity;
+      for (let i = 1; i < coords.length; i += 1) best = Math.min(best, segmentDistance(coords[i - 1], coords[i]));
+      return best;
+    }
+    return Math.min(...coords.map(lineDistance));
+  };
+  const geoDistance = feature => lineDistance(feature?.geometry?.coordinates || []);
+
+  const arcgis = async (service, outFields) => {
+    const url = new URL(service + '/query');
+    url.search = new URLSearchParams({
+      where: '1=1',
+      geometry: JSON.stringify({
+        xmin: bbox.west, ymin: bbox.south, xmax: bbox.east, ymax: bbox.north,
+        spatialReference: { wkid: 4326 }
+      }),
+      geometryType: 'esriGeometryEnvelope',
+      inSR: '4326',
+      spatialRel: 'esriSpatialRelIntersects',
+      outFields,
+      returnGeometry: 'true',
+      returnZ: 'false',
+      returnM: 'false',
+      outSR: '4326',
+      f: 'geojson'
+    }).toString();
+    const response = await fetch(url, { headers: { 'user-agent': 'RRGH-UAT/1.0' } });
+    assert(response.ok, service + ' HTTP ' + response.status);
+    const data = await response.json();
+    assert(!data?.error, service + ': ' + JSON.stringify(data?.error));
+    return { url: url.toString(), data };
+  };
+
+  const summarizeArcgis = (data, nameFields) => {
+    const features = Array.isArray(data?.features) ? data.features : [];
+    return features
+      .map(feature => ({
+        distance_m: Math.round(geoDistance(feature)),
+        name: nameFields.map(field => feature?.properties?.[field]).find(Boolean) || null,
+        properties: feature?.properties || null,
+        geometry_type: feature?.geometry?.type || null
+      }))
+      .sort((a, b) => a.distance_m - b.distance_m);
+  };
+
+  const cartobaseService = 'https://kygisserver.ky.gov/arcgis/rest/services/WGS84WM_Services/Ky_Cartobase_WGS84WM/MapServer/12';
+  const road911Service = 'https://kygisserver.ky.gov/arcgis/rest/services/WGS84WM_Services/Ky_911_Road_Centerlines_WGS84WM/MapServer/0';
+
+  const cartobase = await arcgis(cartobaseService, '*');
+  const road911 = await arcgis(road911Service, '*');
+  const cartobaseNearest = summarizeArcgis(cartobase.data, ['RD_NAME', 'NAME', 'ROADNAME']).slice(0, 20);
+  const road911Nearest = summarizeArcgis(road911.data, ['LSt_Name', 'St_Name', 'FULLNAME', 'ROADNAME']).slice(0, 20);
+
+  const overpassQuery = `[out:json][timeout:30];way["highway"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});out tags geom;`;
+  const overpassEndpoints = [
+    'https://overpass.maprva.org/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
+    'https://overpass-api.de/api/interpreter'
+  ];
+  let osm = null;
+  let osmEndpoint = null;
+  const osmErrors = [];
+  for (const endpoint of overpassEndpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          'user-agent': 'RRGH-UAT/1.0'
+        },
+        body: new URLSearchParams({ data: overpassQuery }).toString()
+      });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const data = await response.json();
+      if (!Array.isArray(data?.elements)) throw new Error('invalid Overpass response');
+      osm = data;
+      osmEndpoint = endpoint;
+      break;
+    } catch (error) {
+      osmErrors.push({ endpoint, error: String(error) });
+    }
+  }
+  assert(osm, 'All Overpass endpoints failed: ' + JSON.stringify(osmErrors));
+
+  const osmWays = osm.elements
+    .filter(element => element?.type === 'way' && Array.isArray(element.geometry))
+    .map(element => {
+      const coords = element.geometry.map(point => [point.lon, point.lat]);
+      return {
+        id: element.id,
+        distance_m: Math.round(lineDistance(coords)),
+        highway: element.tags?.highway || null,
+        name: element.tags?.name || element.tags?.['official_name'] || element.tags?.['alt_name'] || null,
+        surface: element.tags?.surface || null,
+        tracktype: element.tags?.tracktype || null,
+        service: element.tags?.service || null,
+        access: element.tags?.access || null,
+        motor_vehicle: element.tags?.motor_vehicle || null,
+        foot: element.tags?.foot || null,
+        tags: element.tags || {}
+      };
+    })
+    .sort((a, b) => a.distance_m - b.distance_m);
+
+  const osmRoadTrackCandidates = osmWays.filter(way =>
+    ['track', 'service', 'unclassified', 'residential', 'road', 'living_street'].includes(way.highway)
+  );
+
+  const audit = {
+    generatedAt: new Date().toISOString(),
+    target,
+    bbox,
+    cartobase: {
+      service: cartobaseService,
+      feature_count: Array.isArray(cartobase.data?.features) ? cartobase.data.features.length : 0,
+      nearest: cartobaseNearest,
+      clifty_named: cartobaseNearest.filter(item => /clifty\s+school/i.test(String(item.name || '')))
+    },
+    kentucky_911: {
+      service: road911Service,
+      feature_count: Array.isArray(road911.data?.features) ? road911.data.features.length : 0,
+      nearest: road911Nearest,
+      clifty_named: road911Nearest.filter(item => /clifty\s+school/i.test(String(item.name || '')))
+    },
+    openstreetmap: {
+      endpoint: osmEndpoint,
+      endpoint_errors: osmErrors,
+      way_count: osmWays.length,
+      nearest_highways: osmWays.slice(0, 30),
+      road_track_candidates: osmRoadTrackCandidates.slice(0, 30),
+      track_service_candidates: osmRoadTrackCandidates.filter(way => ['track', 'service'].includes(way.highway)).slice(0, 30)
+    }
+  };
+
+  fs.writeFileSync(path.join(EVIDENCE, 'local-road-source-audit.json'), JSON.stringify(audit, null, 2));
+  record('Live Local / other roads source coverage audit', 'PASS', {
+    cartobaseFeatures: audit.cartobase.feature_count,
+    cartobaseNearest: cartobaseNearest[0] || null,
+    road911Features: audit.kentucky_911.feature_count,
+    road911Nearest: road911Nearest[0] || null,
+    osmWays: audit.openstreetmap.way_count,
+    osmNearest: audit.openstreetmap.nearest_highways[0] || null,
+    osmTrackService: audit.openstreetmap.track_service_candidates.slice(0, 5)
+  });
+}
+
 (async () => {
   const browser = await chromium.launch({
     headless: true,
@@ -461,6 +638,7 @@ async function legalExploreAndMobile(browser) {
 
   let failure = null;
   try {
+    await liveLocalRoadSourceAudit();
     await routeLibrary(browser);
     await routeArtifactsAndContent(browser);
     await mapControlsAndAccessibility(browser);
