@@ -1937,6 +1937,45 @@ async function mobile(browser) {
   }));
   assert.strictEqual(mobileCompactStats.length, 4);
   assert(Math.max(...mobileCompactStats.map(item => item.y)) - Math.min(...mobileCompactStats.map(item => item.y)) <= 2, 'Distance, gain, loss and elevation must share one line when minimized on mobile');
+
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-plan-shake-ready') === 'true',
+    { timeout: 3000 }
+  );
+  const dispatchMobileShake = async () => {
+    await page.evaluate(() => {
+      const fire = x => {
+        const event = new Event('devicemotion');
+        Object.defineProperty(event, 'acceleration', { value: { x, y: 3, z: 2 } });
+        window.dispatchEvent(event);
+      };
+      fire(21);
+      window.setTimeout(() => fire(-22), 55);
+    });
+    await page.waitForTimeout(160);
+  };
+
+  await map.click({ position: { x: box.width * 0.46, y: box.height * 0.48 } });
+  await page.waitForTimeout(100);
+  const mobileShakeDialog = page.locator('[data-plan-shake]');
+  const mobileShakeUndo = mobileShakeDialog.getByRole('button', { name: 'Undo', exact: true });
+  const mobileShakeRedo = mobileShakeDialog.getByRole('button', { name: 'Redo', exact: true });
+
+  await dispatchMobileShake();
+  assert(await mobileShakeDialog.isVisible(), 'A deliberate mobile shake should open Undo / Redo while planning is active');
+  assert.strictEqual(await mobileShakeUndo.isDisabled(), false, 'Undo should be available after adding a planning point');
+  assert.strictEqual(await mobileShakeRedo.isDisabled(), true, 'Redo should be unavailable before an Undo');
+  await mobileShakeUndo.click();
+  await mobileShakeDialog.waitFor({ state: 'hidden' });
+
+  await page.waitForTimeout(1450);
+  await dispatchMobileShake();
+  assert(await mobileShakeDialog.isVisible(), 'A later mobile shake should reopen Undo / Redo');
+  assert.strictEqual(await mobileShakeUndo.isDisabled(), true, 'Undo should be unavailable after undoing the only planning point');
+  assert.strictEqual(await mobileShakeRedo.isDisabled(), false, 'Redo should become available after Undo');
+  await mobileShakeRedo.click();
+  await mobileShakeDialog.waitFor({ state: 'hidden' });
+
   await mobilePlanPanel.getByRole('button', { name: 'Expand planning controls', exact: true }).click();
   await mobileBuildButton.click();
   await mobilePlanButton.click();
