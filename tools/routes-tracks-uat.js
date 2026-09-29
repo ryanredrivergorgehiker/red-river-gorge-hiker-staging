@@ -675,6 +675,11 @@ async function fullMap(browser) {
     if (await planConfirmDialog.isVisible()) {
       await planConfirmOk.click();
       await planConfirmDialog.waitFor({ state: 'hidden' });
+      await page.waitForFunction(
+        () => (document.querySelector('[data-map-status]')?.textContent || '').includes('Build route: place a first point'),
+        null,
+        { timeout: 2000 }
+      );
     }
   };
   assert(await planPanel.isVisible(), 'Plan panel must open before the optional informal-trail graph finishes');
@@ -1365,6 +1370,7 @@ async function fullMap(browser) {
   await planConfirmDialog.waitFor({ state: 'hidden' });
   await page.waitForFunction(
     () => document.querySelector('[data-map-sheet="plan"]')?.hasAttribute('hidden'),
+    null,
     { timeout: 2000 }
   );
   assert(await planPanel.isHidden(), 'Confirming the guarded exit should clear the measurement and exit Plan');
@@ -1476,6 +1482,7 @@ async function fullMap(browser) {
   await planPanel.getByRole('button', { name: 'Close planning controls', exact: true }).click();
   await page.waitForFunction(
     () => document.querySelector('[data-map-sheet="plan"]')?.hasAttribute('hidden'),
+    null,
     { timeout: 2000 }
   );
   assert(await planPanel.isHidden(), 'Close should exit immediately once Plan is empty');
