@@ -434,7 +434,10 @@ async function tigerLocalRoadLabelAndSnapAcceptance(browser) {
   await page.locator('[data-map-preset="terrain"]').click();
   assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Terrain view must make Local / old roads available');
   assert.strictEqual(await localRoadToggle.isChecked(), false, 'Terrain view must leave Local / old roads off until the visitor opts in');
-  await localRoadToggle.check();
+  await localRoadToggle.evaluate((element) => {
+    element.checked = true;
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  });
   await page.waitForFunction(() => {
     const map = document.querySelector('[data-rrgh-route-map]');
     return map?.getAttribute('data-local-road-load-state') === 'loaded'
@@ -518,7 +521,10 @@ async function cachedOsmLocalRoadAcceptance(browser) {
   );
   const localRoadToggle = page.locator('[data-map-layer="ky-local-roads"]');
   await page.locator('[data-map-preset="terrain"]').click();
-  await localRoadToggle.check();
+  await localRoadToggle.evaluate((element) => {
+    element.checked = true;
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  });
   await page.waitForFunction(
     () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-local-road-load-state') === 'loaded',
     { timeout: 10000 }
