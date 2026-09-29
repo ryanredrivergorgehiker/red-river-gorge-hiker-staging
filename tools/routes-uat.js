@@ -114,6 +114,8 @@ async function installStubs(page) {
       await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(COUNTIES) });
     } else if (url.includes('Ky_911_Road_Centerlines_WGS84WM') && url.includes('/query?')) {
       await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(KENTUCKY_ROADS) });
+    } else if (url.includes('Ky_TCM_Street_Base_WGS84WM/MapServer/71/query?')) {
+      await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify({ type: 'FeatureCollection', features: [] }) });
     } else {
       await route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG });
     }
@@ -321,8 +323,8 @@ async function mapControlsAndAccessibility(browser) {
     return button && !button.disabled;
   }, { timeout: 10000 });
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 13);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 12);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 14);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 13);
   assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 0);
   assert.strictEqual(await page.locator('[data-map-layer="kgs-oil-gas-wells"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="kgs-oil-gas-wells"]').isDisabled(), true);
