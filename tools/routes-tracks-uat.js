@@ -10,7 +10,7 @@ const SHARED = 'rrgh-analytics-consent-v1';
 const REGION = 'rrgh-region-country-v1';
 const GPX_SHA = '2469c85ebaddd3e701ba6dc8eea3664d90a0667dcd86f2aab43ae1445986830d';
 const GEO_SHA = '123fdb57e1142299f86c714367cc466b70f18fa90cfbaabb92b0d9ced157dc66';
-const PROVIDERS = new Set(['kygisserver.ky.gov', 'kyraster.ky.gov', 'basemap.nationalmap.gov', 'elevation.nationalmap.gov', 'apps.fs.usda.gov', 'kgs.uky.edu', 'overpass.maprva.org', 'overpass.private.coffee', 'overpass-api.de', 'maps.mail.ru']);
+const PROVIDERS = new Set(['kygisserver.ky.gov', 'tigerweb.geo.census.gov', 'kyraster.ky.gov', 'basemap.nationalmap.gov', 'elevation.nationalmap.gov', 'apps.fs.usda.gov', 'kgs.uky.edu', 'overpass.maprva.org', 'overpass.private.coffee', 'overpass-api.de', 'maps.mail.ru']);
 
 const TRANSPARENT_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X3JmAAAAAElFTkSuQmCC',
@@ -93,11 +93,11 @@ const LOCAL_ROADS = {
     {
       type: 'Feature',
       properties: {
+        OID: '110206092933',
         OBJECTID: 71001,
-        RD_NAME: 'CLIFTY SCHOOL RD',
-        SURFTYPE: 'P',
-        GOV_LEVEL: 'CO',
-        STATUS: 'Active'
+        NAME: 'Cliffty School Rd',
+        BASENAME: 'Cliffty School',
+        MTFCC: 'S1400'
       },
       geometry: { type: 'LineString', coordinates: [
         [-83.5328, 37.8242],
@@ -109,11 +109,11 @@ const LOCAL_ROADS = {
     {
       type: 'Feature',
       properties: {
+        OID: '110206092766',
         OBJECTID: 71002,
-        RD_NAME: 'Sample Local Road',
-        SURFTYPE: 'G',
-        GOV_LEVEL: 'CO',
-        STATUS: 'Active'
+        NAME: 'Clifty School Rd',
+        BASENAME: 'Clifty School',
+        MTFCC: 'S1400'
       },
       geometry: { type: 'LineString', coordinates: [
         [-83.5700, 37.8200],
@@ -252,10 +252,15 @@ async function installProviderStubs(page, providerRequests, slowPrimaryOverpass 
     if (url.includes('Ky_911_Road_Centerlines_WGS84WM') && url.includes('/query?')) {
       return route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(KENTUCKY_ROADS) });
     }
-    if (url.includes('Ky_Cartobase_WGS84WM/MapServer/12/query?')) {
+    return route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG });
+  });
+
+  await page.route('https://tigerweb.geo.census.gov/**', async route => {
+    const url = route.request().url();
+    if (url.includes('TIGERweb/tigerWMS_PhysicalFeatures/MapServer/5/query?')) {
       return route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(LOCAL_ROADS) });
     }
-    return route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG });
+    return route.abort();
   });
 
   await page.route('https://basemap.nationalmap.gov/**', route =>
@@ -560,16 +565,18 @@ async function fullMap(browser) {
       const status = document.querySelector('[data-local-roads-status]')?.textContent || '';
       const state = document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-local-road-load-state');
       return state === 'loaded'
-        && status.includes('Kentucky/local road segment')
-        && status.includes('does not establish public access, maintenance, or current drivability');
+        && status.includes('local / other road segment')
+        && status.includes('Census TIGERweb')
+        && status.includes('cached OpenStreetMap track/service context')
+        && status.includes('does not establish public access, maintenance, legal travel, or current drivability');
     },
     { timeout: 5000 }
   );
-  const localRoadRequests = providerRequests.filter(url => url.includes('Ky_Cartobase_WGS84WM/MapServer/12/query?'));
-  assert(localRoadRequests.length >= 1, 'Local / other roads should request Kentucky Local Roads layer 71');
+  const localRoadRequests = providerRequests.filter(url => url.includes('TIGERweb/tigerWMS_PhysicalFeatures/MapServer/5/query?'));
+  assert(localRoadRequests.length >= 1, 'Local / other roads should request Census TIGERweb Local Roads layer 5');
   const localRoadRequest = new URL(localRoadRequests[localRoadRequests.length - 1]);
   assert.strictEqual(localRoadRequest.searchParams.get('resultRecordCount'), '801', 'Local-road viewport query must enforce the 800-feature ceiling');
-  assert.strictEqual(localRoadRequest.searchParams.get('outFields'), 'OBJECTID,RD_NAME', 'Local-road query should request only the road name needed for the display contract');
+  assert.strictEqual(localRoadRequest.searchParams.get('outFields'), 'OID,NAME,BASENAME', 'Local-road query should request the TIGER identifier plus road name fields needed for the display contract');
   assert.strictEqual(localRoadRequest.searchParams.get('returnGeometry'), 'true');
   const localRoadGeometry = JSON.parse(localRoadRequest.searchParams.get('geometry') || '{}');
   assert(Number.isFinite(localRoadGeometry.xmin) && Number.isFinite(localRoadGeometry.xmax), 'Local-road query must carry viewport envelope geometry');
