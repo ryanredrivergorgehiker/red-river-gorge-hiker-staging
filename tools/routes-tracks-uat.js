@@ -87,6 +87,42 @@ const KENTUCKY_ROADS = {
   ]
 };
 
+const LOCAL_ROADS = {
+  type: 'FeatureCollection',
+  features: [
+    {
+      type: 'Feature',
+      properties: {
+        OBJECTID: 71001,
+        RD_NAME: 'Clifty School Road',
+        SURFTYPE: 'P',
+        GOV_LEVEL: 'CO',
+        STATUS: 'Active'
+      },
+      geometry: { type: 'LineString', coordinates: [
+        [-83.5328, 37.8242],
+        [-83.5371, 37.8231],
+        [-83.5414, 37.8221],
+        [-83.5460, 37.8212]
+      ] }
+    },
+    {
+      type: 'Feature',
+      properties: {
+        OBJECTID: 71002,
+        RD_NAME: 'Sample Local Road',
+        SURFTYPE: 'G',
+        GOV_LEVEL: 'CO',
+        STATUS: 'Active'
+      },
+      geometry: { type: 'LineString', coordinates: [
+        [-83.5700, 37.8200],
+        [-83.5650, 37.8210]
+      ] }
+    }
+  ]
+};
+
 const COUNTIES = {
   type: 'FeatureCollection',
   features: [
@@ -215,6 +251,9 @@ async function installProviderStubs(page, providerRequests, slowPrimaryOverpass 
     }
     if (url.includes('Ky_911_Road_Centerlines_WGS84WM') && url.includes('/query?')) {
       return route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(KENTUCKY_ROADS) });
+    }
+    if (url.includes('Ky_TCM_Street_Base_WGS84WM/MapServer/71/query?')) {
+      return route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(LOCAL_ROADS) });
     }
     return route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG });
   });
@@ -506,6 +545,29 @@ async function fullMap(browser) {
   assert.strictEqual(await planOpenButton.isDisabled(), false, 'Plan panel must unlock with core map context');
   assert.strictEqual(await shareButtonReady.isDisabled(), false, 'Share must unlock after initial map state restoration');
   assert.strictEqual(await page.locator('[data-map-preset]').evaluateAll(nodes => nodes.every(node => !node.disabled)), true, 'Map View presets must unlock with core context');
+
+  // Local / other roads: viewport-only, close-zoom display that never joins the planner graph.
+  const localRoadToggle = page.locator('[data-map-layer="ky-local-roads"]');
+  assert.strictEqual(await localRoadToggle.isChecked(), true, 'Local / other roads should be checked by default');
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-local-road-load-state') === 'loaded',
+    { timeout: 5000 }
+  );
+  assert(Number(await mapContainer.getAttribute('data-local-road-feature-count')) >= 1, 'Close-zoom local-road display should render the viewport response');
+  assert.strictEqual(await mapContainer.getAttribute('data-local-road-clifty-found'), 'true', 'Clifty School Road must survive the local-road display pipeline');
+  const localRoadStatus = await page.locator('[data-local-roads-status]').innerText();
+  assert(localRoadStatus.includes('Kentucky/local road segment'), 'Local-road status should identify the loaded display source');
+  assert(localRoadStatus.includes('does not establish public access, maintenance, or current drivability'), 'Local-road status must preserve the access/drivability disclosure');
+
+  const localRoadRequests = providerRequests.filter(url => url.includes('Ky_TCM_Street_Base_WGS84WM/MapServer/71/query?'));
+  assert(localRoadRequests.length >= 1, 'Local / other roads should request Kentucky Local Roads layer 71');
+  const localRoadRequest = new URL(localRoadRequests[localRoadRequests.length - 1]);
+  assert.strictEqual(localRoadRequest.searchParams.get('resultRecordCount'), '801', 'Local-road viewport query must enforce the 800-feature ceiling');
+  assert.strictEqual(localRoadRequest.searchParams.get('outFields'), 'OBJECTID,RD_NAME,SURFTYPE,GOV_LEVEL,STATUS', 'Local-road query should request only compact display fields');
+  assert.strictEqual(localRoadRequest.searchParams.get('returnGeometry'), 'true');
+  const localRoadGeometry = JSON.parse(localRoadRequest.searchParams.get('geometry') || '{}');
+  assert(Number.isFinite(localRoadGeometry.xmin) && Number.isFinite(localRoadGeometry.xmax), 'Local-road query must carry viewport envelope geometry');
+  assert(localRoadGeometry.xmax - localRoadGeometry.xmin < 1, 'Local-road query must be viewport-bounded rather than use the full Gorge planning envelope');
 
   // Geographic orientation labels: transparent gray typography, no badges.
   // Desktop Home shows full stacked names; zooming out eventually becomes broad initials.
