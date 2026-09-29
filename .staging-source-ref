@@ -1,9 +1,9 @@
-ce9dbc74da899c7bf2a9fd96420a3094b655dd66
-purpose=Owner-requested parity pass for minimized Plan history controls. The same floating Undo/Redo controls already accepted on mobile now also appear on desktop whenever Plan is minimized. They remain outside the minimized Distance/Gain/Loss/Elevation strip, mirror active-tool history availability, and disappear whenever Plan is expanded or closed. Mobile behavior and restored Plan-open instructions remain unchanged. No snapping/network code changed; accepted Lower Swift / Osborne Bend defect remains frozen.
-source_ci=36503826364 SUCCESS
-routes_uat_source_ref_commit=128f0bbeca6573e403627e43ddc8bbeee065e798
-routes_tracks_uat_harness_commit=34b9b4c091c59a1224bfb074d4305c4ad3a3595e
-brand_uat_source_ref_commit=cc167fedfcc0194a373cdd30918080decba31cac
-analytics_uat_source_ref_commit=02715be176c14ca1c8630a79b834ce9d74cb202a
-roku_uat_source_ref_commit=680c2272a31ba3f52baef12fb02338914597db4d
+6d14deb3098e753c9f15926a8e648a07a42009b3
+purpose=Owner-approved Local / other roads staging POC. Adds Kentucky Commonwealth Map Local Roads layer 71 as a display-only viewport query at close zoom. The layer is checked by default but only requests/render roads at zoom 13+, uses current map bounds with a small pad, AbortController, 240 ms move debounce, an 8-view cache, and an 800-feature hard ceiling that asks users to zoom in rather than render a dense response. Styling is a thin muted local-road line with name tooltip, compact status/government/surface popup and explicit access/maintenance/drivability disclaimer. The display layer never calls addSnapLine and does not modify the planner graph. Clifty School Road near 37.822129,-83.541391 is the first owner acceptance location. Privacy disclosure added while preserving the approved September 25, 2026 Privacy effective date. Existing Plan UI, responsive snapping baseline and accepted Lower Swift / Osborne Bend snap defect are unchanged. Production unchanged.
+source_ci=36577177373 SUCCESS
+routes_uat_source_ref_commit=54ca9fb6b4585b1a578a86cd982acb432ffc639f
+routes_tracks_uat_harness_commit=3df6a1e67c05ed04d58e2dd555008ccbc0debe1e
+brand_uat_source_ref_commit=6e2990075babe16c55bd6db40a4939358a26a8c5
+analytics_uat_source_ref_commit=ef5ec50a9e9fca521f32fa162409afe4784adb60
+roku_uat_source_ref_commit=62ca956c57ecc8e25f3cc24919e2a39836c6e0a5
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
