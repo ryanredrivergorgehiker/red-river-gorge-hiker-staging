@@ -775,8 +775,8 @@ async function fullMap(browser) {
   assert(body.includes('How to read this map — 30-second guide'));
   assert(body.includes('Map data:'));
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 13);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 12);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 14);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 13);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0, 'Temporary exact-view copier should be removed after Home approval');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
@@ -802,7 +802,7 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-opacity="usfs-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="osm-informal-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="usfs-roads"]').inputValue(), '100');
-  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 12);
+  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 13);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="usgs-topo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="ky-hillshade"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true);
