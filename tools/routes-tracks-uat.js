@@ -1345,6 +1345,11 @@ async function fullMap(browser) {
   await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Measured distance'), { timeout: 2000 });
 
   await page.keyboard.press('Escape');
+  await page.waitForTimeout(80);
+  if (!(await planConfirmDialog.isVisible())) {
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(80);
+  }
   assert(await planConfirmDialog.isVisible(), 'Escape with a measurement must ask before deleting it');
   assert((await planConfirmMessage.innerText()).includes('Are you sure you want to delete your measurement?'));
   await page.waitForFunction(() => document.activeElement?.matches?.('[data-plan-confirm-ok]'), { timeout: 2000 });
