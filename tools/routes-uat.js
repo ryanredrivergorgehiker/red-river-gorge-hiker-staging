@@ -449,9 +449,31 @@ async function tigerLocalRoadLabelAndSnapAcceptance(browser) {
   const mapCanvas = page.locator('.leaflet-container');
   const box = await mapCanvas.boundingBox();
   assert(box);
-  await mapCanvas.click({ position: { x: box.width * 0.50, y: box.height * 0.50 } });
+  const zoom = 15;
+  const scale = 256 * (2 ** zoom);
+  const project = (lat, lng) => {
+    const sin = Math.sin(lat * Math.PI / 180);
+    return {
+      x: ((lng + 180) / 360) * scale,
+      y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale
+    };
+  };
+  const center = project(37.8221290, -83.5413910);
+  const mapPosition = (lat, lng) => {
+    const point = project(lat, lng);
+    return {
+      x: box.width / 2 + (point.x - center.x),
+      y: box.height / 2 + (point.y - center.y)
+    };
+  };
+  // Two exact coordinates on the deterministic TIGER fixture. Using map
+  // projection rather than broad viewport percentages proves the planner is
+  // snapping to this road instead of merely landing near some other network.
+  const roadPointA = mapPosition(37.8220356, -83.5412758);
+  const roadPointB = mapPosition(37.8220013, -83.5395192);
+  await mapCanvas.click({ position: roadPointA });
   await page.waitForTimeout(120);
-  await mapCanvas.click({ position: { x: box.width * 0.60, y: box.height * 0.495 } });
+  await mapCanvas.click({ position: roadPointB });
   await page.waitForTimeout(300);
 
   const status = await page.locator('[data-map-status]').innerText();
