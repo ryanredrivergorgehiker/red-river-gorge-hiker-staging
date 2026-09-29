@@ -424,6 +424,17 @@ async function tigerLocalRoadLabelAndSnapAcceptance(browser) {
   const response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(response && response.ok());
   await page.waitForSelector('.leaflet-container', { timeout: 10000 });
+  await page.waitForFunction(
+    () => !document.querySelector('[data-map-preset="terrain"]')?.disabled,
+    { timeout: 10000 }
+  );
+  const localRoadToggle = page.locator('[data-map-layer="ky-local-roads"]');
+  assert.strictEqual(await localRoadToggle.isChecked(), false, 'Local / old roads must start off in Hiking view');
+  assert.strictEqual(await localRoadToggle.isDisabled(), true, 'Local / old roads must be unavailable in Hiking view');
+  await page.locator('[data-map-preset="terrain"]').click();
+  assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Terrain view must make Local / old roads available');
+  assert.strictEqual(await localRoadToggle.isChecked(), false, 'Terrain view must leave Local / old roads off until the visitor opts in');
+  await localRoadToggle.check();
   await page.waitForFunction(() => {
     const map = document.querySelector('[data-rrgh-route-map]');
     return map?.getAttribute('data-local-road-load-state') === 'loaded'
@@ -481,7 +492,7 @@ async function tigerLocalRoadLabelAndSnapAcceptance(browser) {
   assert.deepStrictEqual(pageErrors, []);
 
   await shot(page, 'tiger-local-road-label-and-snap');
-  record('TIGER Local / other roads labels and route snapping', 'PASS', {
+  record('TIGER Local / old roads labels and route snapping', 'PASS', {
     labelCount: Number(await map.getAttribute('data-local-road-label-count')),
     planningFeatureCount: Number(await map.getAttribute('data-local-road-planning-feature-count')),
     status
@@ -502,6 +513,13 @@ async function cachedOsmLocalRoadAcceptance(browser) {
   assert(response && response.ok());
   await page.waitForSelector('.leaflet-container', { timeout: 10000 });
   await page.waitForFunction(
+    () => !document.querySelector('[data-map-preset="terrain"]')?.disabled,
+    { timeout: 10000 }
+  );
+  const localRoadToggle = page.locator('[data-map-layer="ky-local-roads"]');
+  await page.locator('[data-map-preset="terrain"]').click();
+  await localRoadToggle.check();
+  await page.waitForFunction(
     () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-local-road-load-state') === 'loaded',
     { timeout: 10000 }
   );
@@ -512,7 +530,7 @@ async function cachedOsmLocalRoadAcceptance(browser) {
     'true',
     'The RRGH-hosted OSM road cache must supply Clifty/Cliffty School Road at the owner acceptance location'
   );
-  assert(Number(await map.getAttribute('data-local-road-osm-feature-count')) > 0, 'OSM Local / other roads should render cached viewport geometry');
+  assert(Number(await map.getAttribute('data-local-road-osm-feature-count')) > 0, 'OSM Local / old roads should render cached viewport geometry');
   assert.strictEqual(
     await map.getAttribute('data-local-road-tiger-feature-count'),
     '0',
@@ -525,7 +543,7 @@ async function cachedOsmLocalRoadAcceptance(browser) {
   assert.deepStrictEqual(pageErrors, []);
 
   await shot(page, 'cached-osm-local-road-clifty-acceptance');
-  record('Cached OSM Local / other roads covers Clifty owner acceptance location', 'PASS', {
+  record('Cached OSM Local / old roads covers Clifty owner acceptance location', 'PASS', {
     osmFeatureCount: Number(await map.getAttribute('data-local-road-osm-feature-count'))
   });
   await context.close();
@@ -710,7 +728,7 @@ async function liveLocalRoadSourceAudit() {
     }
   }
   if (!osm) {
-    // Normal Local / other roads use the committed RRGH-hosted OSM cache, not
+    // Normal Local / old roads use the committed RRGH-hosted OSM cache, not
     // live Overpass. A simultaneous public Overpass outage should be recorded
     // but must not block the exact-source browser checks or the deterministic
     // cached-OSM acceptance test below.
@@ -777,7 +795,7 @@ async function liveLocalRoadSourceAudit() {
   };
 
   fs.writeFileSync(path.join(EVIDENCE, 'local-road-source-audit.json'), JSON.stringify(audit, null, 2));
-  record('Live Local / other roads source coverage audit', 'PASS', {
+  record('Live Local / old roads source coverage audit', 'PASS', {
     tigerFeatures: audit.tigerweb.feature_count,
     tigerNearest: tigerNearest[0] || null,
     tigerClifty: tigerClifty.slice(0, 5),
