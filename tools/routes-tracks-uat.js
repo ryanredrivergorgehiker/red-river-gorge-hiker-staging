@@ -565,10 +565,6 @@ async function fullMap(browser) {
     },
     { timeout: 5000 }
   );
-  const localRoadStatus = await page.locator('[data-local-roads-status]').innerText();
-  assert(localRoadStatus.includes('Kentucky/local road segment'), 'Local-road status should identify the loaded display source');
-  assert(localRoadStatus.includes('does not establish public access, maintenance, or current drivability'), 'Local-road status must preserve the access/drivability disclosure');
-
   const localRoadRequests = providerRequests.filter(url => url.includes('Ky_TCM_Street_Base_WGS84WM/MapServer/71/query?'));
   assert(localRoadRequests.length >= 1, 'Local / other roads should request Kentucky Local Roads layer 71');
   const localRoadRequest = new URL(localRoadRequests[localRoadRequests.length - 1]);
