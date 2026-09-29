@@ -430,14 +430,10 @@ async function tigerLocalRoadLabelAndSnapAcceptance(browser) {
   );
   const localRoadToggle = page.locator('[data-map-layer="ky-local-roads"]');
   assert.strictEqual(await localRoadToggle.isChecked(), false, 'Local / old roads must start off in Hiking view');
-  assert.strictEqual(await localRoadToggle.isDisabled(), true, 'Local / old roads must be unavailable in Hiking view');
+  assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Local / old roads must remain available in Hiking view');
   await page.locator('[data-map-preset="terrain"]').click();
-  assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Terrain view must make Local / old roads available');
-  assert.strictEqual(await localRoadToggle.isChecked(), false, 'Terrain view must leave Local / old roads off until the visitor opts in');
-  await localRoadToggle.evaluate((element) => {
-    element.checked = true;
-    element.dispatchEvent(new Event('change', { bubbles: true }));
-  });
+  assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Terrain view must keep Local / old roads available');
+  assert.strictEqual(await localRoadToggle.isChecked(), true, 'Terrain view must turn Local / old roads on by default');
   await page.waitForFunction(() => {
     const map = document.querySelector('[data-rrgh-route-map]');
     return map?.getAttribute('data-local-road-load-state') === 'loaded'
@@ -521,10 +517,8 @@ async function cachedOsmLocalRoadAcceptance(browser) {
   );
   const localRoadToggle = page.locator('[data-map-layer="ky-local-roads"]');
   await page.locator('[data-map-preset="terrain"]').click();
-  await localRoadToggle.evaluate((element) => {
-    element.checked = true;
-    element.dispatchEvent(new Event('change', { bubbles: true }));
-  });
+  assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Terrain view must keep Local / old roads available');
+  assert.strictEqual(await localRoadToggle.isChecked(), true, 'Terrain view must turn Local / old roads on by default');
   await page.waitForFunction(
     () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-local-road-load-state') === 'loaded',
     { timeout: 10000 }

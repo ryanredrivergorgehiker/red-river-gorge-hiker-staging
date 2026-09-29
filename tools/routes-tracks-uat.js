@@ -551,23 +551,20 @@ async function fullMap(browser) {
   assert.strictEqual(await shareButtonReady.isDisabled(), false, 'Share must unlock after initial map state restoration');
   assert.strictEqual(await page.locator('[data-map-preset]').evaluateAll(nodes => nodes.every(node => !node.disabled)), true, 'Map View presets must unlock with core context');
 
-  // Local / old roads are intentionally absent from Hiking and opt-in only in Terrain/Aerial.
+  // Local / old roads remain available in every Map View. Hiking/Sunlight default off; Terrain/Aerial default on.
   const localRoadToggle = page.locator('[data-map-layer="ky-local-roads"]');
   const localRoadFineToggle = page.locator('[data-fine-tune-layer="ky-local-roads"]');
   assert.strictEqual(await localRoadToggle.isChecked(), false, 'Local / old roads must start off in Hiking view');
-  assert.strictEqual(await localRoadToggle.isDisabled(), true, 'Hiking view must keep Local / old roads unavailable');
-  assert.strictEqual(await localRoadFineToggle.isDisabled(), true, 'Fine-tune Local / old roads must also be unavailable in Hiking view');
-  assert.strictEqual(providerRequests.filter(url => url.includes('TIGERweb/tigerWMS_PhysicalFeatures/MapServer/5/query?')).length, 0, 'Hiking startup must not request TIGER Local Roads');
+  assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Hiking view must keep Local / old roads available');
+  assert.strictEqual(await localRoadFineToggle.isDisabled(), false, 'Fine-tune Local / old roads must remain available in Hiking view');
+  assert.strictEqual(providerRequests.filter(url => url.includes('TIGERweb/tigerWMS_PhysicalFeatures/MapServer/5/query?')).length, 0, 'Hiking startup must not request TIGER Local Roads while the layer is off');
 
   await page.locator('[data-map-preset="terrain"]').click();
-  assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Terrain view should make Local / old roads available');
-  assert.strictEqual(await localRoadToggle.isChecked(), false, 'Terrain view should still leave Local / old roads off by default');
-  assert.strictEqual(await localRoadFineToggle.isDisabled(), false, 'Terrain view should unlock the Local / old roads fine-tune toggle');
+  assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Terrain view must keep Local / old roads available');
+  assert.strictEqual(await localRoadToggle.isChecked(), true, 'Terrain view must turn Local / old roads on by default');
+  assert.strictEqual(await localRoadFineToggle.isDisabled(), false, 'Terrain view must keep the Local / old roads fine-tune toggle available');
+  assert.strictEqual(await localRoadFineToggle.isChecked(), true, 'Terrain view must sync the Fine tune Local / old roads checkbox on');
 
-  await localRoadToggle.evaluate((element) => {
-    element.checked = true;
-    element.dispatchEvent(new Event('change', { bubbles: true }));
-  });
   assert.strictEqual(await mapContainer.getAttribute('data-local-road-load-state'), 'zoom-in', 'At Home zoom, Local / old roads should wait for closer inspection');
   await page.getByRole('button', { name: 'Zoom in', exact: true }).first().click();
   await page.waitForFunction(
@@ -590,7 +587,7 @@ async function fullMap(browser) {
     { timeout: 5000 }
   );
   const localRoadRequests = providerRequests.filter(url => url.includes('TIGERweb/tigerWMS_PhysicalFeatures/MapServer/5/query?'));
-  assert(localRoadRequests.length >= 1, 'Local / old roads should request Census TIGERweb Local Roads layer 5 only after opt-in');
+  assert(localRoadRequests.length >= 1, 'Terrain default-on Local / old roads should request Census TIGERweb Local Roads layer 5 after close zoom');
   const localRoadRequest = new URL(localRoadRequests[localRoadRequests.length - 1]);
   assert.strictEqual(localRoadRequest.searchParams.get('resultRecordCount'), '801', 'Local-road viewport query must enforce the 800-feature ceiling');
   assert.strictEqual(localRoadRequest.searchParams.get('outFields'), 'OID,NAME,BASENAME', 'Local-road query should request the TIGER identifier plus road name fields needed for the display contract');
@@ -600,12 +597,12 @@ async function fullMap(browser) {
   assert(localRoadGeometry.xmax - localRoadGeometry.xmin < 1, 'Local-road query must be viewport-bounded rather than use the full Gorge planning envelope');
 
   await page.locator('[data-map-preset="aerial"]').click();
-  assert.strictEqual(await localRoadToggle.isChecked(), false, 'Aerial view should leave Local / old roads off until the visitor opts in');
-  assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Aerial view should make Local / old roads available');
+  assert.strictEqual(await localRoadToggle.isChecked(), true, 'Aerial view must turn Local / old roads on by default');
+  assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Aerial view must keep Local / old roads available');
 
   await page.locator('[data-map-preset="hiking"]').click();
-  assert.strictEqual(await localRoadToggle.isChecked(), false, 'Returning to Hiking must turn Local / old roads off');
-  assert.strictEqual(await localRoadToggle.isDisabled(), true, 'Returning to Hiking must make Local / old roads unavailable');
+  assert.strictEqual(await localRoadToggle.isChecked(), false, 'Returning to Hiking must turn Local / old roads off by default');
+  assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Returning to Hiking must keep Local / old roads available');
   await homeButton.click();
 
   // Geographic orientation labels: transparent gray typography, no badges.
@@ -923,6 +920,8 @@ async function fullMap(browser) {
   assert(/^Today · Sunrise .+ · Sunset .+$/.test(sunlightTeaser), 'Sunlight teaser should show today sunrise/sunset; text=' + sunlightTeaser);
   assert(!sunlightTeaser.includes('calculating'), 'Sunlight teaser must be populated before use');
   await sunlightPreset.click();
+  assert.strictEqual(await localRoadToggle.isChecked(), false, 'Sunlight view must leave Local / old roads off by default');
+  assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Sunlight view must keep Local / old roads available');
   assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '25');
   assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').inputValue(), '75');
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '100');
