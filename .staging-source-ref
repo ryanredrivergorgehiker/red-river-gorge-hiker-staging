@@ -1,9 +1,10 @@
-112399e0b6385bcbd361eea96c944deb472ecad7
-purpose=Local / other roads refinement for owner review: named close-zoom road labels plus route-planner snapping on eligible loaded TIGER/OSM local-road geometry. OSM features explicitly tagged private/no access or private/no foot access are excluded from local-road snapping. Privacy effective date remains September 25, 2026. Production unchanged.
-source_ci=36603661748 SUCCESS
-routes_tracks_uat=36605300839 SUCCESS
-routes_uat=latest follow-up validating exact TIGER road click geometry
-brand_uat=36604075206 SUCCESS
-analytics_uat=36604084929 SUCCESS
-roku_uat=36604096237 SUCCESS
+3cce446b14b1302605124c41fde240eb2af1e8d3
+purpose=Owner-requested Local / old roads safety and performance refinement. Public layer is renamed Local / old roads and explicitly described as roads, not trails, with uncertain status that may include active, old/abandoned, gated/closed, or no-longer-passable roads. Hiking and Sunlight presets keep the layer off and unavailable. Terrain and Aerial presets make it available but leave it off until the visitor opts in. Local-road loading now begins at zoom 14+ instead of 13+, reducing broad-view network/data work. Road-name labels begin at zoom 15+, are capped at 24, deduplicated by normalized name, and use screen-space collision boxes to suppress overlapping labels. Existing TIGERweb + RRGH-hosted OSM track/service source architecture and route-planner snapping remain intact when the layer is enabled. Privacy effective date remains September 25, 2026. Production unchanged.
+source_ci=36612846727 SUCCESS
+routes_tracks_uat=36613026099 SUCCESS
+routes_uat=36613027222 SUCCESS
+brand_uat=36612937908 SUCCESS
+analytics_uat=36612946339 SUCCESS
+roku_uat=36612952155 SUCCESS
+local_road_source_audit=36599905139 SUCCESS (source architecture unchanged)
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
