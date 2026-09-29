@@ -551,29 +551,43 @@ async function fullMap(browser) {
   assert.strictEqual(await shareButtonReady.isDisabled(), false, 'Share must unlock after initial map state restoration');
   assert.strictEqual(await page.locator('[data-map-preset]').evaluateAll(nodes => nodes.every(node => !node.disabled)), true, 'Map View presets must unlock with core context');
 
-  // Local / other roads: viewport-only, close-zoom display that never joins the planner graph.
+  // Local / old roads are intentionally absent from Hiking and opt-in only in Terrain/Aerial.
   const localRoadToggle = page.locator('[data-map-layer="ky-local-roads"]');
-  assert.strictEqual(await localRoadToggle.isChecked(), true, 'Local / other roads should be checked by default');
+  const localRoadFineToggle = page.locator('[data-fine-tune-layer="ky-local-roads"]');
+  assert.strictEqual(await localRoadToggle.isChecked(), false, 'Local / old roads must start off in Hiking view');
+  assert.strictEqual(await localRoadToggle.isDisabled(), true, 'Hiking view must keep Local / old roads unavailable');
+  assert.strictEqual(await localRoadFineToggle.isDisabled(), true, 'Fine-tune Local / old roads must also be unavailable in Hiking view');
+  assert.strictEqual(providerRequests.filter(url => url.includes('TIGERweb/tigerWMS_PhysicalFeatures/MapServer/5/query?')).length, 0, 'Hiking startup must not request TIGER Local Roads');
+
+  await page.locator('[data-map-preset="terrain"]').click();
+  assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Terrain view should make Local / old roads available');
+  assert.strictEqual(await localRoadToggle.isChecked(), false, 'Terrain view should still leave Local / old roads off by default');
+  assert.strictEqual(await localRoadFineToggle.isDisabled(), false, 'Terrain view should unlock the Local / old roads fine-tune toggle');
+
+  await localRoadToggle.check();
+  assert.strictEqual(await mapContainer.getAttribute('data-local-road-load-state'), 'zoom-in', 'At Home zoom, Local / old roads should wait for closer inspection');
+  await page.getByRole('button', { name: 'Zoom in', exact: true }).first().click();
   await page.waitForFunction(
     () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-local-road-load-state') === 'loaded',
     { timeout: 5000 }
   );
-  assert(Number(await mapContainer.getAttribute('data-local-road-feature-count')) >= 1, 'Close-zoom local-road display should render the viewport response');
-  assert.strictEqual(await mapContainer.getAttribute('data-local-road-clifty-found'), 'true', 'Clifty School Road must survive the local-road display pipeline');
+  assert(Number(await mapContainer.getAttribute('data-local-road-feature-count')) >= 1, 'Close-zoom Local / old roads should render the viewport response');
+  assert.strictEqual(await mapContainer.getAttribute('data-local-road-clifty-found'), 'true', 'Clifty School Road must survive the Local / old roads display pipeline');
   await page.waitForFunction(
     () => {
       const status = document.querySelector('[data-local-roads-status]')?.textContent || '';
       const state = document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-local-road-load-state');
       return state === 'loaded'
-        && status.includes('local / other road segment')
+        && status.includes('local / old road segment')
         && status.includes('Census TIGERweb')
         && status.includes('cached OpenStreetMap track/service context')
+        && status.includes('roads, not trails')
         && status.includes('does not establish public access, maintenance, legal travel, or current drivability');
     },
     { timeout: 5000 }
   );
   const localRoadRequests = providerRequests.filter(url => url.includes('TIGERweb/tigerWMS_PhysicalFeatures/MapServer/5/query?'));
-  assert(localRoadRequests.length >= 1, 'Local / other roads should request Census TIGERweb Local Roads layer 5');
+  assert(localRoadRequests.length >= 1, 'Local / old roads should request Census TIGERweb Local Roads layer 5 only after opt-in');
   const localRoadRequest = new URL(localRoadRequests[localRoadRequests.length - 1]);
   assert.strictEqual(localRoadRequest.searchParams.get('resultRecordCount'), '801', 'Local-road viewport query must enforce the 800-feature ceiling');
   assert.strictEqual(localRoadRequest.searchParams.get('outFields'), 'OID,NAME,BASENAME', 'Local-road query should request the TIGER identifier plus road name fields needed for the display contract');
@@ -581,6 +595,11 @@ async function fullMap(browser) {
   const localRoadGeometry = JSON.parse(localRoadRequest.searchParams.get('geometry') || '{}');
   assert(Number.isFinite(localRoadGeometry.xmin) && Number.isFinite(localRoadGeometry.xmax), 'Local-road query must carry viewport envelope geometry');
   assert(localRoadGeometry.xmax - localRoadGeometry.xmin < 1, 'Local-road query must be viewport-bounded rather than use the full Gorge planning envelope');
+
+  await page.locator('[data-map-preset="hiking"]').click();
+  assert.strictEqual(await localRoadToggle.isChecked(), false, 'Returning to Hiking must turn Local / old roads off');
+  assert.strictEqual(await localRoadToggle.isDisabled(), true, 'Returning to Hiking must make Local / old roads unavailable');
+  await homeButton.click();
 
   // Geographic orientation labels: transparent gray typography, no badges.
   // Desktop Home shows full stacked names; zooming out eventually becomes broad initials.
