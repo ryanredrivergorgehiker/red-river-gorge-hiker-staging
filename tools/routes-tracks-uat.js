@@ -1344,21 +1344,16 @@ async function fullMap(browser) {
   await page.keyboard.press('Control+y');
   await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Measured distance'), { timeout: 2000 });
 
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(80);
-  if (!(await planConfirmDialog.isVisible())) {
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(80);
-  }
-  assert(await planConfirmDialog.isVisible(), 'Escape with a measurement must ask before deleting it');
+  await page.getByRole('button', { name: 'Close planning controls', exact: true }).click();
+  assert(await planConfirmDialog.isVisible(), 'Closing Plan with a measurement must ask before deleting it');
   assert((await planConfirmMessage.innerText()).includes('Are you sure you want to delete your measurement?'));
   await page.waitForFunction(() => document.activeElement?.matches?.('[data-plan-confirm-ok]'), { timeout: 2000 });
   await page.keyboard.press('Escape');
   await planConfirmDialog.waitFor({ state: 'hidden' });
   assert((await page.locator('[data-map-status]').innerText()).includes('Measured distance'), 'Escaping the warning should keep the measurement');
 
-  await page.keyboard.press('Escape');
-  assert(await planConfirmDialog.isVisible(), 'A second Escape should reopen the guarded Plan exit');
+  await page.getByRole('button', { name: 'Close planning controls', exact: true }).click();
+  assert(await planConfirmDialog.isVisible(), 'A second Plan close should reopen the guarded exit');
   await page.keyboard.press('Enter');
   await planConfirmDialog.waitFor({ state: 'hidden' });
   assert(await planPanel.isHidden(), 'Enter on the focused OK button should clear the measurement and exit Plan');
