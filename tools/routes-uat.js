@@ -565,7 +565,8 @@ async function legalExploreAndMobile(browser) {
   assert(body.includes('Interactive Maps and Map-Data Services'));
   assert(body.includes('default map layers begin loading immediately'));
   assert(body.includes('USDA Forest Service Enterprise Data Warehouse'));
-  assert(body.includes('RRGH-hosted cache derived from OpenStreetMap data'));
+  assert(body.includes('RRGH-hosted caches derived from OpenStreetMap and from supplemental USGS National Digital Trails'));
+  assert(body.includes('ordinary visitors do not contact the USGS trail query service'));
   assert(body.includes('If you choose “My location,”'));
 
   await page.goto(MAIN + 'copyright-and-terms/', { waitUntil: 'domcontentloaded', timeout: 60000 });

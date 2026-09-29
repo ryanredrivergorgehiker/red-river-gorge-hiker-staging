@@ -1205,6 +1205,9 @@ async function fullMap(browser) {
   assert(!providerRequests.some(url => /overpass/i.test(url)), 'Normal informal-trail loading must use the RRGH cache, not live Overpass');
   assert.strictEqual(await mapContainer.getAttribute('data-informal-trail-source'), 'rrgh-cache');
   assert(Number(await mapContainer.getAttribute('data-informal-trail-count')) > 100, 'Cached community trail layer should contain substantial Gorge trail coverage');
+  assert(Number(await mapContainer.getAttribute('data-informal-trail-usgs-count')) > 0, 'USGS aggregated trail supplement must add at least one de-duplicated Terra Trail segment');
+  assert(Number(await mapContainer.getAttribute('data-informal-trail-osm-count')) > 100, 'OSM community cache must remain the primary informal-trail source');
+  assert(!providerRequests.some(url => url.includes('partnerships.nationalmap.gov')), 'Normal USGS trail supplement loading must use the RRGH-hosted cache, not a live USGS browser request');
   assert((await page.locator('.leaflet-informalTrails-pane canvas, .leaflet-informalTrails-pane path').count()) > 0);
   assert(Number(await mapContainer.getAttribute('data-planner-node-count')) > 1, 'Planner graph should include mapped trail/road network');
   assert(!(await page.locator('.route-layer-panel').innerText()).includes('Always shown'));
@@ -2211,6 +2214,66 @@ async function mobile(browser) {
   await context.close();
 }
 
+async function usgsAggregatedTrailSupplement(browser) {
+  const context = await preparedContext(browser, { viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  const providerRequests = [];
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error)));
+  await installProviderStubs(page, providerRequests, true);
+
+  const response = await page.goto(MAIN + 'routes/map/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(response && response.ok());
+  await page.waitForSelector('.leaflet-container', { timeout: 10000 });
+  await page.waitForFunction(
+    () => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-informal-trail-usgs-count') || 0) > 0
+      && document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-trail-planning-ready') === 'true',
+    { timeout: 15000 }
+  );
+
+  const map = page.locator('[data-rrgh-route-map]');
+  const cache = await page.evaluate(async () => {
+    const response = await fetch('/data/map/usgs-aggregated-trails.geojson', { cache: 'no-cache' });
+    if (!response.ok) throw new Error('USGS aggregated trails cache HTTP ' + response.status);
+    return response.json();
+  });
+  assert.strictEqual(cache.type, 'FeatureCollection');
+  assert(cache.features.length > 0, 'USGS aggregated trail cache should contain de-duplicated supplemental segments');
+  assert.strictEqual(Number(await map.getAttribute('data-informal-trail-usgs-count')), cache.features.length);
+  assert(cache.rrgh_cache.raw_feature_count > cache.features.length, 'USGS source must be de-duplicated before browser display');
+  assert(cache.rrgh_cache.official_like_removed > 0, 'USGS source must remove current Forest Service trail overlaps');
+  assert(cache.rrgh_cache.validation_reference?.lat === 37.86393 && cache.rrgh_cache.validation_reference?.lon === -83.55277);
+  assert(!providerRequests.some(url => url.includes('partnerships.nationalmap.gov')), 'Browser must not contact the live USGS Trails service for the cached supplement');
+
+  const named = cache.features.find(feature => String(feature?.properties?.name || '').trim());
+  assert(named, 'USGS supplement needs at least one named feature for popup/search UAT');
+  const name = String(named.properties.name);
+
+  await page.getByRole('button', { name: 'Search map', exact: true }).click();
+  await page.locator('[data-map-search]').fill(name);
+  const result = page.locator('.route-search-result').filter({ hasText: name }).first();
+  assert(await result.count(), 'USGS supplemental trail must be searchable: ' + name);
+  await result.click();
+  await page.waitForSelector('.leaflet-popup-content', { timeout: 5000 });
+  const popup = await page.locator('.leaflet-popup-content').innerText();
+  assert(popup.includes(name));
+  assert(popup.includes('USGS National Digital Trails / National Transportation Dataset'));
+  assert(popup.includes('Hiker/Pedestrian:'));
+  assert(popup.includes('Pack and Saddle:'));
+  assert(popup.includes('Source originator:'));
+  assert(popup.includes('Source: USGS The National Map — National Digital Trails'));
+  assert.deepStrictEqual(pageErrors, []);
+
+  record('USGS aggregated Terra Trails supplement is cached, de-duplicated and source-labeled', 'PASS', {
+    featureCount: cache.features.length,
+    rawFeatureCount: cache.rrgh_cache.raw_feature_count,
+    officialLikeRemoved: cache.rrgh_cache.official_like_removed,
+    osmDuplicateRemoved: cache.rrgh_cache.osm_duplicate_removed,
+    sample: name
+  });
+  await context.close();
+}
+
 async function legal(browser) {
   const context = await preparedContext(browser, { viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
@@ -2221,7 +2284,8 @@ async function legal(browser) {
   for (const expected of [
     'Interactive Maps and Map-Data Services',
     'Community / Informal Trails',
-    'RRGH-hosted cache derived from OpenStreetMap data',
+    'RRGH-hosted caches derived from OpenStreetMap and from supplemental USGS National Digital Trails',
+    'ordinary visitors do not contact the USGS trail query service',
     'Last updated: September 25, 2026',
     'Measure distance',
     'USGS 3D Elevation Program (3DEP)',
@@ -2263,7 +2327,8 @@ async function legal(browser) {
     'GPS and device-location estimates can be inaccurate',
     'Property and parcel boundaries are not displayed',
     'Community / Informal Trails',
-    'route planner may snap to displayed community/informal paths',
+    'supplemental USGS National Digital Trails / National Transportation Dataset Terra Trail features',
+    'USGS feature explicitly reports Hiker/Pedestrian as No',
     'snap to mapped road-centerline geometry from USDA Forest Service and Kentucky public road datasets',
     'Open Database License (ODbL)',
     'optional Oil & Gas Wells layer',
@@ -2348,6 +2413,7 @@ async function oilGasFailureHandling(browser) {
     await mobile(browser);
     await liveKgsOilGasProbe(browser);
     await oilGasFailureHandling(browser);
+    await usgsAggregatedTrailSupplement(browser);
     await legal(browser);
   } catch (error) {
     failure = error;
