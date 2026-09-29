@@ -94,7 +94,7 @@ const LOCAL_ROADS = {
       type: 'Feature',
       properties: {
         OBJECTID: 71001,
-        RD_NAME: 'Clifty School Road',
+        RD_NAME: 'CLIFTY SCHOOL RD',
         SURFTYPE: 'P',
         GOV_LEVEL: 'CO',
         STATUS: 'Active'
@@ -252,7 +252,7 @@ async function installProviderStubs(page, providerRequests, slowPrimaryOverpass 
     if (url.includes('Ky_911_Road_Centerlines_WGS84WM') && url.includes('/query?')) {
       return route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(KENTUCKY_ROADS) });
     }
-    if (url.includes('Ky_TCM_Street_Base_WGS84WM/MapServer/71/query?')) {
+    if (url.includes('Ky_Cartobase_WGS84WM/MapServer/12/query?')) {
       return route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(LOCAL_ROADS) });
     }
     return route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG });
@@ -565,11 +565,11 @@ async function fullMap(browser) {
     },
     { timeout: 5000 }
   );
-  const localRoadRequests = providerRequests.filter(url => url.includes('Ky_TCM_Street_Base_WGS84WM/MapServer/71/query?'));
+  const localRoadRequests = providerRequests.filter(url => url.includes('Ky_Cartobase_WGS84WM/MapServer/12/query?'));
   assert(localRoadRequests.length >= 1, 'Local / other roads should request Kentucky Local Roads layer 71');
   const localRoadRequest = new URL(localRoadRequests[localRoadRequests.length - 1]);
   assert.strictEqual(localRoadRequest.searchParams.get('resultRecordCount'), '801', 'Local-road viewport query must enforce the 800-feature ceiling');
-  assert.strictEqual(localRoadRequest.searchParams.get('outFields'), 'OBJECTID,RD_NAME,SURFTYPE,GOV_LEVEL,STATUS', 'Local-road query should request only compact display fields');
+  assert.strictEqual(localRoadRequest.searchParams.get('outFields'), 'OBJECTID,RD_NAME', 'Local-road query should request only the road name needed for the display contract');
   assert.strictEqual(localRoadRequest.searchParams.get('returnGeometry'), 'true');
   const localRoadGeometry = JSON.parse(localRoadRequest.searchParams.get('geometry') || '{}');
   assert(Number.isFinite(localRoadGeometry.xmin) && Number.isFinite(localRoadGeometry.xmax), 'Local-road query must carry viewport envelope geometry');
