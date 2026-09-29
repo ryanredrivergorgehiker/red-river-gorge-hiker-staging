@@ -1,9 +1,10 @@
-6d14deb3098e753c9f15926a8e648a07a42009b3
-purpose=Owner-approved Local / other roads staging POC. Adds Kentucky Commonwealth Map Local Roads layer 71 as a display-only viewport query at close zoom. The layer is checked by default but only requests/render roads at zoom 13+, uses current map bounds with a small pad, AbortController, 240 ms move debounce, an 8-view cache, and an 800-feature hard ceiling that asks users to zoom in rather than render a dense response. Styling is a thin muted local-road line with name tooltip, compact status/government/surface popup and explicit access/maintenance/drivability disclaimer. The display layer never calls addSnapLine and does not modify the planner graph. Clifty School Road near 37.822129,-83.541391 is the first owner acceptance location. Privacy disclosure added while preserving the approved September 25, 2026 Privacy effective date. Existing Plan UI, responsive snapping baseline and accepted Lower Swift / Osborne Bend snap defect are unchanged. Production unchanged.
-source_ci=36577177373 SUCCESS
-routes_uat_source_ref_commit=54ca9fb6b4585b1a578a86cd982acb432ffc639f
-routes_tracks_uat_harness_commit=3df6a1e67c05ed04d58e2dd555008ccbc0debe1e
-brand_uat_source_ref_commit=6e2990075babe16c55bd6db40a4939358a26a8c5
-analytics_uat_source_ref_commit=ef5ec50a9e9fca521f32fa162409afe4784adb60
-roku_uat_source_ref_commit=62ca956c57ecc8e25f3cc24919e2a39836c6e0a5
+41143cb4dc729c7d9a25fdd28b54d2d9656ade5b
+purpose=Owner-approved Local / other roads staging POC, corrected after browser UAT. Adds Kentucky Commonwealth Map Local Roads layer 71 as a display-only viewport query at close zoom. The layer is checked by default but only requests/renders roads at zoom 13+, uses current map bounds with a small pad, AbortController, 240 ms move debounce, an 8-view cache, and an 800-feature hard ceiling that asks users to zoom in rather than render a dense response. Styling is a thin muted local-road line with road-name hover tooltip and explicit access/maintenance/drivability disclosure. Local-road popups were removed after UAT showed they could consume Escape while Plan was active; the layer therefore remains visual/contextual and does not interfere with Plan keyboard controls. The display layer never calls addSnapLine and does not modify the planner graph. Clifty School Road near 37.822129,-83.541391 is the first owner acceptance location. Privacy disclosure added while preserving the approved September 25, 2026 Privacy effective date. Existing Plan UI, responsive snapping baseline and accepted Lower Swift / Osborne Bend snap defect are unchanged. Production unchanged.
+source_ci=36579399957 SUCCESS
+routes_uat_source_ref_commit=bf811fe92de7c4c7ba23567b88549ddeb95986a8
+routes_uat_harness_commit=d120bbe072163d173399b2d1ff8464af7ad9cf8d
+routes_tracks_uat_harness_commit=6634f56d76a98e18131db5090bb786dba3f35d98
+brand_uat_source_ref_commit=6f1b7856ab58251d36698fa93ca67a65cde1e837
+analytics_uat_source_ref_commit=b6a9541e43b154d9c683cd07b49e8b833d6574ca
+roku_uat_source_ref_commit=5b1e6efc80217ca2490415704fa0a6b89bd90827
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
