@@ -596,6 +596,10 @@ async function fullMap(browser) {
   assert(Number.isFinite(localRoadGeometry.xmin) && Number.isFinite(localRoadGeometry.xmax), 'Local-road query must carry viewport envelope geometry');
   assert(localRoadGeometry.xmax - localRoadGeometry.xmin < 1, 'Local-road query must be viewport-bounded rather than use the full Gorge planning envelope');
 
+  await page.locator('[data-map-preset="aerial"]').click();
+  assert.strictEqual(await localRoadToggle.isChecked(), false, 'Aerial view should leave Local / old roads off until the visitor opts in');
+  assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Aerial view should make Local / old roads available');
+
   await page.locator('[data-map-preset="hiking"]').click();
   assert.strictEqual(await localRoadToggle.isChecked(), false, 'Returning to Hiking must turn Local / old roads off');
   assert.strictEqual(await localRoadToggle.isDisabled(), true, 'Returning to Hiking must make Local / old roads unavailable');
