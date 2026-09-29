@@ -1356,6 +1356,10 @@ async function fullMap(browser) {
   assert(await planConfirmDialog.isVisible(), 'A second Plan close should reopen the guarded exit');
   await planConfirmOk.click();
   await planConfirmDialog.waitFor({ state: 'hidden' });
+  await page.waitForFunction(
+    () => document.querySelector('[data-map-sheet="plan"]')?.hasAttribute('hidden'),
+    { timeout: 2000 }
+  );
   assert(await planPanel.isHidden(), 'Confirming the guarded exit should clear the measurement and exit Plan');
 
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
