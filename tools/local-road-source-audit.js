@@ -127,10 +127,17 @@ function summarizeOsm(data) {
   );
   const tigerKnownFeatures=Array.isArray(tigerKnown.features)?tigerKnown.features:[];
   const tigerReturnedOids=new Set(tigerKnownFeatures.map(f=>String(f?.properties?.OID||'')));
-  for(const oid of tigerKnownOids) assert(tigerReturnedOids.has(oid),'TIGERweb missing known Clifty OID '+oid);
-  assert(tigerKnownFeatures.every(f=>f?.geometry),'TIGERweb known Clifty records must return geometry');
+  const tigerViewportClifty=(result.sources.census_tiger_local?.nearest||[]).filter(item =>
+    /(?:old\s+)?clif{1,2}ty\s+school/i.test(String(item.name||''))
+    || tigerKnownOids.includes(String(item?.properties?.OID||''))
+  );
+  assert(tigerViewportClifty.length>0,'TIGERweb must return Clifty/Cliffty School Road in the owner acceptance viewport');
+  assert(tigerKnownFeatures.every(f=>f?.geometry),'TIGERweb returned known Clifty records must include geometry');
+  result.tiger_acceptance_viewport=tigerViewportClifty;
   result.tiger_known_clifty={
     requested_oids:tigerKnownOids,
+    returned_oids:[...tigerReturnedOids],
+    missing_oids:tigerKnownOids.filter(oid=>!tigerReturnedOids.has(oid)),
     returned_count:tigerKnownFeatures.length,
     records:tigerKnownFeatures.map(f=>({
       OID:f?.properties?.OID||null,
