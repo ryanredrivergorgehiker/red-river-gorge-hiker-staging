@@ -1,9 +1,9 @@
-1618d6df90dbdb343807c33ccc4e031c89effd7a
-purpose=Owner-approved Plan usability pass only. Adds Ctrl/Cmd+Z Undo plus Ctrl/Cmd+Y and Ctrl/Cmd+Shift+Z Redo for active planning/measurement work; measurement history now participates in Undo/Redo. Adds Escape guarded exit and an explicit Plan × close control. If planning work exists, Escape/× asks before deleting; Enter confirms the focused OK action, Escape cancels the warning. Clear uses the same warning when work exists but leaves Plan open after confirmation. Shortcuts do not override editable form controls. No snapping/network code changed; accepted Lower Swift / Osborne Bend defect remains frozen.
-source_ci=36499249148 SUCCESS
-routes_uat_source_ref_commit=e7673b95d4161817a11e6b4f8aa3cbaf4caba759
-routes_tracks_uat_harness_commit=bacdd046ebabab1d3ea175dc1b6e371722563878
-brand_uat_source_ref_commit=39f4c7982e92076120608df582518fee8e72bc7d
-analytics_uat_source_ref_commit=be53172d3a4030f9eccbe0313800ebdc9b59fcfa
-roku_uat_source_ref_commit=06844ebb3505edcf7a7ec1494b19b651cae88c6d
+5053718b61931a98a79a0350d7d4feaaca95f0bd
+purpose=Owner-requested mobile-only shake Undo/Redo pass. While Measure distance or Build trail route is active on the full mobile map, a deliberate two-peak shake opens an Undo / Redo dialog. Undo and Redo reflect actual active-tool history and are disabled when unavailable. Shake handling uses a 15 m/s² strongest-axis and 24 combined threshold, two peaks within 550 ms, and a 1400 ms dialog cooldown. Motion listener is attached only after a planning-tool user gesture; browsers that require DeviceMotionEvent.requestPermission are requested from that gesture. Desktop behavior is unchanged. No snapping/network code changed; accepted Lower Swift / Osborne Bend defect remains frozen.
+source_ci=36501204359 SUCCESS
+routes_uat_source_ref_commit=f6e3b708d97bfc08366113e4a5979523b3edef38
+routes_tracks_uat_harness_commit=8b03773e010ffd023215582af4279e91e9334b8d
+brand_uat_source_ref_commit=1273c13092bd950c998edd072a9513fb8573ec2f
+analytics_uat_source_ref_commit=a2f38de067301e82cfb8c80b7e23f8d7ca16dfd9
+roku_uat_source_ref_commit=f97c49411fa6b7146b9c1ec65879254673ebe557
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
