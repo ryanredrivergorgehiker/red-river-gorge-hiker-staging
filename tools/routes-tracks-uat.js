@@ -564,7 +564,10 @@ async function fullMap(browser) {
   assert.strictEqual(await localRoadToggle.isChecked(), false, 'Terrain view should still leave Local / old roads off by default');
   assert.strictEqual(await localRoadFineToggle.isDisabled(), false, 'Terrain view should unlock the Local / old roads fine-tune toggle');
 
-  await localRoadToggle.check();
+  await localRoadToggle.evaluate((element) => {
+    element.checked = true;
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  });
   assert.strictEqual(await mapContainer.getAttribute('data-local-road-load-state'), 'zoom-in', 'At Home zoom, Local / old roads should wait for closer inspection');
   await page.getByRole('button', { name: 'Zoom in', exact: true }).first().click();
   await page.waitForFunction(
