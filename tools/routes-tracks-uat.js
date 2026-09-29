@@ -1467,6 +1467,10 @@ async function fullMap(browser) {
   await clearPlanningWork();
   assert(await planPanel.isVisible(), 'Clear should delete work without exiting Plan');
   await planPanel.getByRole('button', { name: 'Close planning controls', exact: true }).click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-map-sheet="plan"]')?.hasAttribute('hidden'),
+    { timeout: 2000 }
+  );
   assert(await planPanel.isHidden(), 'Close should exit immediately once Plan is empty');
   await planOpenButton.click();
   await buildTrailReadyButton.click();
