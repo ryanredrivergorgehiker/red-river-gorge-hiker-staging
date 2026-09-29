@@ -1,9 +1,9 @@
-5053718b61931a98a79a0350d7d4feaaca95f0bd
-purpose=Owner-requested mobile-only shake Undo/Redo pass. While Measure distance or Build trail route is active on the full mobile map, a deliberate two-peak shake opens an Undo / Redo dialog. Undo and Redo reflect actual active-tool history and are disabled when unavailable. Shake handling uses a 15 m/s² strongest-axis and 24 combined threshold, two peaks within 550 ms, and a 1400 ms dialog cooldown. Motion listener is attached only after a planning-tool user gesture; browsers that require DeviceMotionEvent.requestPermission are requested from that gesture. Desktop behavior is unchanged. No snapping/network code changed; accepted Lower Swift / Osborne Bend defect remains frozen.
-source_ci=36501204359 SUCCESS
-routes_uat_source_ref_commit=f6e3b708d97bfc08366113e4a5979523b3edef38
-routes_tracks_uat_harness_commit=8b03773e010ffd023215582af4279e91e9334b8d
-brand_uat_source_ref_commit=1273c13092bd950c998edd072a9513fb8573ec2f
-analytics_uat_source_ref_commit=a2f38de067301e82cfb8c80b7e23f8d7ca16dfd9
-roku_uat_source_ref_commit=f97c49411fa6b7146b9c1ec65879254673ebe557
+4e38070ca1757b8cc929e89d94501080bcba61d6
+purpose=Owner-requested Plan UI correction. Removes the mobile shake feature completely, including DeviceMotion permission/listener/dialog behavior. Adds mobile-only floating Undo/Redo buttons on the map only while Plan is minimized; buttons sit above the minimized Distance/Gain/Loss/Elevation strip and mirror active-tool history availability. Restores full Plan-open instructions so desktop Plan immediately explains Measure distance, Build trail route and Undo/Redo/Clear. No snapping/network code changed; accepted Lower Swift / Osborne Bend defect remains frozen.
+source_ci=36503195400 SUCCESS
+routes_uat_source_ref_commit=919eb76ab400325a0e6d22f6c9a193df03bb0022
+routes_tracks_uat_harness_commit=051f79d2732cbd6319b7bad588ef6844bac76d94
+brand_uat_source_ref_commit=005110de5ffb21de0cc860ae3be6cdcd4ecfa7b3
+analytics_uat_source_ref_commit=e33595969f12983b4aa4c2a9324de059de13dcef
+roku_uat_source_ref_commit=36978ff8861b31dba85228a66161a0042079947f
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
