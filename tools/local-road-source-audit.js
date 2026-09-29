@@ -36,15 +36,15 @@ function lineDistance(coords) {
 function featureDistance(feature) {
   return lineDistance(feature?.geometry?.coordinates || []);
 }
-async function arcgis(service) {
+async function arcgis(service, where = '1=1', outFields = '*') {
   const u = new URL(service + '/query');
   u.search = new URLSearchParams({
-    where:'1=1',
+    where,
     geometry:JSON.stringify({xmin:bbox.west,ymin:bbox.south,xmax:bbox.east,ymax:bbox.north,spatialReference:{wkid:4326}}),
     geometryType:'esriGeometryEnvelope',
     inSR:'4326',
     spatialRel:'esriSpatialRelIntersects',
-    outFields:'*',
+    outFields,
     returnGeometry:'true',
     returnZ:'false',
     returnM:'false',
@@ -101,7 +101,10 @@ function summarizeOsm(data) {
 }
 
 (async()=>{
+  const tigerService='https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_PhysicalFeatures/MapServer/5';
+  const tigerKnownOids=['110206092766','110206092933','110206092934','110206092773'];
   const sources=[
+    ['census_tiger_local',tigerService,['NAME','BASENAME']],
     ['kentucky_cartobase_local','https://kygisserver.ky.gov/arcgis/rest/services/WGS84WM_Services/Ky_Cartobase_WGS84WM/MapServer/12',['RD_NAME','NAME','ROADNAME']],
     ['kentucky_911','https://kygisserver.ky.gov/arcgis/rest/services/WGS84WM_Services/Ky_911_Road_Centerlines_WGS84WM/MapServer/0',['LSt_Name','St_Name','FULLNAME','ROADNAME']],
     ['usgs_local_roads','https://carto.nationalmap.gov/arcgis/rest/services/transportation/MapServer/32',['NAME','FULLNAME','FULL_NAME','PRIME_NAME']],
@@ -116,6 +119,29 @@ function summarizeOsm(data) {
     const nearest=summarize(data,names);
     result.sources[key]={feature_count:(data.features||[]).length,nearest:nearest.slice(0,15)};
   }
+
+  const tigerKnown=await arcgis(
+    tigerService,
+    "OID IN ('" + tigerKnownOids.join("','") + "')",
+    'OID,OBJECTID,NAME,BASENAME,MTFCC'
+  );
+  const tigerKnownFeatures=Array.isArray(tigerKnown.features)?tigerKnown.features:[];
+  const tigerReturnedOids=new Set(tigerKnownFeatures.map(f=>String(f?.properties?.OID||'')));
+  for(const oid of tigerKnownOids) assert(tigerReturnedOids.has(oid),'TIGERweb missing known Clifty OID '+oid);
+  assert(tigerKnownFeatures.every(f=>f?.geometry),'TIGERweb known Clifty records must return geometry');
+  result.tiger_known_clifty={
+    requested_oids:tigerKnownOids,
+    returned_count:tigerKnownFeatures.length,
+    records:tigerKnownFeatures.map(f=>({
+      OID:f?.properties?.OID||null,
+      OBJECTID:f?.properties?.OBJECTID||null,
+      NAME:f?.properties?.NAME||null,
+      BASENAME:f?.properties?.BASENAME||null,
+      MTFCC:f?.properties?.MTFCC||null,
+      distance_m:Math.round(featureDistance(f))
+    }))
+  };
+
   const osmSmall=await overpass(bbox);
   const osmBroad=await overpass(broadBbox);
   const smallWays=summarizeOsm(osmSmall.data);
