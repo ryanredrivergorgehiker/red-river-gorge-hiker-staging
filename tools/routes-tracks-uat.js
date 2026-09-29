@@ -555,6 +555,16 @@ async function fullMap(browser) {
   );
   assert(Number(await mapContainer.getAttribute('data-local-road-feature-count')) >= 1, 'Close-zoom local-road display should render the viewport response');
   assert.strictEqual(await mapContainer.getAttribute('data-local-road-clifty-found'), 'true', 'Clifty School Road must survive the local-road display pipeline');
+  await page.waitForFunction(
+    () => {
+      const status = document.querySelector('[data-local-roads-status]')?.textContent || '';
+      const state = document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-local-road-load-state');
+      return state === 'loaded'
+        && status.includes('Kentucky/local road segment')
+        && status.includes('does not establish public access, maintenance, or current drivability');
+    },
+    { timeout: 5000 }
+  );
   const localRoadStatus = await page.locator('[data-local-roads-status]').innerText();
   assert(localRoadStatus.includes('Kentucky/local road segment'), 'Local-road status should identify the loaded display source');
   assert(localRoadStatus.includes('does not establish public access, maintenance, or current drivability'), 'Local-road status must preserve the access/drivability disclosure');
