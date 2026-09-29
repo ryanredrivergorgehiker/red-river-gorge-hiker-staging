@@ -114,7 +114,7 @@ async function installStubs(page) {
       await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(COUNTIES) });
     } else if (url.includes('Ky_911_Road_Centerlines_WGS84WM') && url.includes('/query?')) {
       await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify(KENTUCKY_ROADS) });
-    } else if (url.includes('Ky_TCM_Street_Base_WGS84WM/MapServer/71/query?')) {
+    } else if (url.includes('Ky_Cartobase_WGS84WM/MapServer/12/query?')) {
       await route.fulfill({ status: 200, contentType: 'application/geo+json', body: JSON.stringify({ type: 'FeatureCollection', features: [] }) });
     } else {
       await route.fulfill({ status: 200, contentType: 'image/png', body: TRANSPARENT_PNG });
