@@ -651,6 +651,20 @@ async function fullMap(browser) {
   assert.strictEqual(minimizedStatsDesktop.length, 4);
   assert(Math.max(...minimizedStatsDesktop.map(item => item.y)) - Math.min(...minimizedStatsDesktop.map(item => item.y)) <= 2, 'Minimized desktop totals should share one row');
 
+  const desktopFloatingHistory = page.locator('[data-plan-mobile-history]');
+  assert(await desktopFloatingHistory.isVisible(), 'Desktop minimized Plan must show floating Undo / Redo controls on the map');
+  const desktopFloatingHistoryBox = await desktopFloatingHistory.boundingBox();
+  const minimizedPlanBoxDesktop = await planPanel.boundingBox();
+  assert(desktopFloatingHistoryBox && minimizedPlanBoxDesktop);
+  assert(
+    desktopFloatingHistoryBox.y + desktopFloatingHistoryBox.height <= minimizedPlanBoxDesktop.y - 3,
+    'Desktop floating Undo / Redo must sit above the minimized Plan strip'
+  );
+  const desktopFloatingUndo = desktopFloatingHistory.getByRole('button', { name: 'Undo', exact: true });
+  const desktopFloatingRedo = desktopFloatingHistory.getByRole('button', { name: 'Redo', exact: true });
+  assert.strictEqual(await desktopFloatingUndo.isDisabled(), true, 'Desktop floating Undo should begin disabled before history exists');
+  assert.strictEqual(await desktopFloatingRedo.isDisabled(), true, 'Desktop floating Redo should begin disabled before history exists');
+
   const minimizeMapBox = await mapContainer.boundingBox();
   assert(minimizeMapBox);
   await mapContainer.click({ position: { x: minimizeMapBox.width * 0.44, y: minimizeMapBox.height * 0.45 } });
@@ -664,8 +678,11 @@ async function fullMap(browser) {
   );
   assert.strictEqual(await planPanel.getAttribute('data-minimized'), 'true', 'Live route pinning must not force the minimized panel open');
   assert((await planPanel.locator('[data-plan-stats-distance]').innerText()).trim() !== '—');
+  assert.strictEqual(await desktopFloatingUndo.isDisabled(), false, 'Desktop floating Undo should enable after route edits');
+  assert.strictEqual(await desktopFloatingRedo.isDisabled(), true, 'Desktop floating Redo should remain disabled before Undo');
 
   await planPanel.getByRole('button', { name: 'Expand planning controls', exact: true }).click();
+  assert(await desktopFloatingHistory.isHidden(), 'Desktop floating Undo / Redo must disappear when Plan is expanded');
   assert.strictEqual(await planPanel.getAttribute('data-minimized'), null, 'Plan panel should restore from minimized state');
   assert(await planPanel.locator('.route-plan-mode-buttons').isVisible());
   await clearPlanningWork();
