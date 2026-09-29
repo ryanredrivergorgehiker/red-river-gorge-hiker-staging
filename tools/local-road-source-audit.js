@@ -87,7 +87,7 @@ async function overpass(box) {
 function summarizeOsm(data) {
   return data.elements.filter(e=>e?.type==='way'&&Array.isArray(e.geometry)).map(e=>({
     id:e.id,
-    distance_m:Math.round(lineDistance(e.geometry.map(p=>[p.lon,p.lat]))),
+    distance_m:Math.round(lineDistance(e.geometry.filter(p=>p&&Number.isFinite(p.lon)&&Number.isFinite(p.lat)).map(p=>[p.lon,p.lat]))),
     highway:e.tags?.highway||null,
     name:e.tags?.name||e.tags?.official_name||e.tags?.alt_name||null,
     surface:e.tags?.surface||null,
