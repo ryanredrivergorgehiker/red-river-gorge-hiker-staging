@@ -605,7 +605,10 @@ async function fullMap(browser) {
   assert(await planPanel.isVisible(), 'Plan panel must open before the optional informal-trail graph finishes');
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Measure distance', exact: true }).isDisabled(), false, 'Measure must be ready with core map context');
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Build trail route', exact: true }).isDisabled(), true, 'Build trail route must remain disabled until planning graph is ready');
-  assert((await planPanel.locator('[data-plan-help]').innerText()).includes('Choose a planning tool.'));
+  const initialPlanHelp = await planPanel.locator('[data-plan-help]').innerText();
+  assert(initialPlanHelp.includes('Measure distance: click or tap points to measure a straight-line distance.'), 'Opening Plan on desktop must immediately show Measure instructions');
+  assert(initialPlanHelp.includes('Build trail route: click near mapped trails or roads to snap automatically'), 'Opening Plan on desktop must immediately show Build instructions');
+  assert(initialPlanHelp.includes('Use Undo / Redo as you edit, or Clear to start over.'), 'Opening Plan on desktop must immediately show editing instructions');
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Undo', exact: true }).locator('svg').count(), 1, 'Undo must use an icon');
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Redo', exact: true }).locator('svg').count(), 1, 'Redo must use an icon');
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Close planning controls', exact: true }).count(), 1, 'Plan must provide an explicit close control');
@@ -1938,45 +1941,29 @@ async function mobile(browser) {
   assert.strictEqual(mobileCompactStats.length, 4);
   assert(Math.max(...mobileCompactStats.map(item => item.y)) - Math.min(...mobileCompactStats.map(item => item.y)) <= 2, 'Distance, gain, loss and elevation must share one line when minimized on mobile');
 
-  await page.waitForFunction(
-    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-plan-shake-ready') === 'true',
-    { timeout: 3000 }
-  );
-  const dispatchMobileShake = async () => {
-    await page.evaluate(() => {
-      const fire = x => {
-        const event = new Event('devicemotion');
-        Object.defineProperty(event, 'acceleration', { value: { x, y: 3, z: 2 } });
-        window.dispatchEvent(event);
-      };
-      fire(21);
-      window.setTimeout(() => fire(-22), 55);
-    });
-    await page.waitForTimeout(160);
-  };
+  const mobileHistory = page.locator('[data-plan-mobile-history]');
+  assert(await mobileHistory.isVisible(), 'Mobile Undo / Redo controls must appear on the map while Plan is minimized');
+  const mobileHistoryBox = await mobileHistory.boundingBox();
+  assert(mobileHistoryBox);
+  assert(mobileHistoryBox.y + mobileHistoryBox.height <= compactPlanBox.y - 3, 'Mobile Undo / Redo controls must sit above the minimized distance strip, outside the Plan box');
+  const mobileFloatingUndo = mobileHistory.getByRole('button', { name: 'Undo', exact: true });
+  const mobileFloatingRedo = mobileHistory.getByRole('button', { name: 'Redo', exact: true });
+  assert.strictEqual(await mobileFloatingUndo.isDisabled(), true, 'Floating Undo should begin disabled with no history');
+  assert.strictEqual(await mobileFloatingRedo.isDisabled(), true, 'Floating Redo should begin disabled with no history');
 
   await map.click({ position: { x: box.width * 0.46, y: box.height * 0.48 } });
   await page.waitForTimeout(100);
-  const mobileShakeDialog = page.locator('[data-plan-shake]');
-  const mobileShakeUndo = mobileShakeDialog.getByRole('button', { name: 'Undo', exact: true });
-  const mobileShakeRedo = mobileShakeDialog.getByRole('button', { name: 'Redo', exact: true });
-
-  await dispatchMobileShake();
-  assert(await mobileShakeDialog.isVisible(), 'A deliberate mobile shake should open Undo / Redo while planning is active');
-  assert.strictEqual(await mobileShakeUndo.isDisabled(), false, 'Undo should be available after adding a planning point');
-  assert.strictEqual(await mobileShakeRedo.isDisabled(), true, 'Redo should be unavailable before an Undo');
-  await mobileShakeUndo.click();
-  await mobileShakeDialog.waitFor({ state: 'hidden' });
-
-  await page.waitForTimeout(1450);
-  await dispatchMobileShake();
-  assert(await mobileShakeDialog.isVisible(), 'A later mobile shake should reopen Undo / Redo');
-  assert.strictEqual(await mobileShakeUndo.isDisabled(), true, 'Undo should be unavailable after undoing the only planning point');
-  assert.strictEqual(await mobileShakeRedo.isDisabled(), false, 'Redo should become available after Undo');
-  await mobileShakeRedo.click();
-  await mobileShakeDialog.waitFor({ state: 'hidden' });
+  assert.strictEqual(await mobileFloatingUndo.isDisabled(), false, 'Floating Undo should enable after adding planning history');
+  assert.strictEqual(await mobileFloatingRedo.isDisabled(), true, 'Floating Redo should remain disabled before Undo');
+  await mobileFloatingUndo.click();
+  assert.strictEqual(await mobileFloatingUndo.isDisabled(), true, 'Floating Undo should disable after undoing the only planning point');
+  assert.strictEqual(await mobileFloatingRedo.isDisabled(), false, 'Floating Redo should enable after Undo');
+  await mobileFloatingRedo.click();
+  assert.strictEqual(await mobileFloatingUndo.isDisabled(), false, 'Floating Undo should re-enable after Redo');
+  assert.strictEqual(await mobileFloatingRedo.isDisabled(), true, 'Floating Redo should disable again after replaying the only history step');
 
   await mobilePlanPanel.getByRole('button', { name: 'Expand planning controls', exact: true }).click();
+  assert(await mobileHistory.isHidden(), 'Floating mobile Undo / Redo must disappear when Plan is expanded');
   await mobileBuildButton.click();
   await mobilePlanButton.click();
 
