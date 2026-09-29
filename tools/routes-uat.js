@@ -38,7 +38,7 @@ const TIGER_LOCAL_ROADS = {
   type: 'FeatureCollection',
   features: [{
     type: 'Feature',
-    properties: { OID: '110206092933', OBJECTID: 71001, NAME: 'Cliffty School Rd', BASENAME: 'Cliffty School', MTFCC: 'S1400' },
+    properties: { OID: '110206092934', OBJECTID: 71001, NAME: 'Cliffty School Rd', BASENAME: 'Cliffty School', MTFCC: 'S1400' },
     geometry: { type: 'LineString', coordinates: [
       [-83.534169, 37.818022], [-83.5395192, 37.8220013], [-83.5412758, 37.8220356], [-83.5415103, 37.8219694], [-83.5434416, 37.8218673]
     ] }
@@ -413,6 +413,61 @@ async function mapControlsAndAccessibility(browser) {
 }
 
 
+async function tigerLocalRoadLabelAndSnapAcceptance(browser) {
+  const context = await contextFor(browser, { viewport: { width: 1200, height: 900 } });
+  const page = await context.newPage();
+  await installStubs(page);
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error)));
+
+  const target = MAIN + 'routes/map/?rrghMap=37.8221290,-83.5413910,15';
+  const response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(response && response.ok());
+  await page.waitForSelector('.leaflet-container', { timeout: 10000 });
+  await page.waitForFunction(() => {
+    const map = document.querySelector('[data-rrgh-route-map]');
+    return map?.getAttribute('data-local-road-load-state') === 'loaded'
+      && Number(map?.getAttribute('data-local-road-label-count') || 0) > 0
+      && Number(map?.getAttribute('data-local-road-planning-feature-count') || 0) > 0
+      && map?.getAttribute('data-trail-planning-ready') === 'true';
+  }, { timeout: 12000 });
+
+  const map = page.locator('[data-rrgh-route-map]');
+  assert.strictEqual(await map.getAttribute('data-local-road-tiger-clifty-found'), 'true');
+  assert(Number(await map.getAttribute('data-local-road-label-count')) > 0, 'Named TIGER local roads should receive close-zoom labels');
+  assert(Number(await map.getAttribute('data-local-road-planning-feature-count')) > 0, 'Loaded local-road geometry should be indexed into the planner');
+
+  const roadLabels = await page.locator('.rrgh-local-road-label').allTextContents();
+  assert(roadLabels.some(text => /Cliffty School Rd/i.test(text)), 'Cliffty School Rd label should be visible: ' + JSON.stringify(roadLabels));
+
+  const planOpen = page.locator('.route-map-tools').getByRole('button', { name: 'Plan', exact: true });
+  await planOpen.click();
+  const planPanel = page.locator('[data-map-sheet="plan"]');
+  const build = planPanel.getByRole('button', { name: 'Build trail route', exact: true });
+  await build.click();
+
+  const mapCanvas = page.locator('.leaflet-container');
+  const box = await mapCanvas.boundingBox();
+  assert(box);
+  await mapCanvas.click({ position: { x: box.width * 0.50, y: box.height * 0.50 } });
+  await page.waitForTimeout(120);
+  await mapCanvas.click({ position: { x: box.width * 0.60, y: box.height * 0.495 } });
+  await page.waitForTimeout(300);
+
+  const status = await page.locator('[data-map-status]').innerText();
+  assert(status.includes('1 snapped segment(s), 0 off-trail segment(s)'), 'Local-road planner clicks should snap along TIGER geometry; status=' + status);
+  assert.deepStrictEqual(pageErrors, []);
+
+  await shot(page, 'tiger-local-road-label-and-snap');
+  record('TIGER Local / other roads labels and route snapping', 'PASS', {
+    labelCount: Number(await map.getAttribute('data-local-road-label-count')),
+    planningFeatureCount: Number(await map.getAttribute('data-local-road-planning-feature-count')),
+    status
+  });
+  await context.close();
+}
+
+
 async function cachedOsmLocalRoadAcceptance(browser) {
   const context = await contextFor(browser, { viewport: { width: 1200, height: 900 } });
   const page = await context.newPage();
@@ -719,6 +774,7 @@ async function liveLocalRoadSourceAudit() {
     await routeLibrary(browser);
     await routeArtifactsAndContent(browser);
     await mapControlsAndAccessibility(browser);
+    await tigerLocalRoadLabelAndSnapAcceptance(browser);
     await cachedOsmLocalRoadAcceptance(browser);
     await legalExploreAndMobile(browser);
   } catch (error) {
