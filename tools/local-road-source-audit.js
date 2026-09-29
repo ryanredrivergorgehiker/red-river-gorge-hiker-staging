@@ -68,9 +68,9 @@ function summarize(data, nameFields) {
 async function overpass(box) {
   const q='[out:json][timeout:30];way["highway"]('+box.south+','+box.west+','+box.north+','+box.east+');out tags geom;';
   const endpoints=[
-    'https://overpass.maprva.org/api/interpreter',
+    'https://overpass-api.de/api/interpreter',
     'https://overpass.private.coffee/api/interpreter',
-    'https://overpass-api.de/api/interpreter'
+    'https://overpass.maprva.org/api/interpreter'
   ];
   const errors=[];
   for (const endpoint of endpoints) {
