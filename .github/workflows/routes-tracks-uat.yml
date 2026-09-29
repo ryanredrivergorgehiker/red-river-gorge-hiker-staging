@@ -37,7 +37,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          query='https://kygisserver.ky.gov/arcgis/rest/services/WGS84WM_Services/Ky_TCM_Street_Base_WGS84WM/MapServer/71/query?where=1%3D1&geometry=-83.555%2C37.815%2C-83.528%2C37.832&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=OBJECTID%2CRD_NAME&returnGeometry=true&returnZ=false&returnM=false&outSR=4326&resultRecordCount=25&f=geojson'
+          query='https://kygisserver.ky.gov/arcgis/rest/services/WGS84WM_Services/Ky_Cartobase_WGS84WM/MapServer/12/query?where=1%3D1&geometry=-83.555%2C37.815%2C-83.528%2C37.832&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=OBJECTID%2CRD_NAME&returnGeometry=true&returnZ=false&returnM=false&outSR=4326&resultRecordCount=25&f=geojson'
           echo '--- HEADERS WITH RRGH ORIGIN ---'
           curl -sS -D /tmp/local-road-headers.txt -H 'Origin: https://redrivergorgehiker.com' "$query" -o /tmp/local-roads.json
           rc=$?
