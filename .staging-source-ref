@@ -1,9 +1,9 @@
-4e38070ca1757b8cc929e89d94501080bcba61d6
-purpose=Owner-requested Plan UI correction. Removes the mobile shake feature completely, including DeviceMotion permission/listener/dialog behavior. Adds mobile-only floating Undo/Redo buttons on the map only while Plan is minimized; buttons sit above the minimized Distance/Gain/Loss/Elevation strip and mirror active-tool history availability. Restores full Plan-open instructions so desktop Plan immediately explains Measure distance, Build trail route and Undo/Redo/Clear. No snapping/network code changed; accepted Lower Swift / Osborne Bend defect remains frozen.
-source_ci=36503195400 SUCCESS
-routes_uat_source_ref_commit=919eb76ab400325a0e6d22f6c9a193df03bb0022
-routes_tracks_uat_harness_commit=051f79d2732cbd6319b7bad588ef6844bac76d94
-brand_uat_source_ref_commit=005110de5ffb21de0cc860ae3be6cdcd4ecfa7b3
-analytics_uat_source_ref_commit=e33595969f12983b4aa4c2a9324de059de13dcef
-roku_uat_source_ref_commit=36978ff8861b31dba85228a66161a0042079947f
+ce9dbc74da899c7bf2a9fd96420a3094b655dd66
+purpose=Owner-requested parity pass for minimized Plan history controls. The same floating Undo/Redo controls already accepted on mobile now also appear on desktop whenever Plan is minimized. They remain outside the minimized Distance/Gain/Loss/Elevation strip, mirror active-tool history availability, and disappear whenever Plan is expanded or closed. Mobile behavior and restored Plan-open instructions remain unchanged. No snapping/network code changed; accepted Lower Swift / Osborne Bend defect remains frozen.
+source_ci=36503826364 SUCCESS
+routes_uat_source_ref_commit=128f0bbeca6573e403627e43ddc8bbeee065e798
+routes_tracks_uat_harness_commit=34b9b4c091c59a1224bfb074d4305c4ad3a3595e
+brand_uat_source_ref_commit=cc167fedfcc0194a373cdd30918080decba31cac
+analytics_uat_source_ref_commit=02715be176c14ca1c8630a79b834ce9d74cb202a
+roku_uat_source_ref_commit=680c2272a31ba3f52baef12fb02338914597db4d
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
