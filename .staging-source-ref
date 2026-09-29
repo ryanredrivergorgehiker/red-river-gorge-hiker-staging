@@ -1,10 +1,10 @@
-64f54f985ad0198debf78f81841d9bd8449050db
-purpose=Owner-corrected Local / old roads preset behavior. Local / old roads is available in every Map View. Hiking and Sunlight default it OFF while remaining user-selectable. Terrain and Aerial default it ON. Main Layers and Fine tune controls remain available in every mode. Close-zoom loading at zoom 14+, label decluttering at zoom 15+, TIGERweb plus hosted OSM road architecture, and eligible route-planner snapping remain unchanged. Privacy disclosure updated to match the actual preset behavior; effective date remains September 25, 2026. Production unchanged.
-source_ci=36616381259 SUCCESS
-routes_tracks_uat=36616535151 SUCCESS
-routes_uat=36616535323 SUCCESS
-brand_uat=36616535122 SUCCESS
-analytics_uat=36616535193 SUCCESS
-roku_uat=36616535296 SUCCESS
-local_road_source_audit=36599905139 SUCCESS (source architecture unchanged)
+00f7f3b7bc79a3257773e33b5ce2199248da1fa8
+purpose=USGS National Digital Trails / National Transportation Dataset Terra Trail supplement added to the existing Community / Informal trails layer. Supplemental features are pre-cached by RRGH, filtered against current USDA Forest Service official trail geometry and the existing OSM community/informal cache, source-labeled in popups, and explicit Hiker/Pedestrian No features are excluded from planner snapping. Current source audit found 4 de-duplicated supplemental Terra Trail segments in the RRGH bounds. The Apple reference point 37.86393,-83.55277 is not explained by the current USGS dataset; its nearest USGS records are current official Forest Service trails roughly 1.86 km away. Local / old roads preset correction remains preserved. Production unchanged.
+source_ci=36619022279 SUCCESS
+routes_tracks_uat=36619320392 SUCCESS
+routes_uat=36619320420 SUCCESS
+brand_uat=36619320337 SUCCESS
+analytics_uat=36619320394 SUCCESS
+roku_uat=36619320412 SUCCESS
+usgs_cache_refresh=36618538971 SUCCESS
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
