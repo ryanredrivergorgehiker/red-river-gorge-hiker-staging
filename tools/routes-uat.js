@@ -441,7 +441,7 @@ async function cachedOsmLocalRoadAcceptance(browser) {
     '0',
     'This acceptance check intentionally fails TIGERweb so the broader cached OSM fallback is proved independently'
   );
-  const status = await page.locator('[data-local-roads-status]').innerText();
+  const status = (await page.locator('[data-local-roads-status]').textContent()) || '';
   assert.strictEqual(await map.getAttribute('data-local-road-osm-mode'), 'fallback');
   assert(status.includes('cached OpenStreetMap fallback road context'), status);
   assert(status.includes('does not establish public access, maintenance, legal travel, or current drivability'), status);
