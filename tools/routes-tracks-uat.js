@@ -927,9 +927,12 @@ async function fullMap(browser) {
   await sunlightPreset.click();
   assert.strictEqual(await localRoadToggle.isChecked(), false, 'Sunlight view must leave Local / old roads off by default');
   assert.strictEqual(await localRoadToggle.isDisabled(), false, 'Sunlight view must keep Local / old roads available');
-  assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '25');
-  assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').inputValue(), '75');
-  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '100');
+  assert.strictEqual(await page.locator('[data-map-layer="kytopo"]').isChecked(), false, 'Sunlight view must turn Kentucky Topo off');
+  assert.strictEqual(await page.locator('[data-opacity="kytopo"]').inputValue(), '0');
+  assert.strictEqual(await page.locator('[data-map-layer="usgs-topo"]').isChecked(), true, 'Sunlight view must keep USGS Topo on');
+  assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').inputValue(), '100');
+  assert.strictEqual(await page.locator('[data-map-layer="ky-hillshade"]').isChecked(), true, 'Sunlight view must keep Terrain relief on');
+  assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '25');
   assert.strictEqual(await page.locator('[data-map-layer="rrg-lidar-sun"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-sun-kind-toggle="sunrise"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-sun-kind-toggle="sunset"]').isChecked(), true);
@@ -1259,6 +1262,9 @@ async function fullMap(browser) {
   assert((await page.locator('.leaflet-lidarSun-pane img.leaflet-image-layer').count()) > 0, 'Enabled Sunrise / Sunset Potential should render continuous raster gradients in the LiDAR pane');
   assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Enabled Sunrise / Sunset Potential should retain hard rim-lip vectors');
   assert((await page.locator('.route-layer-panel').innerText()).includes('Sunrise / Sunset Potential'));
+  assert.strictEqual(await page.locator('[data-map-activity="sunlight"]').count(), 1, 'Sunlight loading indicator must exist');
+  assert.strictEqual(await page.locator('[data-map-activity="watershed"]').count(), 1, 'Watershed loading indicator must exist');
+  assert.strictEqual(await mapContainer.getAttribute('data-sunlight-activity-visible'), 'false', 'Sunlight loading indicator must clear after visible sectors load');
   assert.strictEqual(await page.locator('[data-map-layer="rrg-lidar-sun-raster-test"]').count(), 0, 'Promoted continuous gradient must not retain a TEST layer');
   assert.strictEqual((await page.locator('.route-layer-panel').innerText()).includes('Smooth sunlight gradient (continuous)'), false, 'Promoted continuous gradient must not retain TEST copy');
   await sunriseToggle.uncheck();
