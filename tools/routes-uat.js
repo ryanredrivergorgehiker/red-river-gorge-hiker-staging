@@ -338,8 +338,8 @@ async function mapControlsAndAccessibility(browser) {
     return button && !button.disabled;
   }, { timeout: 10000 });
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 17);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 16);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 16);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 15);
   assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 0);
   assert.strictEqual(await page.locator('[data-map-layer="ky-state-park-trails"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="rrgh-weather"]').isChecked(), false);
@@ -375,14 +375,10 @@ async function mapControlsAndAccessibility(browser) {
   assert.strictEqual(await page.getByText('Sunrise / Sunset Potential', { exact: true }).count() >= 1, true);
   assert.strictEqual(await page.getByText('Sunrise Potential', { exact: true }).count(), 1);
   assert.strictEqual(await page.getByText('Sunset Potential', { exact: true }).count(), 1);
-  assert.strictEqual(await page.locator('[data-map-layer="clifty-sun-1000-1100-test"]').count(), 1, 'Staging must expose the isolated Clifty test supplement');
-  assert.strictEqual(await page.locator('[data-map-layer="clifty-sun-1000-1100-test"]').isChecked(), false, 'Clifty test supplement must be off by default');
-  assert.strictEqual(await page.locator('[data-opacity="clifty-sun-1000-1100-test"]').isDisabled(), true, 'Clifty test opacity must be disabled while the test is off');
   assert.strictEqual((await page.locator('.route-layer-panel').innerText()).includes('Potential does not guarantee standing room'), false);
   await page.locator('.route-layer-fine-tune > summary').click();
-  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 16);
+  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 15);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="rrg-lidar-sun"]').count(), 1);
-  assert.strictEqual(await page.locator('[data-fine-tune-layer="clifty-sun-1000-1100-test"]').count(), 1);
   assert.strictEqual(await page.locator('[data-opacity="rrg-lidar-sun"]').count(), 1);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="rrg-lidar-sunrise"]').count(), 0);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="rrg-lidar-sunset"]').count(), 0);
