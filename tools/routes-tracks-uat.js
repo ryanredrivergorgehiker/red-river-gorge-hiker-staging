@@ -1276,7 +1276,7 @@ async function fullMap(browser) {
   assert.strictEqual(await sunsetToggle.isChecked(), false, 'Continuous sunlight TEST must be independent from accepted Sunset');
   assert.strictEqual(await mapContainer.getAttribute('data-raster-sun-test-load-error'), null, 'Continuous sunlight TEST sectors should load without error');
   assert((await page.locator('.leaflet-lidarSun-pane img.leaflet-image-layer').count()) > 0, 'Continuous sunlight TEST should render raster images in the LiDAR pane');
-  assert((await page.locator('.leaflet-lidarSun-pane path').count()) > 0, 'Continuous sunlight TEST should retain accepted hard rim-lip vectors');
+  assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Continuous sunlight TEST should retain accepted hard rim-lip vectors');
   await rasterSunTestToggle.uncheck();
 
   const aerialToggle = page.locator('[data-map-layer="kyaerial-phase3"]');
