@@ -1277,6 +1277,12 @@ async function fullMap(browser) {
   assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Enabled Sunrise / Sunset Potential should render in the LiDAR pane');
   assert((await page.locator('.route-layer-panel').innerText()).includes('Sunrise / Sunset Potential'));
 
+  // Recreate Ryan's owner-UAT sequence exactly: accepted Sunrise / Sunset
+  // Potential is OFF while the independent Clifty test layer is turned ON.
+  await gorgeToggle.uncheck();
+  assert.strictEqual(await sunriseToggle.isChecked(), false);
+  assert.strictEqual(await sunsetToggle.isChecked(), false);
+
   // Earlier close-zoom cartography checks leave the map at zoom 20 around the
   // western Home point. Restore the approved zoom-13 Home view so the viewport
   // actually intersects the owner-approved Clifty test sectors before asserting
