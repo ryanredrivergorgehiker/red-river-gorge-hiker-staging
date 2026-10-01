@@ -1,12 +1,12 @@
-493de4fd690d83be4ce8104ed154d6396ccaeab3
-purpose=Owner-UAT-only 12-band sunlight smoothing comparison layer; accepted 6-band Sunrise / Sunset Potential remains unchanged.
-source_ci=36917971528 SUCCESS
-routes_tracks_uat=36918445947 SUCCESS
-routes_uat=36919531163 SUCCESS
-brand_explore_uat=36918197810 SUCCESS
-analytics_uat=36918197874 SUCCESS
-roku_uat=36918197932 SUCCESS
-smooth_test=30 sectors; 228502 features; same 1100+ terrain model; same hard lip; same 0.15 outer cutoff; 12 fade bands instead of 6
+1bd4eb8960bffd82960432e831e2ab2bc8d979ff
+purpose=Owner-UAT-only continuous raster sunlight smoothing comparison; accepted 6-band Sunrise / Sunset Potential remains unchanged.
+source_ci=36928159793 SUCCESS
+routes_tracks_uat=36928689330 SUCCESS
+routes_uat=36928322681 SUCCESS
+brand_explore_uat=36928322649 SUCCESS
+analytics_uat=36928322744 SUCCESS
+roku_uat=36928323977 SUCCESS
+raster_test=30 sectors; 9240386 raster bytes; 59517 accepted hard-lip features; same 1100+ terrain model; same 0.15 outer cutoff; continuous WebP alpha fade instead of 6 vector bands
 accepted_sun_layer_unchanged=true
 source_branch=staging/routes-tracks-interactive-map
 pr=46 OPEN DRAFT UNMERGED
