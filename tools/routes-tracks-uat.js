@@ -809,8 +809,8 @@ async function fullMap(browser) {
   assert(body.includes('How to read this map — 30-second guide'));
   assert(body.includes('Map data:'));
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 17);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 16);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 16);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 15);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0, 'Temporary exact-view copier should be removed after Home approval');
   assert.strictEqual(await page.locator('[data-map-layer="ky-state-park-trails"]').isChecked(), true, 'Official Kentucky State Park trails must be on by default');
@@ -826,10 +826,6 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-map-layer="usfs-special-management"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-land-units"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="rrg-lidar-sun"]').isChecked(), false, 'Gorge LiDAR expansion must be off by default');
-  const cliftySunTestToggle = page.locator('[data-map-layer="clifty-sun-1000-1100-test"]');
-  assert.strictEqual(await cliftySunTestToggle.count(), 1, 'Clifty 1,000–1,100 ft staging test toggle must exist');
-  assert.strictEqual(await cliftySunTestToggle.isChecked(), false, 'Clifty 1,000–1,100 ft test supplement must start off');
-  assert.strictEqual(await page.locator('[data-opacity="clifty-sun-1000-1100-test"]').isDisabled(), true, 'Clifty test opacity must stay disabled while test layer is off');
   const oilGasToggle = page.locator('[data-map-layer="kgs-oil-gas-wells"]');
   assert.strictEqual(await oilGasToggle.isChecked(), false, 'Oil & Gas Wells must be off by default');
   assert.strictEqual(await page.locator('[data-opacity="kgs-oil-gas-wells"]').isDisabled(), true);
@@ -845,8 +841,7 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-opacity="usfs-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="osm-informal-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="usfs-roads"]').inputValue(), '100');
-  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 16);
-  assert.strictEqual(await page.locator('[data-fine-tune-layer="clifty-sun-1000-1100-test"]').count(), 1, 'Clifty test must have an independent Fine tune control');
+  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 15);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="usgs-topo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="ky-hillshade"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true);
@@ -936,7 +931,6 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-opacity="usgs-topo"]').inputValue(), '75');
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-map-layer="rrg-lidar-sun"]').isChecked(), true);
-  assert.strictEqual(await cliftySunTestToggle.isChecked(), false, 'Sunlight preset must not automatically enable the Clifty test supplement');
   assert.strictEqual(await page.locator('[data-sun-kind-toggle="sunrise"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-sun-kind-toggle="sunset"]').isChecked(), true);
   assert.strictEqual(await page.locator('.route-map-stage').getAttribute('data-sunlight-mode'), 'true');
@@ -1085,19 +1079,6 @@ async function fullMap(browser) {
     if (!response.ok) throw new Error('Gorge LiDAR manifest HTTP ' + response.status);
     return response.json();
   });
-  const cliftySunTestManifest = await page.evaluate(async () => {
-    const response = await fetch('/data/map/clifty-sun-1000-1100-test-manifest.json', { cache: 'no-cache' });
-    if (!response.ok) throw new Error('Clifty sunlight test manifest HTTP ' + response.status);
-    return response.json();
-  });
-  assert.strictEqual(cliftySunTestManifest.version, 'clifty-1000-1100-test-v1');
-  assert.strictEqual(cliftySunTestManifest.status, 'staging-owner-uat-only');
-  assert.strictEqual(cliftySunTestManifest.defaultEnabled, false);
-  assert.strictEqual(cliftySunTestManifest.acceptedLayerModified, false);
-  assert.strictEqual(cliftySunTestManifest.scope.usesWholeCliftyWilderness, false);
-  assert.deepStrictEqual(cliftySunTestManifest.elevationBandFeet, { minimumInclusive: 1000, maximumExclusive: 1100 });
-  assert(cliftySunTestManifest.counts.features > 0, 'Clifty test supplement must contain new 1,000–1,100 ft candidate geometry');
-  assert(cliftySunTestManifest.scope.combinedCliftyAreaFraction < 0.8, 'Clifty test scope must remain a partial-wilderness exception');
   assert.strictEqual(gorgeManifest.version, 'lidar-only-home-extent-v2');
   assert.strictEqual(gorgeManifest.minimumElevationFeet, 1100);
   assert.strictEqual(gorgeManifest.sectors.length, 30);
@@ -1276,35 +1257,6 @@ async function fullMap(browser) {
   assert.strictEqual(await mapContainer.getAttribute('data-rrg-lidar-sun-load-error'), null, 'Gorge LiDAR sectors should load without error');
   assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Enabled Sunrise / Sunset Potential should render in the LiDAR pane');
   assert((await page.locator('.route-layer-panel').innerText()).includes('Sunrise / Sunset Potential'));
-
-  // Recreate Ryan's owner-UAT sequence exactly: accepted Sunrise / Sunset
-  // Potential is OFF while the independent Clifty test layer is turned ON.
-  await gorgeToggle.uncheck();
-  assert.strictEqual(await sunriseToggle.isChecked(), false);
-  assert.strictEqual(await sunsetToggle.isChecked(), false);
-
-  // Earlier close-zoom cartography checks leave the map at zoom 20 around the
-  // western Home point. Restore the approved zoom-13 Home view so the viewport
-  // actually intersects the owner-approved Clifty test sectors before asserting
-  // that the lazy-loaded Clifty supplement produces features.
-  await homeButton.click();
-  await page.waitForFunction(
-    () => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-current-zoom')) === 13,
-    { timeout: 3000 }
-  );
-
-  await cliftySunTestToggle.check();
-  await page.waitForFunction(
-    () => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-clifty-sun-test-loaded-sectors')) > 0
-      && Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-clifty-sun-test-feature-count')) > 0,
-    { timeout: 20000 }
-  );
-  assert.strictEqual(await mapContainer.getAttribute('data-clifty-sun-test-accepted-layer-modified'), 'false', 'Clifty test loader must affirm that accepted sunlight paint is unchanged');
-  assert.strictEqual(await mapContainer.getAttribute('data-clifty-sun-test-load-error'), null, 'Clifty test supplement should load without error');
-  assert.strictEqual(await page.locator('[data-opacity="clifty-sun-1000-1100-test"]').isDisabled(), false, 'Clifty test opacity must enable only while the test layer is on');
-  await cliftySunTestToggle.uncheck();
-  assert.strictEqual(await page.locator('[data-opacity="clifty-sun-1000-1100-test"]').isDisabled(), true, 'Clifty test opacity must disable again when the test layer is off');
-
   await gorgeToggle.uncheck();
 
   const aerialToggle = page.locator('[data-map-layer="kyaerial-phase3"]');
