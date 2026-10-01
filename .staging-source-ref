@@ -1,14 +1,14 @@
-ab603f985bec5bb461651ac194b6c82e1c4687e7
-purpose=Promote approved continuous raster gradient into Sunrise / Sunset Potential; remove staging TEST row/copy; preserve 1,100+ terrain model and hard rim lip; retain independent Sunrise and Sunset toggles.
-source_ci=36934297203 SUCCESS
-routes_tracks_uat=36934711581 SUCCESS
-routes_uat=36934912218 SUCCESS
-brand_explore_uat=36934462816 SUCCESS
-analytics_uat=36934462869 SUCCESS
-roku_uat=36934462807 SUCCESS
-continuous_dataset=30 sectors; 7774642 raster bytes; 59517 accepted hard-lip features; separate sunrise/sunset WebP rasters; same 1100+ terrain model; same 0.15 outer cutoff
-test_ui_removed=true
-test_artifacts_removed=true
+9f1d3e3adf0f668d3c96bf5f716d3ee8f55d022f
+purpose=Add animated non-blocking watershed and sunlight loading indicators; rebalance Sunlight preset to USGS Topo 100%, Terrain relief 25%, Kentucky Topo off/0%; preserve promoted continuous sunlight rendering.
+source_ci=36937201250 SUCCESS
+routes_tracks_uat=36937395937 SUCCESS
+routes_uat=36937396015 SUCCESS
+brand_explore_uat=36937395903 SUCCESS
+analytics_uat=36937395944 SUCCESS
+roku_uat=36937395906 SUCCESS
+watershed_loading=animated flowing-water indicator; clears on success, error, abort, undo/restore, and clear
+sunlight_loading=animated rising-sun indicator; waits for visible continuous raster images and hard-lip data; clears when ready
+sunlight_preset=kytopo off/0; usgs-topo on/100; ky-hillshade on/25
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
 source_branch=staging/routes-tracks-interactive-map
 pr=46 OPEN DRAFT UNMERGED
