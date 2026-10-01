@@ -809,10 +809,15 @@ async function fullMap(browser) {
   assert(body.includes('How to read this map — 30-second guide'));
   assert(body.includes('Map data:'));
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 14);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 13);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 16);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 15);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0, 'Temporary exact-view copier should be removed after Home approval');
+  assert.strictEqual(await page.locator('[data-map-layer="ky-state-park-trails"]').isChecked(), true, 'Official Kentucky State Park trails must be on by default');
+  assert.strictEqual(await page.locator('[data-opacity="ky-state-park-trails"]').inputValue(), '100');
+  assert.strictEqual(await page.locator('[data-map-layer="rrgh-weather"]').isChecked(), false, 'Weather overlay must start off in Hiking view');
+  assert.strictEqual(await page.locator('[data-opacity="rrgh-weather"]').isDisabled(), true);
+  assert.strictEqual(await page.locator('[data-weather-product]').inputValue(), 'precip-10d');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-wilderness"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 0);
@@ -836,7 +841,7 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-opacity="usfs-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="osm-informal-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-opacity="usfs-roads"]').inputValue(), '100');
-  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 13);
+  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 15);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="usgs-topo"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="ky-hillshade"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="ky-hillshade"]').isDisabled(), true);
