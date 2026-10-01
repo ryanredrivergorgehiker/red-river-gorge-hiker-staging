@@ -375,6 +375,10 @@ async function mapControlsAndAccessibility(browser) {
   assert.strictEqual(await page.getByText('Sunrise / Sunset Potential', { exact: true }).count() >= 1, true);
   assert.strictEqual(await page.getByText('Sunrise Potential', { exact: true }).count(), 1);
   assert.strictEqual(await page.getByText('Sunset Potential', { exact: true }).count(), 1);
+  assert.strictEqual(await page.locator('[data-map-layer="rrg-lidar-sun-raster-test"]').count(), 1);
+  assert.strictEqual(await page.locator('[data-map-layer="rrg-lidar-sun-raster-test"]').isChecked(), false);
+  assert.strictEqual((await page.locator('.route-layer-panel').innerText()).includes('Smooth sunlight gradient (continuous)'), true);
+  assert.strictEqual(await page.locator('[data-map-layer="rrg-lidar-sun-smooth-test"]').count(), 0);
   assert.strictEqual((await page.locator('.route-layer-panel').innerText()).includes('Potential does not guarantee standing room'), false);
   await page.locator('.route-layer-fine-tune > summary').click();
   assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 15);
