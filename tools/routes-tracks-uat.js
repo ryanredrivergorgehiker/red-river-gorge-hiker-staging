@@ -1259,6 +1259,24 @@ async function fullMap(browser) {
   assert((await page.locator('.route-layer-panel').innerText()).includes('Sunrise / Sunset Potential'));
   await gorgeToggle.uncheck();
 
+  const smoothSunTestToggle = page.locator('[data-map-layer="rrg-lidar-sun-smooth-test"]');
+  assert.strictEqual(await smoothSunTestToggle.isChecked(), false, 'Smooth sunlight TEST must be off by default');
+  assert((await page.locator('.route-layer-panel').innerText()).includes('Smooth sunlight gradient (12-band)'));
+  assert.strictEqual(await sunriseToggle.isChecked(), false);
+  assert.strictEqual(await sunsetToggle.isChecked(), false);
+  await smoothSunTestToggle.check();
+  await page.waitForFunction(
+    () => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-smooth-sun-test-loaded-sectors')) > 0
+      && Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-smooth-sun-test-feature-count')) > 0,
+    { timeout: 30000 }
+  );
+  assert.strictEqual(await gorgeToggle.isChecked(), false, 'Smooth sunlight TEST must not turn on the accepted layer');
+  assert.strictEqual(await sunriseToggle.isChecked(), false, 'Smooth sunlight TEST must be independent from accepted Sunrise');
+  assert.strictEqual(await sunsetToggle.isChecked(), false, 'Smooth sunlight TEST must be independent from accepted Sunset');
+  assert.strictEqual(await mapContainer.getAttribute('data-smooth-sun-test-load-error'), null, 'Smooth sunlight TEST sectors should load without error');
+  assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Smooth sunlight TEST should render in the LiDAR pane');
+  await smoothSunTestToggle.uncheck();
+
   const aerialToggle = page.locator('[data-map-layer="kyaerial-phase3"]');
   const leafOffAerialToggle = page.locator('[data-map-layer="kyaerial-phase2-leafoff"]');
   const kyTopoToggle = page.locator('[data-map-layer="kytopo"]');
