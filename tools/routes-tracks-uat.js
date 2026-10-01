@@ -1277,6 +1277,16 @@ async function fullMap(browser) {
   assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Enabled Sunrise / Sunset Potential should render in the LiDAR pane');
   assert((await page.locator('.route-layer-panel').innerText()).includes('Sunrise / Sunset Potential'));
 
+  // Earlier close-zoom cartography checks leave the map at zoom 20 around the
+  // western Home point. Restore the approved zoom-13 Home view so the viewport
+  // actually intersects the owner-approved Clifty test sectors before asserting
+  // that the lazy-loaded Clifty supplement produces features.
+  await homeButton.click();
+  await page.waitForFunction(
+    () => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-current-zoom')) === 13,
+    { timeout: 3000 }
+  );
+
   await cliftySunTestToggle.check();
   await page.waitForFunction(
     () => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-clifty-sun-test-loaded-sectors')) > 0
