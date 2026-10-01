@@ -1,13 +1,7 @@
-1d190525c64054072d73a37f846db18cb617a473
-purpose=Fix owner-UAT Clifty 1,000-1,100 ft sunlight supplement visibility so its own TEST checkbox renders independently of accepted Sunrise/Sunset child toggles; accepted 1,100+ paint remains unchanged.
-source_ci=36908929601 SUCCESS attempt=2
-routes_tracks_uat=36909206202 SUCCESS
-routes_uat=36909206191 SUCCESS
-brand_explore_uat=36909206282 SUCCESS
-analytics_uat=36909206206 SUCCESS
-roku_uat=36909206302 SUCCESS
-regression=Clifty TEST independently visible with accepted Sunrise and Sunset toggles OFF
-accepted_sun_layer_unchanged=true
+2c621a0cd85656344991fb586b936184b53fd2dd
+purpose=Retire the Clifty 1,000-1,100 ft Sunrise / Sunset Potential experiment and restore the previously accepted 1,100+ owner-UAT candidate unchanged.
+experiment_status=RETIRED_FROM_STAGING
+accepted_sun_layer=1,100+ only
 source_branch=staging/routes-tracks-interactive-map
 pr=46 OPEN DRAFT UNMERGED
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
