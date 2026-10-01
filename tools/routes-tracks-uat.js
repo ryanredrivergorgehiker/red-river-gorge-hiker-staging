@@ -817,7 +817,7 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-opacity="ky-state-park-trails"]').inputValue(), '100');
   assert.strictEqual(await page.locator('[data-map-layer="rrgh-weather"]').isChecked(), false, 'Weather overlay must start off in Hiking view');
   assert.strictEqual(await page.locator('[data-opacity="rrgh-weather"]').isDisabled(), true);
-  assert.strictEqual(await page.locator('[data-weather-product]').inputValue(), 'precip-10d');
+  assert.strictEqual(await page.locator('select[data-weather-product]').inputValue(), 'precip-10d');
   assert.strictEqual(await page.locator('[data-map-layer="osm-informal-trails"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="usfs-wilderness"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 0);

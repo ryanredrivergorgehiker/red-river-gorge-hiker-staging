@@ -343,7 +343,7 @@ async function mapControlsAndAccessibility(browser) {
   assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 0);
   assert.strictEqual(await page.locator('[data-map-layer="ky-state-park-trails"]').isChecked(), true);
   assert.strictEqual(await page.locator('[data-map-layer="rrgh-weather"]').isChecked(), false);
-  assert.strictEqual(await page.locator('[data-weather-product]').inputValue(), 'precip-10d');
+  assert.strictEqual(await page.locator('select[data-weather-product]').inputValue(), 'precip-10d');
   assert.strictEqual(await page.locator('[data-map-layer="kgs-oil-gas-wells"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="kgs-oil-gas-wells"]').isDisabled(), true);
   assert.strictEqual(await page.locator('[data-plan-pan]').count(), 0);
