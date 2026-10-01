@@ -1251,33 +1251,24 @@ async function fullMap(browser) {
   assert.strictEqual(await sunsetToggle.isChecked(), true, 'Combined master on must turn Sunset on');
   await page.waitForFunction(
     () => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-rrg-lidar-sun-loaded-sectors')) > 0
-      && Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-rrg-lidar-sun-feature-count')) > 0,
-    { timeout: 20000 }
-  );
-  assert.strictEqual(await mapContainer.getAttribute('data-rrg-lidar-sun-load-error'), null, 'Gorge LiDAR sectors should load without error');
-  assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Enabled Sunrise / Sunset Potential should render in the LiDAR pane');
-  assert((await page.locator('.route-layer-panel').innerText()).includes('Sunrise / Sunset Potential'));
-  await gorgeToggle.uncheck();
-
-  const rasterSunTestToggle = page.locator('[data-map-layer="rrg-lidar-sun-raster-test"]');
-  assert.strictEqual(await rasterSunTestToggle.isChecked(), false, 'Continuous sunlight TEST must be off by default');
-  assert((await page.locator('.route-layer-panel').innerText()).includes('Smooth sunlight gradient (continuous)'));
-  assert.strictEqual(await sunriseToggle.isChecked(), false);
-  assert.strictEqual(await sunsetToggle.isChecked(), false);
-  await rasterSunTestToggle.check();
-  await page.waitForFunction(
-    () => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-raster-sun-test-loaded-sectors')) > 0
-      && Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-raster-sun-test-image-count')) > 0
-      && Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-raster-sun-test-hard-feature-count')) > 0,
+      && Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-rrg-lidar-sun-image-count')) > 0
+      && Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-rrg-lidar-sun-hard-feature-count')) > 0,
     { timeout: 30000 }
   );
-  assert.strictEqual(await gorgeToggle.isChecked(), false, 'Continuous sunlight TEST must not turn on the accepted layer');
-  assert.strictEqual(await sunriseToggle.isChecked(), false, 'Continuous sunlight TEST must be independent from accepted Sunrise');
-  assert.strictEqual(await sunsetToggle.isChecked(), false, 'Continuous sunlight TEST must be independent from accepted Sunset');
-  assert.strictEqual(await mapContainer.getAttribute('data-raster-sun-test-load-error'), null, 'Continuous sunlight TEST sectors should load without error');
-  assert((await page.locator('.leaflet-lidarSun-pane img.leaflet-image-layer').count()) > 0, 'Continuous sunlight TEST should render raster images in the LiDAR pane');
-  assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Continuous sunlight TEST should retain accepted hard rim-lip vectors');
-  await rasterSunTestToggle.uncheck();
+  assert.strictEqual(await mapContainer.getAttribute('data-rrg-lidar-sun-load-error'), null, 'Continuous Sunrise / Sunset Potential sectors should load without error');
+  assert((await page.locator('.leaflet-lidarSun-pane img.leaflet-image-layer').count()) > 0, 'Enabled Sunrise / Sunset Potential should render continuous raster gradients in the LiDAR pane');
+  assert((await page.locator('.leaflet-lidarSun-pane canvas, .leaflet-lidarSun-pane path').count()) > 0, 'Enabled Sunrise / Sunset Potential should retain hard rim-lip vectors');
+  assert((await page.locator('.route-layer-panel').innerText()).includes('Sunrise / Sunset Potential'));
+  assert.strictEqual(await page.locator('[data-map-layer="rrg-lidar-sun-raster-test"]').count(), 0, 'Promoted continuous gradient must not retain a TEST layer');
+  assert.strictEqual((await page.locator('.route-layer-panel').innerText()).includes('Smooth sunlight gradient (continuous)'), false, 'Promoted continuous gradient must not retain TEST copy');
+  await sunriseToggle.uncheck();
+  assert.strictEqual(await gorgeToggle.isChecked(), true, 'Sunset-only state must keep combined master on');
+  assert.strictEqual(await gorgeToggle.getAttribute('aria-checked'), null);
+  await sunriseToggle.check();
+  await sunsetToggle.uncheck();
+  assert.strictEqual(await gorgeToggle.isChecked(), true, 'Sunrise-only state must keep combined master on');
+  await sunsetToggle.check();
+  await gorgeToggle.uncheck();
 
   const aerialToggle = page.locator('[data-map-layer="kyaerial-phase3"]');
   const leafOffAerialToggle = page.locator('[data-map-layer="kyaerial-phase2-leafoff"]');
