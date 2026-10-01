@@ -1,6 +1,8 @@
-2c6363f1d28eb15a0cc637ad17167c48de4fbe5c
-purpose=Routes & Tracks staging iteration: official Kentucky State Park trails separated from Community / Informal; RRGH-hosted NOAA current snow depth plus 10-day and 30-day precipitation overlays with legends; mobile full-screen map control; explicit loading/progress screen; Measure area; Bearing / slope; USGS StreamStats watershed delineation; existing Routes & Tracks behavior preserved.
-source_ci=36876857516 SUCCESS
+0a7c92c249aa4e000d10d789611801ea07e33d9e
+purpose=Owner UAT corrections: suppress Community / Informal geometry inside authoritative Kentucky State Park boundaries and remove State Park trail overlaps; reduce State Park trail-label clutter at broad zoom; restore legend order Forest Service then State Park then Community / Informal; add Undo/Redo history for Measure area, Bearing / slope, and Watershed; keep Snow / recent precipitation off by default in every Map View. Privacy/Terms and map-source disclosures updated proportionally. Production unchanged.
+source_ci=36882724483 SUCCESS
+osm_cache_refresh=36882022563 SUCCESS attempt 2
+usgs_cache_refresh=36882023048 SUCCESS
 source_branch=staging/routes-tracks-interactive-map
 pr=46 OPEN DRAFT UNMERGED
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
