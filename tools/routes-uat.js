@@ -338,7 +338,7 @@ async function mapControlsAndAccessibility(browser) {
     return button && !button.disabled;
   }, { timeout: 10000 });
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 17);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 16);
   assert.strictEqual(await page.locator('[data-opacity]').count(), 15);
   assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 0);
   assert.strictEqual(await page.locator('[data-map-layer="ky-state-park-trails"]').isChecked(), true);
