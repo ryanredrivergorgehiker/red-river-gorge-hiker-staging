@@ -1,8 +1,8 @@
-0a7c92c249aa4e000d10d789611801ea07e33d9e
-purpose=Owner UAT corrections: suppress Community / Informal geometry inside authoritative Kentucky State Park boundaries and remove State Park trail overlaps; reduce State Park trail-label clutter at broad zoom; restore legend order Forest Service then State Park then Community / Informal; add Undo/Redo history for Measure area, Bearing / slope, and Watershed; keep Snow / recent precipitation off by default in every Map View. Privacy/Terms and map-source disclosures updated proportionally. Production unchanged.
-source_ci=36882724483 SUCCESS
-osm_cache_refresh=36882022563 SUCCESS attempt 2
-usgs_cache_refresh=36882023048 SUCCESS
+2c621a0cd85656344991fb586b936184b53fd2dd
+purpose=Owner UAT correction: restore the full Community / Informal trail cache, preserve Hanson's Point and Pinch-em-Tight community geometry, scope boundary suppression only to the validated Natural Bridge State Resort Park record Abbrev=NB, remove Natural Bridge official State Park trail duplicates, guard against destructive partial Overpass refreshes, retain Forest Service > State Park > Community legend order, reduced State Park label clutter, all-tool Undo/Redo/Clear support, and weather off by default in every Map View.
+source_ci=36886205442 SUCCESS
+osm_cache=1082 displayed features after Natural Bridge-only filtering
+osm_acceptance=Hanson's Point OSM 772984506 preserved; Pinch-em-Tight OSM 1341563278 preserved
 source_branch=staging/routes-tracks-interactive-map
 pr=46 OPEN DRAFT UNMERGED
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
