@@ -1,8 +1,13 @@
-2c621a0cd85656344991fb586b936184b53fd2dd
-purpose=Owner UAT correction: restore the full Community / Informal trail cache, preserve Hanson's Point and Pinch-em-Tight community geometry, scope boundary suppression only to the validated Natural Bridge State Resort Park record Abbrev=NB, remove Natural Bridge official State Park trail duplicates, guard against destructive partial Overpass refreshes, retain Forest Service > State Park > Community legend order, reduced State Park label clutter, all-tool Undo/Redo/Clear support, and weather off by default in every Map View.
-source_ci=36886205442 SUCCESS
-osm_cache=1082 displayed features after Natural Bridge-only filtering
-osm_acceptance=Hanson's Point OSM 772984506 preserved; Pinch-em-Tight OSM 1341563278 preserved
+a32c65a40439a9aaa3564764dd363fd3e7e06bd2
+purpose=Owner-UAT-only Clifty 1,000-1,100 ft Sunrise / Sunset Potential supplement; separate off-by-default test layer; accepted 1,100+ sunlight paint remains unchanged.
+source_ci=36906783793 SUCCESS
+routes_tracks_uat=36907982778 SUCCESS
+routes_uat=36906987211 SUCCESS
+brand_explore_uat=36906987258 SUCCESS
+analytics_uat=36906987318 SUCCESS
+roku_uat=36906987199 SUCCESS
+clifty_test=11 sectors; 14413 features; approved Clifty scope only; not whole wilderness
+accepted_sun_layer_unchanged=true
 source_branch=staging/routes-tracks-interactive-map
 pr=46 OPEN DRAFT UNMERGED
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
