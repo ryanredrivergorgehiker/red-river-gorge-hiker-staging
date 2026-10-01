@@ -338,9 +338,12 @@ async function mapControlsAndAccessibility(browser) {
     return button && !button.disabled;
   }, { timeout: 10000 });
 
-  assert.strictEqual(await page.locator('[data-map-layer]').count(), 14);
-  assert.strictEqual(await page.locator('[data-opacity]').count(), 13);
+  assert.strictEqual(await page.locator('[data-map-layer]').count(), 16);
+  assert.strictEqual(await page.locator('[data-opacity]').count(), 15);
   assert.strictEqual(await page.locator('[data-context-full-opacity="usfs-wilderness"]').count(), 0);
+  assert.strictEqual(await page.locator('[data-map-layer="ky-state-park-trails"]').isChecked(), true);
+  assert.strictEqual(await page.locator('[data-map-layer="rrgh-weather"]').isChecked(), false);
+  assert.strictEqual(await page.locator('[data-weather-product]').inputValue(), 'precip-10d');
   assert.strictEqual(await page.locator('[data-map-layer="kgs-oil-gas-wells"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-opacity="kgs-oil-gas-wells"]').isDisabled(), true);
   assert.strictEqual(await page.locator('[data-plan-pan]').count(), 0);
@@ -374,7 +377,7 @@ async function mapControlsAndAccessibility(browser) {
   assert.strictEqual(await page.getByText('Sunset Potential', { exact: true }).count(), 1);
   assert.strictEqual((await page.locator('.route-layer-panel').innerText()).includes('Potential does not guarantee standing room'), false);
   await page.locator('.route-layer-fine-tune > summary').click();
-  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 13);
+  assert.strictEqual(await page.locator('[data-fine-tune-layer]').count(), 15);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="rrg-lidar-sun"]').count(), 1);
   assert.strictEqual(await page.locator('[data-opacity="rrg-lidar-sun"]').count(), 1);
   assert.strictEqual(await page.locator('[data-fine-tune-layer="rrg-lidar-sunrise"]').count(), 0);
