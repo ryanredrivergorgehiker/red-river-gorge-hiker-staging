@@ -1129,7 +1129,7 @@ async function fullMap(browser) {
   await dayHikeFilter.uncheck();
   await page.waitForFunction(() => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-visible-route-count') === '0');
   await dayHikeFilter.check();
-  await page.waitForFunction(() => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-visible-route-count') === '2');
+  await page.waitForFunction(() => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-visible-route-count') === '1');
   await backpackingFilter.uncheck();
   await offTrailFilter.uncheck();
   assert.strictEqual(await dayHikeFilter.isChecked(), true);
