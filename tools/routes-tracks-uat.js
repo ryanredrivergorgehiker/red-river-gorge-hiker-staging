@@ -2361,12 +2361,17 @@ async function mobile(browser) {
   assert.strictEqual(await mobileFloatingUndo.isDisabled(), true, 'Floating Undo should begin disabled with no history');
   assert.strictEqual(await mobileFloatingRedo.isDisabled(), true, 'Floating Redo should begin disabled with no history');
 
-  await map.click({ position: { x: box.width * 0.46, y: box.height * 0.48 } });
-  await page.waitForFunction(() => {
-    const button = document.querySelector('[data-plan-mobile-history] button[aria-label="Undo"]');
-    return button instanceof HTMLButtonElement && !button.disabled;
-  }, { timeout: 3000 });
-  assert.strictEqual(await mobileFloatingUndo.isDisabled(), false, 'Floating Undo should enable after adding planning history');
+  const mobilePlanningClickCandidates = [
+    { x: box.width * 0.24, y: box.height * 0.62 },
+    { x: box.width * 0.72, y: box.height * 0.62 },
+    { x: box.width * 0.30, y: box.height * 0.36 }
+  ];
+  for (const position of mobilePlanningClickCandidates) {
+    await map.click({ position });
+    await page.waitForTimeout(180);
+    if (!(await mobileFloatingUndo.isDisabled())) break;
+  }
+  assert.strictEqual(await mobileFloatingUndo.isDisabled(), false, 'Floating Undo should enable after adding planning history at a clear map point');
   assert.strictEqual(await mobileFloatingRedo.isDisabled(), true, 'Floating Redo should remain disabled before Undo');
   await mobileFloatingUndo.click();
   assert.strictEqual(await mobileFloatingUndo.isDisabled(), true, 'Floating Undo should disable after undoing the only planning point');
