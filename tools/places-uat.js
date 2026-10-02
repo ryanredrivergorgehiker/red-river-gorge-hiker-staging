@@ -75,6 +75,8 @@ async function counts(page){
       assert.strictEqual(await page.locator('.rrgh-place-marker-host[title="'+alias+'"]').count(),0,alias);
     }
 
+    const layersSummary = page.locator('[data-map-sheet="layers"] > summary');
+    await layersSummary.click();
     await around.uncheck();
     await page.waitForFunction(()=>document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-visible-place-poi-count')==='10');
     assert.strictEqual(await page.locator('.rrgh-place-marker-host').count(),10);
@@ -85,19 +87,24 @@ async function counts(page){
     assert.strictEqual(await page.locator('.rrgh-place-marker-host').count(),23);
     await hiker.check();
     await page.waitForFunction(()=>document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-visible-place-poi-count')==='29');
+    await layersSummary.click();
 
     await page.locator('[data-map-preset="terrain"]').click();
     assert.strictEqual(await around.isChecked(),false);
     assert.strictEqual(await hiker.isChecked(),false);
+    await layersSummary.click();
     await around.check();
     assert.strictEqual(await around.isChecked(),true);
+    await layersSummary.click();
     assert.strictEqual(await page.locator('[data-map-preset][aria-pressed="true"]').count(),0,'Manual layer change after preset must produce custom state');
 
     await page.locator('[data-map-preset="aerial"]').click();
     assert.strictEqual(await around.isChecked(),false);
     assert.strictEqual(await hiker.isChecked(),false);
+    await layersSummary.click();
     await hiker.check();
     await page.waitForFunction(()=>document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-visible-place-poi-count')==='10');
+    await layersSummary.click();
 
     await page.locator('[data-map-preset="sunlight"]').click();
     assert.strictEqual(await around.isChecked(),false);
