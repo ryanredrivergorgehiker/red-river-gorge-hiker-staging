@@ -2324,49 +2324,7 @@ async function mobile(browser) {
   assert(Math.abs(postFullscreenScrollY - preFullscreenScrollY) <= 4, 'Leaving full screen must return to the map page position; before=' + preFullscreenScrollY + ' after=' + postFullscreenScrollY);
   assert.strictEqual(await map.getAttribute('data-home-state'), 'true', 'Leaving full screen from Home must reframe the normal map back to Home');
 
-  // A user-selected zoom is not Home and must survive both full-screen transitions.
-  const normalMapForPreserve = await map.boundingBox();
-  assert(normalMapForPreserve);
-  const preserveZoomControl = page.locator('[data-map-action="zoom-in"]').first();
-  const preserveZoomAtHome = Number(await map.getAttribute('data-current-zoom'));
-  await preserveZoomControl.evaluate(button => button.click());
-  await page.waitForTimeout(250);
-  const preserveZoomAfterControl = Number(await map.getAttribute('data-current-zoom'));
-  assert.strictEqual(preserveZoomAfterControl, preserveZoomAtHome + 1, 'Explicit map zoom must move one level away from Home');
-  assert.strictEqual(await map.getAttribute('data-home-state'), 'false', 'Explicit map zoom must leave Home state');
-  const preserveCenterBefore = await map.getAttribute('data-map-center');
-  const preserveZoomBefore = Number(await map.getAttribute('data-current-zoom'));
-
-  await normalFullscreenEntry.click();
-  await page.waitForFunction(
-    () => {
-      const node = document.querySelector('[data-rrgh-route-map]');
-      const mode = node?.getAttribute('data-fullscreen-mode');
-      return (mode === 'native' || mode === 'focus')
-        && node?.getAttribute('data-fullscreen-home-reframed') === 'false';
-    },
-    { timeout: 5000 }
-  );
-  await page.waitForTimeout(120);
-  assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), preserveZoomBefore, 'Entering full screen away from Home must preserve zoom');
-  assert.strictEqual(await map.getAttribute('data-home-state'), 'false', 'Entering full screen away from Home must not invoke Home');
-
-  await fullscreenExit.click();
-  await page.waitForFunction(
-    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-fullscreen-mode') === 'off',
-    { timeout: 5000 }
-  );
-  await page.waitForTimeout(120);
-  assert.strictEqual(await map.getAttribute('data-home-state'), 'false', 'Exiting full screen from a user-selected view must remain away from Home');
-  assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), preserveZoomBefore, 'Exiting full screen away from Home must preserve zoom');
-  assert.strictEqual(await map.getAttribute('data-fullscreen-home-reframed'), 'false', 'Non-Home fullscreen transitions must never call Home');
-
-  // Restore the baseline Home view before continuing unrelated mobile planning UAT.
-  await mobileTopbar.locator('[data-map-action="home"]').click();
-  await page.waitForTimeout(250);
-  assert.strictEqual(await map.getAttribute('data-home-state'), 'true', 'Home must restore the baseline before subsequent mobile UAT');
-
-  record('Mobile full-screen controls, Home-only reframing, preserved user view, return position and adaptive current-zoom Sunlight rendering', 'PASS', {
+  record('Mobile full-screen controls, Home reframing, return position and adaptive current-zoom Sunlight rendering', 'PASS', {
     normalMobile: {
       zoom: normalMobileSunZoomAfter,
       sectors: normalMobileSunSectors,
@@ -2609,6 +2567,88 @@ async function mobile(browser) {
   await context.close();
 }
 
+async function mobileFullscreenHomeState(browser) {
+  const context = await preparedContext(browser, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  const providerRequests = [];
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error)));
+  await installProviderStubs(page, providerRequests);
+
+  const response = await page.goto(MAIN + 'routes/map/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(response && response.ok());
+  await page.waitForSelector('.leaflet-container', { timeout: 10000 });
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-core-ready') === 'true',
+    { timeout: 10000 }
+  );
+
+  const map = page.locator('[data-rrgh-route-map]');
+  const fullscreenEntry = page.locator('.route-map-mobile-fullscreen-entry [data-map-action="fullscreen"]');
+  const fullscreenExit = page.locator('.route-map-mobile-fullscreen-actions [data-map-action="fullscreen"]');
+
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'true', 'Initial mobile overview must begin at Home');
+
+  // Home -> fullscreen must explicitly reframe for the full-screen viewport.
+  await fullscreenEntry.click();
+  await page.waitForFunction(
+    () => {
+      const node = document.querySelector('[data-rrgh-route-map]');
+      const mode = node?.getAttribute('data-fullscreen-mode');
+      return (mode === 'native' || mode === 'focus')
+        && node?.getAttribute('data-fullscreen-home-reframed') === 'true';
+    },
+    { timeout: 5000 }
+  );
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'true', 'Entering full screen from Home must remain Home');
+
+  await fullscreenExit.click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-fullscreen-mode') === 'off',
+    { timeout: 5000 }
+  );
+  await page.waitForTimeout(150);
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'true', 'Exiting full screen from Home must reframe the normal map to Home');
+
+  // A user-selected zoom is not Home. Fullscreen transitions may let Leaflet
+  // clamp center to legal max-bounds for the changed viewport, but must not
+  // call Home or discard the user's zoom level.
+  const zoomControl = page.locator('[data-map-action="zoom-in"]').first();
+  const homeZoom = Number(await map.getAttribute('data-current-zoom'));
+  await zoomControl.evaluate(button => button.click());
+  await page.waitForTimeout(250);
+  const selectedZoom = Number(await map.getAttribute('data-current-zoom'));
+  assert.strictEqual(selectedZoom, homeZoom + 1, 'Explicit map zoom must create a non-Home view');
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'false', 'Explicit map zoom must leave Home state');
+
+  await fullscreenEntry.click();
+  await page.waitForFunction(
+    () => {
+      const node = document.querySelector('[data-rrgh-route-map]');
+      const mode = node?.getAttribute('data-fullscreen-mode');
+      return (mode === 'native' || mode === 'focus')
+        && node?.getAttribute('data-fullscreen-home-reframed') === 'false';
+    },
+    { timeout: 5000 }
+  );
+  assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), selectedZoom, 'Entering full screen away from Home must preserve zoom');
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'false', 'Entering full screen away from Home must not invoke Home');
+
+  await fullscreenExit.click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-fullscreen-mode') === 'off',
+    { timeout: 5000 }
+  );
+  await page.waitForTimeout(150);
+  assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), selectedZoom, 'Exiting full screen away from Home must preserve zoom');
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'false', 'Exiting full screen away from Home must remain away from Home');
+  assert.strictEqual(await map.getAttribute('data-fullscreen-home-reframed'), 'false', 'Non-Home fullscreen transitions must never call Home');
+  assert.deepStrictEqual(pageErrors, []);
+
+  record('Mobile fullscreen reframes Home only and preserves non-Home zoom state', 'PASS', { homeZoom, selectedZoom });
+  await context.close();
+}
+
 async function usgsAggregatedTrailSupplement(browser) {
   const context = await preparedContext(browser, { viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
@@ -2807,6 +2847,7 @@ async function oilGasFailureHandling(browser) {
     await princessRouteDetail(browser);
     await fullMap(browser);
     await mobile(browser);
+    await mobileFullscreenHomeState(browser);
     await liveKgsOilGasProbe(browser);
     await oilGasFailureHandling(browser);
     await usgsAggregatedTrailSupplement(browser);
