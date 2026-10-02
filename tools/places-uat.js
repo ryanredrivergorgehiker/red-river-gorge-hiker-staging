@@ -46,7 +46,7 @@ async function counts(page){
 }
 
 (async()=>{
-  const browser=await chromium.launch({headless:true});
+  const browser=await chromium.launch({headless:true,args:['--host-resolver-rules=MAP redrivergorgehiker.com 127.0.0.1']});
   try{
     const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:1440,height:1000}});
     const page=await context.newPage();
