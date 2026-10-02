@@ -565,6 +565,10 @@ async function fullMap(browser) {
   assert.strictEqual(await localRoadFineToggle.isDisabled(), false, 'Terrain view must keep the Local / old roads fine-tune toggle available');
   assert.strictEqual(await localRoadFineToggle.isChecked(), true, 'Terrain view must sync the Fine tune Local / old roads checkbox on');
 
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-local-road-load-state') === 'zoom-in',
+    { timeout: 5000 }
+  );
   assert.strictEqual(await mapContainer.getAttribute('data-local-road-load-state'), 'zoom-in', 'At Home zoom, Local / old roads should wait for closer inspection');
   await page.getByRole('button', { name: 'Zoom in', exact: true }).first().click();
   await page.waitForFunction(
