@@ -1,3 +1,3 @@
 6b06b48576580c8a8604fc3fb1eb95e58a72d498
 # Princess Arch + authoritative Home/fullscreen exact candidate
-# Retest Home gating without overconstraining Leaflet max-bounds clamping
+# Retest Home gating and restore baseline before unrelated mobile planning checks
