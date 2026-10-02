@@ -589,10 +589,15 @@ async function fullMap(browser) {
 
   let releaseRouteGeometry;
   const routeGeometryGate = new Promise(resolve => { releaseRouteGeometry = resolve; });
-  await page.route('**/data/routes/skybridge-arch-v1.geojson', async route => {
-    await routeGeometryGate;
-    await route.continue();
-  });
+  for (const routePattern of [
+    '**/data/routes/skybridge-arch-v1.geojson',
+    '**/data/routes/princess-arch-v1.geojson'
+  ]) {
+    await page.route(routePattern, async route => {
+      await routeGeometryGate;
+      await route.continue();
+    });
+  }
 
   let releaseInformalCache;
   const informalCacheGate = new Promise(resolve => { releaseInformalCache = resolve; });
