@@ -40,24 +40,9 @@ jobs:
           ref: ${{ steps.source.outputs.source_ref }}
           path: site
 
-      - name: Seed validated Skybridge elevation cache
+      - name: Seed validated route elevation caches
         working-directory: site
-        shell: bash
-        run: |
-          route_json_blob="$(git rev-parse HEAD:src/data/routes/skybridge-arch.json)"
-          route_geo_blob="$(git rev-parse HEAD:public/data/routes/skybridge-arch-v1.geojson)"
-          route_gpx_blob="$(git rev-parse HEAD:public/downloads/routes/Skybridge_Arch_APPROVED_v1.gpx)"
-
-          if [ "$route_json_blob" != "61e2c76339799420df38bb86442c774e8d3d1cab" ] \
-            || [ "$route_geo_blob" != "7845938e72579cde013178f9eaceb7dba9fb8234" ] \
-            || [ "$route_gpx_blob" != "0e9575f0d5567f70ccc1701ab72c40992afc4628" ]; then
-            echo "Route inputs changed; refusing to reuse cached elevation data." >&2
-            exit 1
-          fi
-
-          mkdir -p public/data/routes
-          cp .ci-cache/skybridge-arch.elevation.json public/data/routes/skybridge-arch.elevation.json
-          echo "Seeded validated Skybridge elevation artifact for unchanged route inputs."
+        run: node scripts/seed-route-elevation-cache.mjs
 
       - name: Set up Node
         uses: actions/setup-node@v6
