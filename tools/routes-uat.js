@@ -355,6 +355,17 @@ async function routeArtifactsAndContent(browser) {
   assert.strictEqual(princessApi.gpxUrl, null);
   assert.strictEqual(princessApi.waypointCount, 1);
 
+  await page.setViewportSize({ width: 390, height: 844 });
+  const princessMobileResponse = await page.goto(MAIN + 'routes/princess-arch/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(princessMobileResponse && princessMobileResponse.ok());
+  assert.strictEqual(await page.getByRole('heading', { level: 1, name: 'Princess Arch', exact: true }).count(), 1);
+  assert.strictEqual(await page.locator('.route-waypoint-list li').count(), 1);
+  assert.strictEqual(await page.getByRole('link', { name: 'Download GPX', exact: true }).count(), 0);
+  const princessMobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert(princessMobileOverflow <= 2, 'Princess Arch mobile page horizontal overflow: ' + princessMobileOverflow);
+  await shot(page, 'mobile-princess-arch-route');
+  await page.setViewportSize({ width: 1440, height: 1100 });
+
   const osmCache = JSON.parse(await fetchText(page, MAIN + 'data/map/osm-informal-trails.geojson'));
   assert.strictEqual(osmCache.type, 'FeatureCollection');
   assert(osmCache.features.length > 100, 'OSM cache should contain substantial community trail coverage');
