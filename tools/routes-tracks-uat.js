@@ -554,7 +554,7 @@ async function princessRouteDetail(browser) {
   assert(body.includes('Princess Arch'));
   assert(body.includes('2 routes'));
 
-  response = await page.goto(MAIN + 'routes/map/?route=princess-arch', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  response = await page.goto(MAIN + 'routes/map/?rrghRoute=RTE-0002', { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(response && response.ok());
   await page.waitForSelector('.leaflet-container', { timeout: 10000 });
   await page.waitForFunction(
