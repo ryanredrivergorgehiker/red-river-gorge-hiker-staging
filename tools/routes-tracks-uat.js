@@ -499,7 +499,7 @@ async function princessRouteDetail(browser) {
   assert(response && response.ok());
   await page.waitForSelector('.leaflet-container', { timeout: 10000 });
   await page.waitForFunction(
-    () => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-planner-node-count') || 0) > 1,
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-route-data-ready') === 'true',
     { timeout: 10000 }
   );
 
