@@ -1,16 +1,16 @@
-e582d0ab308b4d6871c792c8d2594363f9ecada6
-purpose=Mobile-only full-screen map refinement: smaller top utility typography; in-map Map View dropdown; persistent Search/Explore/Plan/Share bottom bar; floating quick-reference info pop-up.
-source_ci=36950327738 SUCCESS
-routes_tracks_uat=36950413225 SUCCESS
-routes_uat=36950413173 SUCCESS
-brand_explore_uat=36950417585 SUCCESS
-analytics_uat=36950422802 SUCCESS
-roku_uat=36950429665 SUCCESS
-mobile_topbar=smaller type in normal mobile and tighter type in full-screen/focus mode
-mobile_fullscreen_map_view=Hiking/Terrain/Aerial/Sunlight dropdown at upper-left of map; stays synchronized with preset state
-mobile_fullscreen_bottom_bar=Search/Explore/Plan/Share retained below map within viewport
-mobile_fullscreen_quickref=small information icon at upper-right opens concise full-screen instructions
-desktop_visual_behavior=unchanged by CSS media-query scope
+7d0911fc0e8c35e3553dc66a2882796b94c63d91
+purpose=Mobile full-screen correction: prevent iPhone Sunlight memory crashes; move Map View to top-right cluster; use diagonal-arrow fullscreen icon with eye quick-reference below; keep Search/Explore/Plan/Share visible; hide redundant instructions and expand map.
+source_ci=37006695546 SUCCESS
+routes_tracks_uat=37006849451 SUCCESS
+routes_uat=37006849334 SUCCESS
+brand_explore_uat=37006887006 SUCCESS
+analytics_uat=37006891399 SUCCESS
+roku_uat=37006898587 SUCCESS
+mobile_fullscreen_uat=390x844 Chromium touch viewport passed: control cluster visible; status hidden; four bottom actions inside viewport; Sunlight auto-zooms to >=13; live sectors <=6; live raster overlays <=12; leaving Sunlight releases sectors/images
+sunlight_mobile_memory_guard=full-screen mobile only; min zoom 13; viewport pad 0.08; max 6 live sectors; off-viewport sector eviction and image src release
+fullscreen_controls=top-right Map View selector left of diagonal-arrow toggle; eye quick-reference below toggle
+fullscreen_layout=My location/Home/Layers remain compact top utilities; redundant instructions/context/read-guide hidden; Search/Explore/Plan/Share condensed bottom bar retained
+desktop_visual_behavior=unchanged by <=700px scope
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
 source_branch=staging/routes-tracks-interactive-map
 pr=46 OPEN DRAFT UNMERGED
