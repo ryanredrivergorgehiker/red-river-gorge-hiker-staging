@@ -1129,7 +1129,7 @@ async function fullMap(browser) {
   await dayHikeFilter.uncheck();
   await page.waitForFunction(() => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-visible-route-count') === '0');
   await dayHikeFilter.check();
-  await page.waitForFunction(() => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-visible-route-count') === '1');
+  await page.waitForFunction(() => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-visible-route-count') === '2');
   await backpackingFilter.uncheck();
   await offTrailFilter.uncheck();
   assert.strictEqual(await dayHikeFilter.isChecked(), true);
@@ -1739,9 +1739,20 @@ async function fullMap(browser) {
   await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
 
   await exploreButton.click();
-  const skybridgeExplore = page.locator('[data-map-sheet="explore"]').getByRole('button', { name: /Skybridge Arch/ }).first();
-  assert.strictEqual(await skybridgeExplore.count(), 1, 'Skybridge Arch should be selectable from Explore before sharing');
-  await skybridgeExplore.click();
+  const princessExplore = page.locator('[data-map-sheet="explore"]').getByRole('button', { name: /Princess Arch/ }).first();
+  assert.strictEqual(await princessExplore.count(), 1, 'Princess Arch should be selectable from Explore before sharing');
+  await princessExplore.click();
+  await page.waitForFunction(
+    () => document.querySelector('.leaflet-popup-content')?.textContent?.includes('Princess Arch'),
+    { timeout: 5000 }
+  );
+  const princessPopup = await page.locator('.leaflet-popup-content').innerText();
+  assert(princessPopup.includes('Princess Arch'));
+  assert(princessPopup.includes('0.57 mi'));
+  assert(princessPopup.includes('Easy'));
+  assert(princessPopup.includes('Day hike'));
+  assert(princessPopup.includes('View route guide'));
+  assert(!princessPopup.includes('Download GPX'), 'Princess Arch must not expose a public GPX download in the full map');
 
   await backpackingFilter.uncheck();
   await offTrailFilter.check();
@@ -1773,7 +1784,7 @@ async function fullMap(browser) {
   assert(await sharePanel.isVisible(), 'Share fallback panel should open when native Web Share is unavailable');
   const sharedUrl = await sharePanel.locator('[data-share-url]').inputValue();
   const shared = new URL(sharedUrl);
-  assert.strictEqual(shared.searchParams.get('rrghRoute'), 'RTE-0001');
+  assert.strictEqual(shared.searchParams.get('rrghRoute'), 'RTE-0002');
   assert.strictEqual(shared.searchParams.get('rrghPreset'), 'custom', 'Manual layer changes should share as a custom preset');
   assert(shared.searchParams.get('rrghMap'), 'Shared link should include center and zoom');
   assert(shared.searchParams.get('rrghLayers')?.includes('usfs-special-management:0:'), 'Shared link should preserve disabled Special management');
@@ -1808,7 +1819,7 @@ async function fullMap(browser) {
   assert.strictEqual(await page.locator('[data-route-category-filter="backpacking"]').isChecked(), false);
   assert.strictEqual(await page.locator('[data-route-category-filter="off-trail"]').isChecked(), true);
   await page.waitForFunction(
-    () => document.querySelector('.leaflet-popup-content')?.textContent?.includes('Skybridge Arch'),
+    () => document.querySelector('.leaflet-popup-content')?.textContent?.includes('Princess Arch'),
     { timeout: 5000 }
   );
   record('Stateful map Share permalink and selected-route restore', 'PASS', { sharedUrl });

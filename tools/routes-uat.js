@@ -10,6 +10,7 @@ const SHARED = 'rrgh-analytics-consent-v1';
 const REGION = 'rrgh-region-country-v1';
 const GPX_SHA = '2469c85ebaddd3e701ba6dc8eea3664d90a0667dcd86f2aab43ae1445986830d';
 const GEO_SHA = '123fdb57e1142299f86c714367cc466b70f18fa90cfbaabb92b0d9ced157dc66';
+const PRINCESS_GEO_SHA = 'ced314bb34392750b0f823c9a11bc95a48e6fa52c59830d4ee83619f615d6602';
 const TRANSPARENT_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X3JmAAAAAElFTkSuQmCC',
   'base64'
@@ -187,9 +188,10 @@ async function routeLibrary(browser) {
   const page = await context.newPage();
   const response = await page.goto(MAIN + 'routes/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(response && response.ok());
-  assert.strictEqual(await page.locator('[data-route-card]').count(), 1);
-  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '1 route');
+  assert.strictEqual(await page.locator('[data-route-card]').count(), 2);
+  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '2 routes');
   assert.strictEqual(await page.getByRole('link', { name: 'Skybridge Arch', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('link', { name: 'Princess Arch', exact: true }).count(), 1);
 
   const pageText = await page.locator('body').innerText();
   assert(pageText.includes('Field-tested routes'));
@@ -203,6 +205,8 @@ async function routeLibrary(browser) {
   assert(await page.locator('[data-route-empty]').isVisible());
   await search.fill('Skybridge');
   assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '1 route');
+  await search.fill('');
+  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '2 routes');
 
   const dayHike = page.locator('[data-route-category-filter="day-hike"]');
   const backpacking = page.locator('[data-route-category-filter="backpacking"]');
@@ -215,16 +219,16 @@ async function routeLibrary(browser) {
   await dayHike.uncheck();
   assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '0 routes');
   await dayHike.check();
-  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '1 route');
+  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '2 routes');
 
   await backpacking.uncheck();
   await offTrail.uncheck();
-  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '1 route');
+  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '2 routes');
   await dayHike.uncheck();
   assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '0 routes');
   await dayHike.check();
   await offTrail.check();
-  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '1 route');
+  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '2 routes');
 
   await shot(page, 'desktop-route-library');
   record('Route library public copy and filters', 'PASS');
@@ -296,6 +300,61 @@ async function routeArtifactsAndContent(browser) {
   assert(dataset.distribution.contentUrl.endsWith('/downloads/routes/Skybridge_Arch_APPROVED_v1.gpx'));
   assert(dataset.license.endsWith('/copyright-and-terms/#gpx-download-license'));
 
+
+  const princessResponse = await page.goto(MAIN + 'routes/princess-arch/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(princessResponse && princessResponse.ok());
+  assert((await page.locator('link[rel="canonical"]').getAttribute('href') || '').endsWith('/routes/princess-arch/'));
+  const princessBody = await page.locator('body').innerText();
+  for (const expected of [
+    'Princess Arch',
+    '0.57 mi',
+    'Day hike',
+    'USDA Forest Service Princess Arch Trail #233 / established official trail',
+    'Easy',
+    'Straightforward established-trail navigation',
+    'Chimney Top Road / Forest Road 10',
+    'Ryan reports the road is closed at the gate in winter.',
+    'Landmarks & viewpoints',
+    'Current land-manager resources',
+    'Map & route data sources'
+  ]) assert(princessBody.includes(expected), 'Princess route: ' + expected);
+  for (const forbidden of ['Trailhead', 'Parking waypoint', 'overlook waypoint', '1,138 ft', 'Download GPX', 'Princess_Arch_APPROVED_v1.gpx']) {
+    assert(!princessBody.includes(forbidden), 'Princess route must not expose: ' + forbidden);
+  }
+  assert(!/drive\.google\.com|RAW Gaia|PROPOSED/i.test(princessBody));
+  assert.strictEqual(await page.locator('.route-waypoint-list li').count(), 1);
+  assert((await page.locator('.route-waypoint-list li').innerText()).includes('Princess Arch'));
+  assert.strictEqual(await page.getByRole('link', { name: 'Download GPX', exact: true }).count(), 0);
+
+  const princessGeoBytes = await fetchBytes(page, MAIN + 'data/routes/princess-arch-v1.geojson');
+  assert.strictEqual(sha256(princessGeoBytes), PRINCESS_GEO_SHA);
+  const princessGeo = JSON.parse(Buffer.from(princessGeoBytes).toString('utf8'));
+  const princessLines = princessGeo.features.filter(feature => feature.geometry.type === 'LineString');
+  const princessPoints = princessGeo.features.filter(feature => feature.geometry.type === 'Point');
+  assert.strictEqual(princessLines.length, 1);
+  assert.strictEqual(princessLines[0].geometry.coordinates.length, 82);
+  assert.strictEqual(princessPoints.length, 1);
+  assert.strictEqual(princessPoints[0].properties.waypointId, 'WP-0003');
+  assert.deepStrictEqual(princessPoints[0].geometry.coordinates, [-83.61963, 37.82733]);
+
+  const princessElevation = JSON.parse(await fetchText(page, MAIN + 'data/routes/princess-arch.elevation.json'));
+  assert.strictEqual(princessElevation.routeId, 'RTE-0002');
+  assert.strictEqual(princessElevation.sampleCount, 100);
+  assert.strictEqual(princessElevation.points.length, 100);
+  assert.strictEqual(princessElevation.source.id, 'usgs-3dep-bare-earth-dem');
+  assert.deepStrictEqual(princessElevation.stats, { ascentFt: 127, descentFt: 128, minElevationFt: 1117, maxElevationFt: 1215 });
+
+  const princessSchemas = (await page.locator('script[type="application/ld+json"]').allTextContents()).map(text => JSON.parse(text));
+  assert(princessSchemas.some(schema => schema['@type'] === 'BreadcrumbList'));
+  assert.strictEqual(princessSchemas.filter(schema => schema['@type'] === 'Dataset').length, 0, 'Princess controlled GPX must not emit DataDownload schema');
+
+  const routeApi = JSON.parse(await fetchText(page, MAIN + 'data/routes/index.json'));
+  const princessApi = routeApi.find(route => route.routeId === 'RTE-0002');
+  assert(princessApi, 'Princess Arch must appear in the public route API');
+  assert.strictEqual(princessApi.slug, 'princess-arch');
+  assert.strictEqual(princessApi.gpxUrl, null);
+  assert.strictEqual(princessApi.waypointCount, 1);
+
   const osmCache = JSON.parse(await fetchText(page, MAIN + 'data/map/osm-informal-trails.geojson'));
   assert.strictEqual(osmCache.type, 'FeatureCollection');
   assert(osmCache.features.length > 100, 'OSM cache should contain substantial community trail coverage');
@@ -309,7 +368,7 @@ async function routeArtifactsAndContent(browser) {
   const sitemapIndex = await fetchText(page, MAIN + 'sitemap-index.xml');
   assert(sitemapIndex.includes('sitemap-0.xml'));
   const sitemap = await fetchText(page, MAIN + 'sitemap-0.xml');
-  for (const route of ['/routes/', '/routes/skybridge-arch/', '/routes/map/', '/guides/kentucky-lidar/']) {
+  for (const route of ['/routes/', '/routes/skybridge-arch/', '/routes/princess-arch/', '/routes/map/', '/guides/kentucky-lidar/']) {
     assert(sitemap.includes(route), route);
   }
 
@@ -599,7 +658,7 @@ async function legalExploreAndMobile(browser) {
   const mobile = await contextFor(browser, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const mp = await mobile.newPage();
   await installStubs(mp);
-  for (const route of ['routes/', 'routes/skybridge-arch/', 'routes/map/', 'privacy/', 'copyright-and-terms/']) {
+  for (const route of ['routes/', 'routes/skybridge-arch/', 'routes/princess-arch/', 'routes/map/', 'privacy/', 'copyright-and-terms/']) {
     const response = await mp.goto(MAIN + route, { waitUntil: 'domcontentloaded', timeout: 60000 });
     assert(response && response.ok(), route);
     const overflow = await mp.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
