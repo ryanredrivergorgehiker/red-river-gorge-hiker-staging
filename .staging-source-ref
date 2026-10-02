@@ -1,15 +1,17 @@
-7d0911fc0e8c35e3553dc66a2882796b94c63d91
-purpose=Mobile full-screen correction: prevent iPhone Sunlight memory crashes; move Map View to top-right cluster; use diagonal-arrow fullscreen icon with eye quick-reference below; keep Search/Explore/Plan/Share visible; hide redundant instructions and expand map.
-source_ci=37006695546 SUCCESS
-routes_tracks_uat=37006849451 SUCCESS
-routes_uat=37006849334 SUCCESS
-brand_explore_uat=37006887006 SUCCESS
-analytics_uat=37006891399 SUCCESS
-roku_uat=37006898587 SUCCESS
-mobile_fullscreen_uat=390x844 Chromium touch viewport passed: control cluster visible; status hidden; four bottom actions inside viewport; Sunlight auto-zooms to >=13; live sectors <=6; live raster overlays <=12; leaving Sunlight releases sectors/images
-sunlight_mobile_memory_guard=full-screen mobile only; min zoom 13; viewport pad 0.08; max 6 live sectors; off-viewport sector eviction and image src release
-fullscreen_controls=top-right Map View selector left of diagonal-arrow toggle; eye quick-reference below toggle
-fullscreen_layout=My location/Home/Layers remain compact top utilities; redundant instructions/context/read-guide hidden; Search/Explore/Plan/Share condensed bottom bar retained
+84d3cf570cf3fbe1327f28ce74c8ed16ffc2e6bc
+purpose=Mobile full-screen placement correction: normal-state fullscreen control is inside map upper-left; normal top utilities are My location/Home/Layers only; full-screen top and bottom controls overlay the map without changing top-button sizing; Map View/collapse/info cluster remains upper-right; original i information marker restored; fullscreen glyph uses standard diagonal arrow characters; iPhone Sunlight bounded-memory guard preserved.
+source_ci=37008721675 SUCCESS
+routes_tracks_uat=37008832341 SUCCESS
+routes_uat=37008832303 SUCCESS
+brand_explore_uat=37008838348 SUCCESS
+analytics_uat=37008844406 SUCCESS
+roku_uat=37008849088 SUCCESS
+normal_mobile_fullscreen_control=inside map upper-left; outward diagonal arrows
+fullscreen_mobile_top_utilities=My location/Home/Layers inside map; same 44px sizing and typography as normal state
+fullscreen_mobile_top_right=Map View selector left of inward diagonal collapse arrows; original i quick-reference marker directly below
+fullscreen_mobile_bottom=Search/Explore/Plan/Share inside map overlay
+fullscreen_mobile_instructions=hidden; map fills full viewport
+sunlight_mobile_memory_guard=preserved from prior candidate; min zoom 13; max 6 live sectors / 12 raster overlays; off-viewport eviction and image source release
 desktop_visual_behavior=unchanged by <=700px scope
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
 source_branch=staging/routes-tracks-interactive-map
