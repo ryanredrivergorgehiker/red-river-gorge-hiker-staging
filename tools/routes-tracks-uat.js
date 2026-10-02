@@ -10,6 +10,7 @@ const SHARED = 'rrgh-analytics-consent-v1';
 const REGION = 'rrgh-region-country-v1';
 const GPX_SHA = '2469c85ebaddd3e701ba6dc8eea3664d90a0667dcd86f2aab43ae1445986830d';
 const GEO_SHA = '123fdb57e1142299f86c714367cc466b70f18fa90cfbaabb92b0d9ced157dc66';
+const PRINCESS_GEO_SHA = 'ced314bb34392750b0f823c9a11bc95a48e6fa52c59830d4ee83619f615d6602';
 const PROVIDERS = new Set(['kygisserver.ky.gov', 'tigerweb.geo.census.gov', 'kyraster.ky.gov', 'basemap.nationalmap.gov', 'elevation.nationalmap.gov', 'apps.fs.usda.gov', 'kgs.uky.edu', 'overpass.maprva.org', 'overpass.private.coffee', 'overpass-api.de', 'maps.mail.ru']);
 
 const TRANSPARENT_PNG = Buffer.from(
@@ -483,6 +484,92 @@ async function routeDetail(browser) {
   assert.deepStrictEqual(pageErrors, []);
   await shot(page, 'desktop-route-detail-hiker-first');
   record('Route detail map, route card, markers, legend and exact artifacts', 'PASS');
+  await context.close();
+}
+
+async function princessRouteDetail(browser) {
+  const context = await preparedContext(browser, { viewport: { width: 1440, height: 1050 } });
+  const page = await context.newPage();
+  const providerRequests = [];
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error)));
+  await installProviderStubs(page, providerRequests);
+
+  let response = await page.goto(MAIN + 'routes/princess-arch/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(response && response.ok());
+  await page.waitForSelector('.leaflet-container', { timeout: 10000 });
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-map-routes-ready') === 'true',
+    { timeout: 10000 }
+  );
+
+  let body = await page.locator('body').innerText();
+  for (const expected of [
+    'Princess Arch', '0.57 mi', 'Official Forest Service trail',
+    'Chimney Top Road / Forest Road 10', 'Landmarks & viewpoints',
+    '127 ft', '128 ft', '1,117–1,215 ft'
+  ]) assert(body.includes(expected), expected);
+  for (const forbidden of ['Little Princess Arch', 'Turnaround Overlook', 'Download GPX', '1,138 ft']) {
+    assert(!body.includes(forbidden), forbidden);
+  }
+  assert.strictEqual(await page.locator('.route-waypoint-icon').count(), 1, 'Princess Arch must expose exactly one approved public waypoint');
+
+  const geoBytes = await fetchBytes(page, MAIN + 'data/routes/princess-arch-v1.geojson');
+  assert.strictEqual(
+    crypto.createHash('sha256').update(Buffer.from(geoBytes)).digest('hex'),
+    PRINCESS_GEO_SHA,
+    'Princess Arch public web geometry must be the exact approved artifact'
+  );
+  const geo = JSON.parse(Buffer.from(geoBytes).toString('utf8'));
+  const line = geo.features.filter(feature => feature.geometry?.type === 'LineString');
+  const points = geo.features.filter(feature => feature.geometry?.type === 'Point');
+  assert.strictEqual(line.length, 1);
+  assert.strictEqual(line[0].geometry.coordinates.length, 82, 'Princess Arch route line must preserve all 82 approved track points');
+  assert.strictEqual(points.length, 1);
+  assert.strictEqual(points[0].properties.waypointId, 'WP-0003');
+  assert.strictEqual(points[0].properties.name, 'Princess Arch');
+  assert.deepStrictEqual(points[0].geometry.coordinates, [-83.61963, 37.82733]);
+
+  const withheldGpx = await context.request.get(MAIN + 'downloads/routes/Princess_Arch_APPROVED_v1.gpx');
+  assert.strictEqual(withheldGpx.status(), 404, 'Princess Arch GPX must not be publicly downloadable in this staging candidate');
+
+  const apiPayload = await page.evaluate(async () => {
+    const r = await fetch('/data/routes/index.json', { cache: 'no-cache' });
+    if (!r.ok) throw new Error('Route API HTTP ' + r.status);
+    return r.json();
+  });
+  const princessApi = apiPayload.find(route => route.routeId === 'RTE-0002');
+  assert(princessApi, 'Route API must include Princess Arch');
+  assert.strictEqual(princessApi.slug, 'princess-arch');
+  assert.strictEqual(princessApi.gpxUrl, null, 'Route API must not publish a Princess Arch GPX URL');
+  assert.strictEqual(princessApi.waypointCount, 1);
+
+  response = await page.goto(MAIN + 'routes/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(response && response.ok());
+  body = await page.locator('body').innerText();
+  assert(body.includes('Skybridge Arch'));
+  assert(body.includes('Princess Arch'));
+  assert(body.includes('2 routes'));
+
+  response = await page.goto(MAIN + 'routes/map/?route=princess-arch', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  assert(response && response.ok());
+  await page.waitForSelector('.leaflet-container', { timeout: 10000 });
+  await page.waitForFunction(
+    () => document.querySelector('.leaflet-popup-content')?.textContent?.includes('Princess Arch'),
+    { timeout: 10000 }
+  );
+  const popup = await page.locator('.leaflet-popup-content').innerText();
+  assert(popup.includes('Princess Arch'));
+  assert(popup.includes('0.57 mi'));
+  assert(!popup.includes('Download GPX'), 'Princess Arch full-map popup must not expose a GPX download');
+  assert.deepStrictEqual(pageErrors, []);
+
+  await shot(page, 'desktop-princess-arch-route');
+  record('Princess Arch route/page/map geometry and GPX publication gate', 'PASS', {
+    geometrySha256: PRINCESS_GEO_SHA,
+    trackPoints: 82,
+    waypoint: 'WP-0003'
+  });
   await context.close();
 }
 
@@ -2086,6 +2173,7 @@ async function mobile(browser) {
   assert(await page.locator('[data-map-mobile-status]').isVisible(), 'Normal mobile instructions must remain visible');
   assert.strictEqual(await page.locator('[data-mobile-map-preset] option').count(), 4, 'User-facing Map View selector must expose only Hiking/Terrain/Aerial/Sunlight');
   const preFullscreenScrollY = await page.evaluate(() => window.scrollY);
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'true', 'Initial mobile overview must be recognized as Home before full-screen entry');
 
   await normalFullscreenEntry.click();
   await page.waitForFunction(
@@ -2095,6 +2183,11 @@ async function mobile(browser) {
     },
     { timeout: 5000 }
   );
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-fullscreen-home-reframed') === 'true',
+    { timeout: 5000 }
+  );
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'true', 'Entering full screen from Home must reframe and remain Home');
   assert.strictEqual(await page.locator('[data-map-mobile-status]').isVisible(), false, 'Full screen must hide redundant mobile instructions');
   assert.strictEqual(await normalFullscreenEntry.isVisible(), false, 'Normal upper-left fullscreen entry must hide once full screen is active');
   assert(await page.locator('.route-map-mobile-fullscreen-cluster').isVisible(), 'Full-screen control cluster must be visible');
@@ -2221,7 +2314,45 @@ async function mobile(browser) {
   await page.waitForTimeout(100);
   const postFullscreenScrollY = await page.evaluate(() => window.scrollY);
   assert(Math.abs(postFullscreenScrollY - preFullscreenScrollY) <= 4, 'Leaving full screen must return to the map page position; before=' + preFullscreenScrollY + ' after=' + postFullscreenScrollY);
-  record('Mobile full-screen controls, restored instructions, return position and adaptive current-zoom Sunlight rendering', 'PASS', {
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'true', 'Leaving full screen from Home must reframe the normal map back to Home');
+
+  // A user-selected zoom is not Home and must survive both full-screen transitions.
+  const normalMapForPreserve = await map.boundingBox();
+  assert(normalMapForPreserve);
+  await page.mouse.dblclick(
+    normalMapForPreserve.x + normalMapForPreserve.width * 0.58,
+    normalMapForPreserve.y + normalMapForPreserve.height * 0.48
+  );
+  await page.waitForTimeout(350);
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'false', 'Manual map zoom must leave Home state');
+  const preserveCenterBefore = await map.getAttribute('data-map-center');
+  const preserveZoomBefore = Number(await map.getAttribute('data-current-zoom'));
+
+  await normalFullscreenEntry.click();
+  await page.waitForFunction(
+    () => {
+      const node = document.querySelector('[data-rrgh-route-map]');
+      const mode = node?.getAttribute('data-fullscreen-mode');
+      return (mode === 'native' || mode === 'focus')
+        && node?.getAttribute('data-fullscreen-home-reframed') === 'false';
+    },
+    { timeout: 5000 }
+  );
+  await page.waitForTimeout(120);
+  assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), preserveZoomBefore, 'Entering full screen away from Home must preserve zoom');
+  assert.strictEqual(await map.getAttribute('data-map-center'), preserveCenterBefore, 'Entering full screen away from Home must preserve center');
+
+  await fullscreenExit.click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-fullscreen-mode') === 'off',
+    { timeout: 5000 }
+  );
+  await page.waitForTimeout(120);
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'false', 'Exiting full screen from a user-selected view must remain away from Home');
+  assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), preserveZoomBefore, 'Exiting full screen away from Home must preserve zoom');
+  assert.strictEqual(await map.getAttribute('data-map-center'), preserveCenterBefore, 'Exiting full screen away from Home must preserve center');
+
+  record('Mobile full-screen controls, Home-only reframing, preserved user view, return position and adaptive current-zoom Sunlight rendering', 'PASS', {
     normalMobile: {
       zoom: normalMobileSunZoomAfter,
       sectors: normalMobileSunSectors,
@@ -2659,6 +2790,7 @@ async function oilGasFailureHandling(browser) {
   let failure = null;
   try {
     await routeDetail(browser);
+    await princessRouteDetail(browser);
     await fullMap(browser);
     await mobile(browser);
     await liveKgsOilGasProbe(browser);
