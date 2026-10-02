@@ -2239,11 +2239,14 @@ async function mobile(browser) {
   await mobileBuildButton.click();
   assert.strictEqual(await mobilePlanPanel.getAttribute('data-minimized'), 'true', 'Mobile Build trail route should automatically minimize immediately after selection');
   const mobilePanPad = page.locator('[data-plan-pan-pad]');
-  const mobilePanPadBox = await mobilePanPad.boundingBox();
-  assert(mobilePanPadBox);
+  const [mobilePanPadBox, currentPlanningMapBox] = await Promise.all([
+    mobilePanPad.boundingBox(),
+    map.boundingBox()
+  ]);
+  assert(mobilePanPadBox && currentPlanningMapBox);
   assert(mobilePanPadBox.width <= 76 && mobilePanPadBox.height <= 76, 'Mobile pan pad should be very compact; size=' + mobilePanPadBox.width + 'x' + mobilePanPadBox.height);
-  assert(mobilePanPadBox.x + mobilePanPadBox.width >= box.x + box.width - 14, 'Mobile pan pad should sit at the upper-right edge of the map');
-  assert(mobilePanPadBox.y >= box.y && mobilePanPadBox.y <= box.y + 18, 'Mobile pan pad should sit at the upper-right top edge of the map');
+  assert(mobilePanPadBox.x + mobilePanPadBox.width >= currentPlanningMapBox.x + currentPlanningMapBox.width - 14, 'Mobile pan pad should sit at the upper-right edge of the map');
+  assert(mobilePanPadBox.y >= currentPlanningMapBox.y && mobilePanPadBox.y <= currentPlanningMapBox.y + 18, 'Mobile pan pad should sit at the upper-right top edge of the map');
   const compactPlanBox = await mobilePlanPanel.boundingBox();
   assert(compactPlanBox && compactPlanBox.height <= 92, 'Minimized mobile planner must be a compact status strip; height=' + (compactPlanBox && compactPlanBox.height));
   assert.strictEqual((await mobilePlanPanel.locator('[data-plan-panel-title]').innerText()).trim(), '', 'Minimized mobile planner must not repeat Build trail route');
