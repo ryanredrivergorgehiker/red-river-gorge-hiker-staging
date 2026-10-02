@@ -2327,21 +2327,13 @@ async function mobile(browser) {
   // A user-selected zoom is not Home and must survive both full-screen transitions.
   const normalMapForPreserve = await map.boundingBox();
   assert(normalMapForPreserve);
-  const preserveStart = {
-    x: normalMapForPreserve.x + normalMapForPreserve.width * 0.58,
-    y: normalMapForPreserve.y + normalMapForPreserve.height * 0.48
-  };
-  const preserveTouch = (y) => ({
-    x: preserveStart.x, y, radiusX: 2, radiusY: 2, rotationAngle: 0, force: 1, id: 31
-  });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [preserveTouch(preserveStart.y)] });
-  for (const delta of [18, 36, 54, 72]) {
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [preserveTouch(preserveStart.y + delta)] });
-    await page.waitForTimeout(25);
-  }
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await page.waitForTimeout(350);
-  assert.strictEqual(await map.getAttribute('data-home-state'), 'false', 'Manual mobile pan must leave Home state');
+  const preserveZoomControl = page.locator('[data-map-action="zoom-in"]').first();
+  const preserveZoomAtHome = Number(await map.getAttribute('data-current-zoom'));
+  await preserveZoomControl.evaluate(button => button.click());
+  await page.waitForTimeout(250);
+  const preserveZoomAfterControl = Number(await map.getAttribute('data-current-zoom'));
+  assert.strictEqual(preserveZoomAfterControl, preserveZoomAtHome + 1, 'Explicit map zoom must move one level away from Home');
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'false', 'Explicit map zoom must leave Home state');
   const preserveCenterBefore = await map.getAttribute('data-map-center');
   const preserveZoomBefore = Number(await map.getAttribute('data-current-zoom'));
 
