@@ -2138,12 +2138,15 @@ async function mobile(browser) {
   const fullscreenLayerBox = await fullscreenLayerPanel.boundingBox();
   assert(fullscreenLayerBox);
   assert(fullscreenLayerBox.y >= fullTopbarBox.y + fullTopbarBox.height - 1, 'Full-screen Layers panel must open below the top utility buttons');
-  const layerGroupTitles = await fullscreenLayerPanel.locator('.route-layer-group-title').allInnerTexts();
-  assert(layerGroupTitles.includes('Base & Imagery'), 'Layers must separate Base & Imagery');
-  assert(layerGroupTitles.includes('Conditions & Analysis'), 'Layers must separate Conditions & Analysis');
-  assert(layerGroupTitles.includes('Oil & gas'), 'Oil & gas must remain its own group');
   const baseImagery = fullscreenLayerPanel.locator('.route-layer-group[aria-label="Base and imagery layers"]');
   const conditionsAnalysis = fullscreenLayerPanel.locator('.route-layer-group[aria-label="Conditions and analysis layers"]');
+  const oilGasGroup = fullscreenLayerPanel.locator('.route-layer-group[aria-label="Oil and gas layers"]');
+  assert.strictEqual(await baseImagery.count(), 1, 'Layers must separate Base & Imagery');
+  assert.strictEqual(await conditionsAnalysis.count(), 1, 'Layers must separate Conditions & Analysis');
+  assert.strictEqual(await oilGasGroup.count(), 1, 'Oil & gas must remain its own group');
+  assert((await baseImagery.locator('.route-layer-group-title').textContent()).includes('Base & Imagery'));
+  assert((await conditionsAnalysis.locator('.route-layer-group-title').textContent()).includes('Conditions & Analysis'));
+  assert((await oilGasGroup.locator('.route-layer-group-title').textContent()).includes('Oil & gas'));
   for (const label of ['Kentucky Topo','USGS Topo','Terrain relief (LiDAR)','Leaf-on aerial imagery','Leaf-off aerial imagery']) {
     assert((await baseImagery.innerText()).includes(label), 'Base & Imagery must contain ' + label);
   }
