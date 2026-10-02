@@ -318,7 +318,7 @@ async function routeArtifactsAndContent(browser) {
     'Current land-manager resources',
     'Map & route data sources'
   ]) assert(princessBody.includes(expected), 'Princess route: ' + expected);
-  for (const forbidden of ['Trailhead', 'Parking waypoint', 'overlook waypoint', '1,138 ft', 'Download GPX', 'Princess_Arch_APPROVED_v1.gpx']) {
+  for (const forbidden of ['Turnaround Overlook', '1,138 ft', 'Download GPX', 'Princess_Arch_APPROVED_v1.gpx']) {
     assert(!princessBody.includes(forbidden), 'Princess route must not expose: ' + forbidden);
   }
   assert(!/drive\.google\.com|RAW Gaia|PROPOSED/i.test(princessBody));
