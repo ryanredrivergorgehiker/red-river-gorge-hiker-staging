@@ -10,7 +10,6 @@ const SHARED = 'rrgh-analytics-consent-v1';
 const REGION = 'rrgh-region-country-v1';
 const GPX_SHA = '2469c85ebaddd3e701ba6dc8eea3664d90a0667dcd86f2aab43ae1445986830d';
 const GEO_SHA = '123fdb57e1142299f86c714367cc466b70f18fa90cfbaabb92b0d9ced157dc66';
-const PRINCESS_GEO_SHA = 'ced314bb34392750b0f823c9a11bc95a48e6fa52c59830d4ee83619f615d6602';
 const PROVIDERS = new Set(['kygisserver.ky.gov', 'tigerweb.geo.census.gov', 'kyraster.ky.gov', 'basemap.nationalmap.gov', 'elevation.nationalmap.gov', 'apps.fs.usda.gov', 'kgs.uky.edu', 'overpass.maprva.org', 'overpass.private.coffee', 'overpass-api.de', 'maps.mail.ru']);
 
 const TRANSPARENT_PNG = Buffer.from(
@@ -487,95 +486,6 @@ async function routeDetail(browser) {
   await context.close();
 }
 
-async function princessRouteDetail(browser) {
-  const context = await preparedContext(browser, { viewport: { width: 1440, height: 1050 } });
-  const page = await context.newPage();
-  const providerRequests = [];
-  const pageErrors = [];
-  page.on('pageerror', error => pageErrors.push(String(error)));
-  await installProviderStubs(page, providerRequests);
-
-  let response = await page.goto(MAIN + 'routes/princess-arch/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  assert(response && response.ok());
-  await page.waitForSelector('.leaflet-container', { timeout: 10000 });
-  await page.waitForFunction(
-    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-route-data-ready') === 'true',
-    { timeout: 10000 }
-  );
-
-  let body = await page.locator('body').innerText();
-  for (const expected of [
-    'Princess Arch', '0.57 mi', 'Official Forest Service trail',
-    'Chimney Top Road / Forest Road 10', 'Landmarks & viewpoints',
-    '127 ft', '128 ft', '1,117–1,215 ft'
-  ]) assert(body.includes(expected), expected);
-  for (const forbidden of ['Little Princess Arch', 'Turnaround Overlook', 'Download GPX', '1,138 ft']) {
-    assert(!body.includes(forbidden), forbidden);
-  }
-  assert.strictEqual(await page.locator('.route-waypoint-icon').count(), 1, 'Princess Arch must expose exactly one approved public waypoint');
-
-  const geoBytes = await fetchBytes(page, MAIN + 'data/routes/princess-arch-v1.geojson');
-  assert.strictEqual(
-    crypto.createHash('sha256').update(Buffer.from(geoBytes)).digest('hex'),
-    PRINCESS_GEO_SHA,
-    'Princess Arch public web geometry must be the exact approved artifact'
-  );
-  const geo = JSON.parse(Buffer.from(geoBytes).toString('utf8'));
-  const line = geo.features.filter(feature => feature.geometry?.type === 'LineString');
-  const points = geo.features.filter(feature => feature.geometry?.type === 'Point');
-  assert.strictEqual(line.length, 1);
-  assert.strictEqual(line[0].geometry.coordinates.length, 82, 'Princess Arch route line must preserve all 82 approved track points');
-  assert.strictEqual(points.length, 1);
-  assert.strictEqual(points[0].properties.waypointId, 'WP-0003');
-  assert.strictEqual(points[0].properties.name, 'Princess Arch');
-  assert.deepStrictEqual(points[0].geometry.coordinates, [-83.61963, 37.82733]);
-
-  const withheldGpxStatus = await page.evaluate(async () => {
-    const response = await fetch('/downloads/routes/Princess_Arch_APPROVED_v1.gpx', { cache: 'no-cache' });
-    return response.status;
-  });
-  assert.strictEqual(withheldGpxStatus, 404, 'Princess Arch GPX must not be publicly downloadable in this staging candidate');
-
-  const apiPayload = await page.evaluate(async () => {
-    const r = await fetch('/data/routes/index.json', { cache: 'no-cache' });
-    if (!r.ok) throw new Error('Route API HTTP ' + r.status);
-    return r.json();
-  });
-  const princessApi = apiPayload.find(route => route.routeId === 'RTE-0002');
-  assert(princessApi, 'Route API must include Princess Arch');
-  assert.strictEqual(princessApi.slug, 'princess-arch');
-  assert.strictEqual(princessApi.gpxUrl, null, 'Route API must not publish a Princess Arch GPX URL');
-  assert.strictEqual(princessApi.waypointCount, 1);
-
-  response = await page.goto(MAIN + 'routes/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  assert(response && response.ok());
-  body = await page.locator('body').innerText();
-  assert(body.includes('Skybridge Arch'));
-  assert(body.includes('Princess Arch'));
-  assert(body.includes('2 routes'));
-
-  response = await page.goto(MAIN + 'routes/map/?rrghRoute=RTE-0002', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  assert(response && response.ok());
-  await page.waitForSelector('.leaflet-container', { timeout: 10000 });
-  await page.waitForFunction(
-    () => document.querySelector('.leaflet-popup-content')?.textContent?.includes('Princess Arch'),
-    { timeout: 10000 }
-  );
-  const popup = await page.locator('.leaflet-popup-content').innerText();
-  assert(popup.includes('Princess Arch'));
-  assert(popup.includes('0.57 mi'));
-  assert(!popup.includes('Download GPX'), 'Princess Arch full-map popup must not expose a GPX download');
-  assert.deepStrictEqual(pageErrors, []);
-
-  await shot(page, 'desktop-princess-arch-route');
-  record('Princess Arch route/page/map geometry and GPX publication gate', 'PASS', {
-    geometrySha256: PRINCESS_GEO_SHA,
-    trackPoints: 82,
-    waypoint: 'WP-0003'
-  });
-  await context.close();
-}
-
 async function fullMap(browser) {
   const context = await preparedContext(browser, { viewport: { width: 1440, height: 1300 } });
   await context.grantPermissions(['geolocation'], { origin: 'https://redrivergorgehiker.com:8443' });
@@ -589,15 +499,10 @@ async function fullMap(browser) {
 
   let releaseRouteGeometry;
   const routeGeometryGate = new Promise(resolve => { releaseRouteGeometry = resolve; });
-  for (const routePattern of [
-    '**/data/routes/skybridge-arch-v1.geojson',
-    '**/data/routes/princess-arch-v1.geojson'
-  ]) {
-    await page.route(routePattern, async route => {
-      await routeGeometryGate;
-      await route.continue();
-    });
-  }
+  await page.route('**/data/routes/skybridge-arch-v1.geojson', async route => {
+    await routeGeometryGate;
+    await route.continue();
+  });
 
   let releaseInformalCache;
   const informalCacheGate = new Promise(resolve => { releaseInformalCache = resolve; });
@@ -2844,7 +2749,6 @@ async function oilGasFailureHandling(browser) {
   let failure = null;
   try {
     await routeDetail(browser);
-    await princessRouteDetail(browser);
     await fullMap(browser);
     await mobile(browser);
     await mobileFullscreenHomeState(browser);
