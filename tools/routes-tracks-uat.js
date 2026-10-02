@@ -722,7 +722,7 @@ async function fullMap(browser) {
   await planPanel.getByRole('button', { name: 'Measure distance', exact: true }).click();
   assert.strictEqual(await planPanel.getAttribute('data-minimized'), 'true', 'Choosing Measure distance should automatically minimize the Tools panel');
   assert((await planPanel.locator('[data-plan-help]').innerText()).includes('Click or tap points to measure straight-line distance.'));
-  await planPanel.getByRole('button', { name: 'Expand planning controls', exact: true }).click();
+  await planPanel.getByRole('button', { name: 'Expand map tools', exact: true }).click();
   await planPanel.getByRole('button', { name: 'Measure distance', exact: true }).click();
   await planOpenButton.click();
 
@@ -742,7 +742,7 @@ async function fullMap(browser) {
   assert(buildHelp.includes('snap to the network'));
   assert(buildHelp.includes('Drag a planned segment to adjust or resnap it.'));
   assert(buildHelp.includes('Right-click or press and hold'));
-  assert.strictEqual(await planPanel.getByRole('button', { name: 'Expand planning controls', exact: true }).count(), 1, 'Auto-minimized active planning panel must offer Expand');
+  assert.strictEqual(await planPanel.getByRole('button', { name: 'Expand map tools', exact: true }).count(), 1, 'Auto-minimized active planning panel must offer Expand');
   assert(await planPanel.locator('[data-plan-live-stats]').isVisible(), 'Minimized planning panel must keep live totals visible');
   assert.strictEqual(await planPanel.locator('.route-plan-mode-buttons').isHidden(), true, 'Minimized panel should hide setup controls');
   assert.strictEqual((await planPanel.locator('[data-plan-panel-title]').innerText()).trim(), '', 'Minimized planner should not spend space repeating the active tool title');
@@ -783,7 +783,7 @@ async function fullMap(browser) {
   assert.strictEqual(await desktopFloatingUndo.isDisabled(), false, 'Desktop floating Undo should enable after route edits');
   assert.strictEqual(await desktopFloatingRedo.isDisabled(), true, 'Desktop floating Redo should remain disabled before Undo');
 
-  await planPanel.getByRole('button', { name: 'Expand planning controls', exact: true }).click();
+  await planPanel.getByRole('button', { name: 'Expand map tools', exact: true }).click();
   assert(await desktopFloatingHistory.isHidden(), 'Desktop floating Undo / Redo must disappear when Tools is expanded');
   assert.strictEqual(await planPanel.getAttribute('data-minimized'), null, 'Tools panel should restore from minimized state');
   assert(await planPanel.locator('.route-plan-mode-buttons').isVisible());
@@ -2272,7 +2272,7 @@ async function mobile(browser) {
   assert.strictEqual(await mobileFloatingUndo.isDisabled(), false, 'Floating Undo should re-enable after Redo');
   assert.strictEqual(await mobileFloatingRedo.isDisabled(), true, 'Floating Redo should disable again after replaying the only history step');
 
-  await mobilePlanPanel.getByRole('button', { name: 'Expand planning controls', exact: true }).click();
+  await mobilePlanPanel.getByRole('button', { name: 'Expand map tools', exact: true }).click();
   assert(await mobileHistory.isHidden(), 'Floating mobile Undo / Redo must disappear when Tools is expanded');
   await mobileBuildButton.click();
   await mobilePlanButton.click();
