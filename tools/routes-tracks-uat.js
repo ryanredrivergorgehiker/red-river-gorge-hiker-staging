@@ -2361,6 +2361,11 @@ async function mobile(browser) {
   assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), preserveZoomBefore, 'Exiting full screen away from Home must preserve zoom');
   assert.strictEqual(await map.getAttribute('data-fullscreen-home-reframed'), 'false', 'Non-Home fullscreen transitions must never call Home');
 
+  // Restore the baseline Home view before continuing unrelated mobile planning UAT.
+  await mobileTopbar.locator('[data-map-action="home"]').click();
+  await page.waitForTimeout(250);
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'true', 'Home must restore the baseline before subsequent mobile UAT');
+
   record('Mobile full-screen controls, Home-only reframing, preserved user view, return position and adaptive current-zoom Sunlight rendering', 'PASS', {
     normalMobile: {
       zoom: normalMobileSunZoomAfter,
