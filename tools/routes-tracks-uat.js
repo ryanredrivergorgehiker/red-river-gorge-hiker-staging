@@ -519,12 +519,12 @@ async function fullMap(browser) {
   const mapContainer = page.locator('[data-rrgh-route-map]');
   const searchButton = page.locator('.route-map-utility-tools').getByRole('button', { name: 'Search map', exact: true });
   const exploreButton = page.locator('.route-map-tools-desktop').getByRole('button', { name: 'Explore', exact: true });
-  const planOpenButton = page.locator('.route-map-tools-desktop').getByRole('button', { name: 'Plan', exact: true });
+  const planOpenButton = page.locator('.route-map-tools-desktop').getByRole('button', { name: 'Tools', exact: true });
   const shareButtonReady = page.locator('.route-map-tools-desktop').getByRole('button', { name: 'Share', exact: true });
   const homeButton = page.getByRole('button', { name: 'Reset map view', exact: true }).first();
   assert.strictEqual(await searchButton.isDisabled(), true, 'Search must begin disabled before route geometry is ready');
   assert.strictEqual(await exploreButton.isDisabled(), true, 'Explore must begin disabled before route geometry is ready');
-  assert.strictEqual(await planOpenButton.isDisabled(), true, 'Plan must begin disabled before core map context is ready');
+  assert.strictEqual(await planOpenButton.isDisabled(), true, 'Tools must begin disabled before core map context is ready');
   assert.strictEqual(await shareButtonReady.isDisabled(), true, 'Share must begin disabled before initial map state is restored');
   assert.strictEqual(await homeButton.isDisabled(), true, 'Home must begin disabled before core map context is ready');
   assert.strictEqual(await page.locator('[data-map-preset]').evaluateAll(nodes => nodes.every(node => node.disabled)), true, 'Map View presets must begin disabled');
@@ -547,7 +547,7 @@ async function fullMap(browser) {
   assert.strictEqual(await homeButton.isDisabled(), false, 'Home must unlock with core map context');
   assert.strictEqual(await searchButton.isDisabled(), false, 'Search must unlock only when core map context is ready');
   assert.strictEqual(await exploreButton.isDisabled(), false, 'Explore must unlock only when core map context is ready');
-  assert.strictEqual(await planOpenButton.isDisabled(), false, 'Plan panel must unlock with core map context');
+  assert.strictEqual(await planOpenButton.isDisabled(), false, 'Tools panel must unlock with core map context');
   assert.strictEqual(await shareButtonReady.isDisabled(), false, 'Share must unlock after initial map state restoration');
   assert.strictEqual(await page.locator('[data-map-preset]').evaluateAll(nodes => nodes.every(node => !node.disabled)), true, 'Map View presets must unlock with core context');
 
@@ -704,23 +704,23 @@ async function fullMap(browser) {
       await page.waitForTimeout(40);
     }
   };
-  assert(await planPanel.isVisible(), 'Plan panel must open before the optional informal-trail graph finishes');
+  assert(await planPanel.isVisible(), 'Tools panel must open before the optional informal-trail graph finishes');
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Measure distance', exact: true }).isDisabled(), false, 'Measure must be ready with core map context');
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Build trail route', exact: true }).isDisabled(), true, 'Build trail route must remain disabled until planning graph is ready');
   const initialPlanHelp = await planPanel.locator('[data-plan-help]').innerText();
-  assert(initialPlanHelp.includes('Measure distance: click or tap points to measure a straight-line distance.'), 'Opening Plan on desktop must immediately show Measure instructions');
-  assert(initialPlanHelp.includes('Build trail route: click near mapped trails or roads to snap automatically'), 'Opening Plan on desktop must immediately show Build instructions');
-  assert(initialPlanHelp.includes('Use Undo / Redo as you edit, or Clear to start over.'), 'Opening Plan on desktop must immediately show editing instructions');
+  assert(initialPlanHelp.includes('Measure distance: click or tap points to measure a straight-line distance.'), 'Opening Tools on desktop must immediately show Measure instructions');
+  assert(initialPlanHelp.includes('Build trail route: click near mapped trails or roads to snap automatically'), 'Opening Tools on desktop must immediately show Build instructions');
+  assert(initialPlanHelp.includes('Use Undo / Redo as you edit, or Clear to start over.'), 'Opening Tools on desktop must immediately show editing instructions');
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Undo', exact: true }).locator('svg').count(), 1, 'Undo must use an icon');
   assert.strictEqual(await planPanel.getByRole('button', { name: 'Redo', exact: true }).locator('svg').count(), 1, 'Redo must use an icon');
-  assert.strictEqual(await planPanel.getByRole('button', { name: 'Close planning controls', exact: true }).count(), 1, 'Plan must provide an explicit close control');
+  assert.strictEqual(await planPanel.getByRole('button', { name: 'Close map tools', exact: true }).count(), 1, 'Tools must provide an explicit close control');
   const planChildClasses = await planPanel.evaluate(panel => Array.from(panel.children).map(child => child.className));
   const modeIndex = planChildClasses.indexOf('route-plan-mode-buttons');
   const actionsIndex = planChildClasses.indexOf('route-plan-actions');
   const helpIndex = planChildClasses.indexOf('route-plan-help');
   assert(modeIndex >= 0 && actionsIndex > modeIndex && helpIndex > actionsIndex, 'Undo / Redo / Export GPX / Clear must appear immediately below Measure distance / Build trail route');
   await planPanel.getByRole('button', { name: 'Measure distance', exact: true }).click();
-  assert.strictEqual(await planPanel.getAttribute('data-minimized'), 'true', 'Choosing Measure distance should automatically minimize the Plan panel');
+  assert.strictEqual(await planPanel.getAttribute('data-minimized'), 'true', 'Choosing Measure distance should automatically minimize the Tools panel');
   assert((await planPanel.locator('[data-plan-help]').innerText()).includes('Click or tap points to measure straight-line distance.'));
   await planPanel.getByRole('button', { name: 'Expand planning controls', exact: true }).click();
   await planPanel.getByRole('button', { name: 'Measure distance', exact: true }).click();
@@ -737,7 +737,7 @@ async function fullMap(browser) {
   assert.strictEqual(await buildTrailReadyButton.isDisabled(), false, 'Build trail route must unlock when the graph is ready');
   await buildTrailReadyButton.click();
   assert(await planPanel.isVisible(), 'Choosing Build trail route must keep the planning panel visible');
-  assert.strictEqual(await planPanel.getAttribute('data-minimized'), 'true', 'Choosing Build trail route should automatically minimize the Plan panel');
+  assert.strictEqual(await planPanel.getAttribute('data-minimized'), 'true', 'Choosing Build trail route should automatically minimize the Tools panel');
   const buildHelp = await planPanel.locator('[data-plan-help]').innerText();
   assert(buildHelp.includes('snap to the network'));
   assert(buildHelp.includes('Drag a planned segment to adjust or resnap it.'));
@@ -754,13 +754,13 @@ async function fullMap(browser) {
   assert(Math.max(...minimizedStatsDesktop.map(item => item.y)) - Math.min(...minimizedStatsDesktop.map(item => item.y)) <= 2, 'Minimized desktop totals should share one row');
 
   const desktopFloatingHistory = page.locator('[data-plan-mobile-history]');
-  assert(await desktopFloatingHistory.isVisible(), 'Desktop minimized Plan must show floating Undo / Redo controls on the map');
+  assert(await desktopFloatingHistory.isVisible(), 'Desktop minimized Tools must show floating Undo / Redo controls on the map');
   const desktopFloatingHistoryBox = await desktopFloatingHistory.boundingBox();
   const minimizedPlanBoxDesktop = await planPanel.boundingBox();
   assert(desktopFloatingHistoryBox && minimizedPlanBoxDesktop);
   assert(
     desktopFloatingHistoryBox.y + desktopFloatingHistoryBox.height <= minimizedPlanBoxDesktop.y - 3,
-    'Desktop floating Undo / Redo must sit above the minimized Plan strip'
+    'Desktop floating Undo / Redo must sit above the minimized Tools strip'
   );
   const desktopFloatingUndo = desktopFloatingHistory.getByRole('button', { name: 'Undo', exact: true });
   const desktopFloatingRedo = desktopFloatingHistory.getByRole('button', { name: 'Redo', exact: true });
@@ -784,8 +784,8 @@ async function fullMap(browser) {
   assert.strictEqual(await desktopFloatingRedo.isDisabled(), true, 'Desktop floating Redo should remain disabled before Undo');
 
   await planPanel.getByRole('button', { name: 'Expand planning controls', exact: true }).click();
-  assert(await desktopFloatingHistory.isHidden(), 'Desktop floating Undo / Redo must disappear when Plan is expanded');
-  assert.strictEqual(await planPanel.getAttribute('data-minimized'), null, 'Plan panel should restore from minimized state');
+  assert(await desktopFloatingHistory.isHidden(), 'Desktop floating Undo / Redo must disappear when Tools is expanded');
+  assert.strictEqual(await planPanel.getAttribute('data-minimized'), null, 'Tools panel should restore from minimized state');
   assert(await planPanel.locator('.route-plan-mode-buttons').isVisible());
   await clearPlanningWork();
   await buildTrailReadyButton.click();
@@ -1376,7 +1376,7 @@ async function fullMap(browser) {
   await page.locator('[data-coordinate-close]').click();
   assert(await page.locator('[data-coordinate-card]').isHidden(), 'Coordinate card × should dismiss the card');
 
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await page.getByRole('button', { name: 'Tools', exact: true }).click();
   assert(await page.locator('[data-map-sheet="plan"]').isVisible());
   await page.getByRole('button', { name: 'Measure distance', exact: true }).click();
   assert.strictEqual(await page.locator('[data-map-sheet="plan"]').getAttribute('data-minimized'), 'true', 'Measure selection should immediately expose the map by minimizing the panel');
@@ -1405,16 +1405,16 @@ async function fullMap(browser) {
   await page.keyboard.press('Control+y');
   await page.waitForFunction(() => document.querySelector('[data-map-status]')?.textContent?.includes('Measured distance'), { timeout: 2000 });
 
-  await page.getByRole('button', { name: 'Close planning controls', exact: true }).click();
-  assert(await planConfirmDialog.isVisible(), 'Closing Plan with a measurement must ask before deleting it');
+  await page.getByRole('button', { name: 'Close map tools', exact: true }).click();
+  assert(await planConfirmDialog.isVisible(), 'Closing Tools with a measurement must ask before deleting it');
   assert((await planConfirmMessage.innerText()).includes('Are you sure you want to delete your measurement?'));
   await page.waitForFunction(() => document.activeElement?.matches?.('[data-plan-confirm-ok]'), { timeout: 2000 });
   await page.keyboard.press('Escape');
   await planConfirmDialog.waitFor({ state: 'hidden' });
   assert((await page.locator('[data-map-status]').innerText()).includes('Measured distance'), 'Escaping the warning should keep the measurement');
 
-  await page.getByRole('button', { name: 'Close planning controls', exact: true }).click();
-  assert(await planConfirmDialog.isVisible(), 'A second Plan close should reopen the guarded exit');
+  await page.getByRole('button', { name: 'Close map tools', exact: true }).click();
+  assert(await planConfirmDialog.isVisible(), 'A second Tools close should reopen the guarded exit');
   await planConfirmOk.click();
   await planConfirmDialog.waitFor({ state: 'hidden' });
   await page.waitForFunction(
@@ -1422,7 +1422,7 @@ async function fullMap(browser) {
     null,
     { timeout: 2000 }
   );
-  assert(await planPanel.isHidden(), 'Confirming the guarded exit should clear the measurement and exit Plan');
+  assert(await planPanel.isHidden(), 'Confirming the guarded exit should clear the measurement and exit Tools');
 
   await page.getByRole('button', { name: 'Reset map view', exact: true }).click();
   if (await page.locator('[data-map-sheet="plan"]').isHidden()) await planOpenButton.click();
@@ -1518,17 +1518,17 @@ async function fullMap(browser) {
   assert(!bridgeGapDistance.includes('mi') || Number.parseFloat(bridgeGapDistance) < 0.5, 'Short bridge connection must not become a multi-mile detour; distance=' + bridgeGapDistance);
 
   if (await planPanel.getAttribute('data-minimized') === 'true') await planOpenButton.click();
-  await planPanel.getByRole('button', { name: 'Close planning controls', exact: true }).click();
-  assert(await planConfirmDialog.isVisible(), 'Closing Plan with a built path must ask before deleting it');
+  await planPanel.getByRole('button', { name: 'Close map tools', exact: true }).click();
+  assert(await planConfirmDialog.isVisible(), 'Closing Tools with a built path must ask before deleting it');
   assert((await planConfirmMessage.innerText()).includes('Are you sure you want to delete your built path?'));
   await planConfirmDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await planConfirmDialog.waitFor({ state: 'hidden' });
-  assert(await planPanel.isVisible(), 'Cancel must keep Plan open');
+  assert(await planPanel.isVisible(), 'Cancel must keep Tools open');
   assert((await page.locator('[data-map-status]').innerText()).includes('1 snapped segment'), 'Cancel must preserve the built route');
 
   await clearPlanningWork();
-  assert(await planPanel.isVisible(), 'Clear should delete work without exiting Plan');
-  await planPanel.getByRole('button', { name: 'Close planning controls', exact: true }).click();
+  assert(await planPanel.isVisible(), 'Clear should delete work without exiting Tools');
+  await planPanel.getByRole('button', { name: 'Close map tools', exact: true }).click();
   // This long-running integration suite can observe the dialog close event one
   // browser turn late. If that happens, finish the already-tested confirmation
   // path instead of turning the unrelated timing race into a map-source failure.
@@ -1537,7 +1537,7 @@ async function fullMap(browser) {
     await planConfirmDialog.waitFor({ state: 'hidden' });
   }
   await planPanel.waitFor({ state: 'hidden', timeout: 2000 });
-  assert(await planPanel.isHidden(), 'Close should exit Plan after the cleared/confirmed state is settled');
+  assert(await planPanel.isHidden(), 'Close should exit Tools after the cleared/confirmed state is settled');
   await planOpenButton.click();
   await buildTrailReadyButton.click();
 
@@ -1767,7 +1767,7 @@ async function fullMap(browser) {
     Object.defineProperty(navigator, 'share', { configurable: true, value: undefined });
   });
   const shareButton = page.locator('.route-map-tools-desktop').getByRole('button', { name: 'Share', exact: true });
-  assert.strictEqual(await shareButton.count(), 1, 'Desktop Share should sit with Explore and Plan');
+  assert.strictEqual(await shareButton.count(), 1, 'Desktop Share should sit with Explore and Tools');
   await shareButton.click();
   const sharePanel = page.locator('[data-map-sheet="share"]');
   assert(await sharePanel.isVisible(), 'Share fallback panel should open when native Web Share is unavailable');
@@ -1842,7 +1842,7 @@ async function mobile(browser) {
   assert.strictEqual((await mobileTopbar.locator('[data-map-action="home"]').innerText()).trim(), 'Home');
   assert.strictEqual(await mobileTopbar.locator('[data-sheet-open="layers"]').count(), 1, 'Layers');
   assert.strictEqual((await mobileTopbar.locator('[data-sheet-open="layers"]').innerText()).trim(), 'Layers');
-  for (const label of ['Search','Explore','Plan','Share']) {
+  for (const label of ['Search','Explore','Tools','Share']) {
     assert.strictEqual(await page.locator('.route-map-mobile-bar').getByRole('button', { name: label, exact: true }).count(), 1, label);
   }
   assert(await page.locator('.route-map-mobile-topbar').isVisible());
@@ -2032,7 +2032,7 @@ async function mobile(browser) {
   assert(box && topbarBox && mobileStatusBox && mobileBarBox);
   assert(topbarBox.y + topbarBox.height <= box.y + 2, 'Mobile My location/Home/Layers controls should sit above the map');
   assert(mobileStatusBox.y >= box.y + box.height - 2, 'Mobile instructions should sit below the map instead of overlaying it');
-  assert(mobileBarBox.y >= mobileStatusBox.y + mobileStatusBox.height - 2, 'Search/Explore/Plan/Share should sit below the mobile instructions');
+  assert(mobileBarBox.y >= mobileStatusBox.y + mobileStatusBox.height - 2, 'Search/Explore/Tools/Share should sit below the mobile instructions');
   assert(box.height >= 0.6 * 844, 'Mobile map should occupy most of the viewport; height=' + box.height);
 
   // The normal mobile fullscreen control belongs inside the map at upper-right.
@@ -2056,6 +2056,7 @@ async function mobile(browser) {
   assert.strictEqual(normalTopButtons.length, 3, 'Normal mobile top utility bar must contain My location, Home, Layers only');
   assert(await page.locator('[data-map-mobile-status]').isVisible(), 'Normal mobile instructions must remain visible');
   assert.strictEqual(await page.locator('[data-mobile-map-preset] option').count(), 4, 'User-facing Map View selector must expose only Hiking/Terrain/Aerial/Sunlight');
+  const preFullscreenScrollY = await page.evaluate(() => window.scrollY);
 
   await normalFullscreenEntry.click();
   await page.waitForFunction(
@@ -2094,7 +2095,7 @@ async function mobile(browser) {
   assert(viewBox.y >= fullTopbarBox.y + fullTopbarBox.height - 1, 'Map View/collapse/info cluster must sit below the top utility row');
   assert(fullTopbarBox.x >= fullMapBox.x && fullTopbarBox.y >= fullMapBox.y, 'My location/Home/Layers must move inside the full-screen map');
   assert(fullTopbarBox.x + fullTopbarBox.width <= fullMapBox.x + fullMapBox.width + 1, 'Top utilities must remain inside the full-screen map width');
-  assert(fullBarBox.x >= fullMapBox.x && fullBarBox.y >= fullMapBox.y, 'Search/Explore/Plan/Share must move inside the full-screen map');
+  assert(fullBarBox.x >= fullMapBox.x && fullBarBox.y >= fullMapBox.y, 'Search/Explore/Tools/Share must move inside the full-screen map');
   assert(fullBarBox.x + fullBarBox.width <= fullMapBox.x + fullMapBox.width + 1, 'Bottom actions must remain inside the full-screen map width');
   assert(fullBarBox.y + fullBarBox.height <= fullMapBox.y + fullMapBox.height + 1, 'Bottom actions must remain inside the full-screen map height');
   assert.strictEqual(fullTopButtons.length, normalTopButtons.length);
@@ -2102,17 +2103,53 @@ async function mobile(browser) {
     assert(Math.abs(fullTopButtons[index].height - normalTopButtons[index].height) <= 1, 'Top utility button height must not change in full screen');
     assert(Math.abs(fullTopButtons[index].fontSize - normalTopButtons[index].fontSize) <= 0.2, 'Top utility typography must not change in full screen');
   }
-  for (const label of ['Search','Explore','Plan','Share']) {
+  for (const label of ['Search','Explore','Tools','Share']) {
     assert(await page.locator('.route-map-mobile-bar').getByRole('button', { name: label, exact: true }).isVisible(), label + ' must remain visible inside full screen');
   }
 
+  // The minimized Tools/result strip (including Watershed status) must sit above the bottom actions.
+  await page.locator('.route-map-mobile-bar').getByRole('button', { name: 'Tools', exact: true }).click();
+  const mobileToolsPanel = page.locator('.route-plan-panel');
+  assert(await mobileToolsPanel.isVisible(), 'Tools panel must open in full screen');
+  await mobileToolsPanel.getByRole('button', { name: 'Watershed', exact: true }).click();
+  await page.waitForTimeout(100);
+  assert.strictEqual(await mobileToolsPanel.getAttribute('data-minimized'), 'true', 'Choosing Watershed should minimize the Tools panel');
+  const [watershedStripBox, fullscreenBottomBarBox] = await Promise.all([
+    mobileToolsPanel.boundingBox(),
+    page.locator('.route-map-mobile-bar').boundingBox()
+  ]);
+  assert(watershedStripBox && fullscreenBottomBarBox);
+  assert(watershedStripBox.y + watershedStripBox.height <= fullscreenBottomBarBox.y - 1, 'Watershed status/result strip must sit above Search/Explore/Tools/Share');
+  await mobileToolsPanel.getByRole('button', { name: 'Close map tools', exact: true }).click();
+  const confirm = page.locator('[data-plan-confirm]');
+  if (await confirm.isVisible()) await confirm.locator('[data-plan-confirm-ok]').click();
+
   // Layers opens below the top utility row and may cover the secondary cluster.
+  const compactSourceText = await page.locator('.route-map-context-strip').innerText();
+  assert(compactSourceText.includes('U.S. Census Bureau'), 'Compact source strip must include U.S. Census Bureau');
+  await page.locator('.route-map-mobile-bar').getByRole('button', { name: 'Search', exact: true }).click();
+  const searchHelp = await page.locator('.route-search-panel .route-map-sheet-help').innerText();
+  assert.strictEqual(searchHelp.trim(), 'Searches RRGH routes and landmarks, official trails, Forest Service roads and recreation sites, plus loaded community/informal trails.');
+  await page.locator('.route-search-panel [data-sheet-close]').click();
+
   await mobileTopbar.locator('[data-sheet-open="layers"]').click();
   const fullscreenLayerPanel = page.locator('.route-layer-panel');
   assert(await fullscreenLayerPanel.isVisible(), 'Layers must open in full screen');
   const fullscreenLayerBox = await fullscreenLayerPanel.boundingBox();
   assert(fullscreenLayerBox);
   assert(fullscreenLayerBox.y >= fullTopbarBox.y + fullTopbarBox.height - 1, 'Full-screen Layers panel must open below the top utility buttons');
+  const layerGroupTitles = await fullscreenLayerPanel.locator('.route-layer-group-title').allInnerTexts();
+  assert(layerGroupTitles.includes('Base & Imagery'), 'Layers must separate Base & Imagery');
+  assert(layerGroupTitles.includes('Conditions & Analysis'), 'Layers must separate Conditions & Analysis');
+  assert(layerGroupTitles.includes('Oil & gas'), 'Oil & gas must remain its own group');
+  const baseImagery = fullscreenLayerPanel.locator('.route-layer-group[aria-label="Base and imagery layers"]');
+  const conditionsAnalysis = fullscreenLayerPanel.locator('.route-layer-group[aria-label="Conditions and analysis layers"]');
+  for (const label of ['Kentucky Topo','USGS Topo','Terrain relief (LiDAR)','Leaf-on aerial imagery','Leaf-off aerial imagery']) {
+    assert((await baseImagery.innerText()).includes(label), 'Base & Imagery must contain ' + label);
+  }
+  for (const label of ['Snow / recent precipitation','Sunrise / Sunset Potential']) {
+    assert((await conditionsAnalysis.innerText()).includes(label), 'Conditions & Analysis must contain ' + label);
+  }
   await page.locator('.route-layer-panel > summary').click();
   await page.waitForTimeout(80);
 
@@ -2140,7 +2177,10 @@ async function mobile(browser) {
     { timeout: 5000 }
   );
   assert(await page.locator('[data-map-mobile-status]').isVisible(), 'Mobile instructions should return after leaving full screen');
-  record('Mobile full-screen controls, restored instructions and current-zoom Sunlight guard', 'PASS', {
+  await page.waitForTimeout(100);
+  const postFullscreenScrollY = await page.evaluate(() => window.scrollY);
+  assert(Math.abs(postFullscreenScrollY - preFullscreenScrollY) <= 4, 'Leaving full screen must return to the map page position; before=' + preFullscreenScrollY + ' after=' + postFullscreenScrollY);
+  record('Mobile full-screen controls, restored instructions, return position and current-zoom Sunlight guard', 'PASS', {
     zoom: fullscreenSunZoom,
     sectors: fullscreenSunSectors,
     images: fullscreenSunImages
@@ -2188,7 +2228,7 @@ async function mobile(browser) {
   assert(scaleOffsetX >= 0 && scaleOffsetX <= 24, 'Mobile scale should stay aligned to the map left edge; x offset=' + scaleOffsetX);
   assert(scaleOffsetY >= 0 && scaleOffsetY <= 24, 'Mobile scale should sit in the map upper-left corner; y offset=' + scaleOffsetY);
 
-  const mobilePlanButton = page.locator('.route-map-mobile-bar').getByRole('button', { name: 'Plan', exact: true });
+  const mobilePlanButton = page.locator('.route-map-mobile-bar').getByRole('button', { name: 'Tools', exact: true });
   await mobilePlanButton.click();
   const mobilePlanPanel = page.locator('[data-map-sheet="plan"]');
   assert(await mobilePlanPanel.isVisible());
@@ -2212,10 +2252,10 @@ async function mobile(browser) {
   assert(Math.max(...mobileCompactStats.map(item => item.y)) - Math.min(...mobileCompactStats.map(item => item.y)) <= 2, 'Distance, gain, loss and elevation must share one line when minimized on mobile');
 
   const mobileHistory = page.locator('[data-plan-mobile-history]');
-  assert(await mobileHistory.isVisible(), 'Mobile Undo / Redo controls must appear on the map while Plan is minimized');
+  assert(await mobileHistory.isVisible(), 'Mobile Undo / Redo controls must appear on the map while Tools is minimized');
   const mobileHistoryBox = await mobileHistory.boundingBox();
   assert(mobileHistoryBox);
-  assert(mobileHistoryBox.y + mobileHistoryBox.height <= compactPlanBox.y - 3, 'Mobile Undo / Redo controls must sit above the minimized distance strip, outside the Plan box');
+  assert(mobileHistoryBox.y + mobileHistoryBox.height <= compactPlanBox.y - 3, 'Mobile Undo / Redo controls must sit above the minimized distance strip, outside the Tools box');
   const mobileFloatingUndo = mobileHistory.getByRole('button', { name: 'Undo', exact: true });
   const mobileFloatingRedo = mobileHistory.getByRole('button', { name: 'Redo', exact: true });
   assert.strictEqual(await mobileFloatingUndo.isDisabled(), true, 'Floating Undo should begin disabled with no history');
@@ -2233,7 +2273,7 @@ async function mobile(browser) {
   assert.strictEqual(await mobileFloatingRedo.isDisabled(), true, 'Floating Redo should disable again after replaying the only history step');
 
   await mobilePlanPanel.getByRole('button', { name: 'Expand planning controls', exact: true }).click();
-  assert(await mobileHistory.isHidden(), 'Floating mobile Undo / Redo must disappear when Plan is expanded');
+  assert(await mobileHistory.isHidden(), 'Floating mobile Undo / Redo must disappear when Tools is expanded');
   await mobileBuildButton.click();
   await mobilePlanButton.click();
 
