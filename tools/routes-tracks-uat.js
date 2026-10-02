@@ -2035,6 +2035,73 @@ async function mobile(browser) {
   assert(mobileBarBox.y >= mobileStatusBox.y + mobileStatusBox.height - 2, 'Search/Explore/Plan/Share should sit below the mobile instructions');
   assert(box.height >= 0.6 * 844, 'Mobile map should occupy most of the viewport; height=' + box.height);
 
+  // Mobile full-screen controls stay inside the viewport, suppress redundant instructions,
+  // keep the four primary actions visible, and bound the heavy sunlight raster footprint.
+  const topbarFullscreen = mobileTopbar.locator('[data-map-action="fullscreen"]');
+  assert.strictEqual(await topbarFullscreen.count(), 1, 'Mobile topbar needs one fullscreen icon');
+  await topbarFullscreen.click();
+  await page.waitForFunction(
+    () => {
+      const mode = document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-fullscreen-mode');
+      return mode === 'native' || mode === 'focus';
+    },
+    { timeout: 5000 }
+  );
+  assert.strictEqual(await page.locator('[data-map-mobile-status]').isVisible(), false, 'Full screen must hide redundant mobile instructions');
+  assert(await page.locator('.route-map-mobile-fullscreen-cluster').isVisible(), 'Full-screen control cluster must be visible');
+  const fullscreenView = page.locator('[data-mobile-map-preset]');
+  const fullscreenExit = page.locator('.route-map-mobile-fullscreen-actions [data-map-action="fullscreen"]');
+  const fullscreenQuickRef = page.locator('.route-map-mobile-quickref > summary');
+  assert(await fullscreenView.isVisible(), 'Full-screen Map View selector must be visible');
+  assert(await fullscreenExit.isVisible(), 'Full-screen diagonal-arrow exit control must be visible');
+  assert(await fullscreenQuickRef.isVisible(), 'Full-screen eye quick-reference control must be visible');
+  const [viewBox, exitBox, eyeBox, fullBarBox] = await Promise.all([
+    fullscreenView.boundingBox(),
+    fullscreenExit.boundingBox(),
+    fullscreenQuickRef.boundingBox(),
+    page.locator('.route-map-mobile-bar').boundingBox()
+  ]);
+  assert(viewBox && exitBox && eyeBox && fullBarBox);
+  assert(viewBox.x < exitBox.x, 'Map View selector must sit left of the full-screen icon');
+  assert(eyeBox.y > exitBox.y, 'Eye quick-reference control must sit below the full-screen icon');
+  assert(fullBarBox.y + fullBarBox.height <= 844 + 1, 'Search/Explore/Plan/Share must remain inside the mobile full-screen viewport');
+  for (const label of ['Search','Explore','Plan','Share']) {
+    assert(await page.locator('.route-map-mobile-bar').getByRole('button', { name: label, exact: true }).isVisible(), label + ' must remain visible in full screen');
+  }
+
+  await fullscreenView.selectOption('sunlight');
+  await page.waitForFunction(
+    () => {
+      const map = document.querySelector('[data-rrgh-route-map]');
+      return Number(map?.getAttribute('data-current-zoom') || 0) >= 13
+        && map?.getAttribute('data-rrg-lidar-sun-load-state') === 'loaded';
+    },
+    { timeout: 15000 }
+  );
+  const fullscreenSunZoom = Number(await map.getAttribute('data-current-zoom'));
+  const fullscreenSunSectors = Number(await map.getAttribute('data-rrg-lidar-sun-loaded-sectors'));
+  const fullscreenSunImages = Number(await map.getAttribute('data-rrg-lidar-sun-image-count'));
+  assert(fullscreenSunZoom >= 13, 'Mobile full-screen Sunlight must protect memory by zooming to detail level');
+  assert(fullscreenSunSectors >= 1 && fullscreenSunSectors <= 6, 'Mobile full-screen Sunlight must cap live sectors at 6; got ' + fullscreenSunSectors);
+  assert(fullscreenSunImages >= 2 && fullscreenSunImages <= 12, 'Mobile full-screen Sunlight must cap decoded raster overlays; got ' + fullscreenSunImages);
+
+  await fullscreenView.selectOption('hiking');
+  await page.waitForTimeout(120);
+  assert.strictEqual(Number(await map.getAttribute('data-rrg-lidar-sun-loaded-sectors')), 0, 'Leaving Sunlight in mobile full screen must release loaded sectors');
+  assert.strictEqual(Number(await map.getAttribute('data-rrg-lidar-sun-image-count')), 0, 'Leaving Sunlight in mobile full screen must release raster images');
+
+  await fullscreenExit.click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-fullscreen-mode') === 'off',
+    { timeout: 5000 }
+  );
+  assert(await page.locator('[data-map-mobile-status]').isVisible(), 'Mobile instructions should return after leaving full screen');
+  record('Mobile full-screen controls and bounded Sunlight memory guard', 'PASS', {
+    zoom: fullscreenSunZoom,
+    sectors: fullscreenSunSectors,
+    images: fullscreenSunImages
+  });
+
   await mobileTopbar.locator('[data-sheet-open="layers"]').click();
   assert(await page.locator('.route-layer-panel').isVisible());
   const mobileOilGasToggle = page.locator('[data-map-layer="kgs-oil-gas-wells"]');
