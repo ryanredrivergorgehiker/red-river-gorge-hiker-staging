@@ -1,20 +1,19 @@
-5678897545beccb954d8897f4b9e756cb7da9c6b
-purpose=Mobile owner-UAT corrections: normal fullscreen control moved to map upper-right; normal instructions restored; full-screen view/collapse/info cluster moved below top utilities; Layers opens below top buttons; Sunlight renders at current zoom without forced zoom-in while retaining <=6 live sectors / <=12 raster overlays; Custom layers removed from user-facing selector.
-source_ci=37011947968 SUCCESS
-routes_tracks_uat=37012070270 SUCCESS
-routes_uat=37012070240 SUCCESS
-brand_explore_uat=37012078298 SUCCESS
-analytics_uat=37012087479 SUCCESS
-roku_uat=37012095466 SUCCESS
-normal_mobile_fullscreen_control=inside map upper-right; outward diagonal arrows
-normal_mobile_instructions=restored/visible
-fullscreen_mobile_top_utilities=My location/Home/Layers inside map at top; same sizing/typography as normal
-fullscreen_mobile_secondary_cluster=below top utility row; Map View left of inward collapse arrows; original i quick-reference below collapse
-fullscreen_layers_panel=opens below top utility buttons; may cover secondary cluster
-fullscreen_mobile_bottom=Search/Explore/Plan/Share inside map overlay
-sunlight_mobile_memory_guard=current zoom preserved; tighter pad 0.08; max 6 live sectors / 12 raster overlays; off-viewport eviction and image source release
-custom_layers_user_option=removed
-desktop_visual_behavior=unchanged by <=700px scope
+2b7fbbe77a7af6665641fb12c8d3a6780ec53245
+purpose=Mobile owner-UAT refinements: fullscreen watershed/Tools strip clears bottom actions; fullscreen exit restores exact pre-entry page position; Layers regrouped into Base & Imagery and Conditions & Analysis with Oil & Gas unchanged; user-facing Plan renamed Tools; Search help copy made source-neutral; compact source strip adds U.S. Census Bureau.
+source_ci=37024054120 SUCCESS
+routes_tracks_uat=37027672274 SUCCESS
+routes_uat=37025063006 SUCCESS
+brand_explore_uat=37024221136 SUCCESS
+analytics_uat=37024234052 SUCCESS
+roku_uat=37024245445 SUCCESS
+fullscreen_tools_strip=above Search/Explore/Tools/Share bottom actions
+fullscreen_exit_scroll=restore exact pre-entry window scroll position
+layers_groups=Hiking; Base & Imagery; Conditions & Analysis; Oil & gas; Land management & context
+tools_label=user-facing Plan renamed Tools; internal plan identifiers retained
+search_help=Searches RRGH routes and landmarks, official trails, Forest Service roads and recreation sites, plus loaded community/informal trails.
+compact_sources=Kentucky GIS; NOAA/NWS; USGS; USDA Forest Service; U.S. Census Bureau; OpenStreetMap
+sunlight_mobile_memory_guard=current zoom; max 6 live sectors / 12 raster overlays; off-viewport eviction preserved
+desktop_and_map_semantics=unchanged except user-facing Tools copy and layer grouping labels
 production_unchanged=988a9e9563e81123bcf425d87760e95bfba69b9c
 source_branch=staging/routes-tracks-interactive-map
 pr=46 OPEN DRAFT UNMERGED
