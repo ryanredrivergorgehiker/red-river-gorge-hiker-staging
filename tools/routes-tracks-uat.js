@@ -530,8 +530,11 @@ async function princessRouteDetail(browser) {
   assert.strictEqual(points[0].properties.name, 'Princess Arch');
   assert.deepStrictEqual(points[0].geometry.coordinates, [-83.61963, 37.82733]);
 
-  const withheldGpx = await context.request.get(MAIN + 'downloads/routes/Princess_Arch_APPROVED_v1.gpx');
-  assert.strictEqual(withheldGpx.status(), 404, 'Princess Arch GPX must not be publicly downloadable in this staging candidate');
+  const withheldGpxStatus = await page.evaluate(async () => {
+    const response = await fetch('/downloads/routes/Princess_Arch_APPROVED_v1.gpx', { cache: 'no-cache' });
+    return response.status;
+  });
+  assert.strictEqual(withheldGpxStatus, 404, 'Princess Arch GPX must not be publicly downloadable in this staging candidate');
 
   const apiPayload = await page.evaluate(async () => {
     const r = await fetch('/data/routes/index.json', { cache: 'no-cache' });
