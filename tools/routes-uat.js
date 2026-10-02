@@ -352,7 +352,7 @@ async function mapControlsAndAccessibility(browser) {
   assert.strictEqual(await page.locator('[data-staging-copy-map-view]').count(), 0);
   assert.strictEqual(await page.locator('.route-layer-panel').getAttribute('open'), null);
   assert.strictEqual(await page.getByRole('button', { name: 'Explore', exact: true }).count(), 1);
-  assert.strictEqual(await page.getByRole('button', { name: 'Plan', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('button', { name: 'Tools', exact: true }).count(), 1);
   assert.strictEqual(await page.locator('[data-map-tool="measure"]').count(), 1);
   assert.strictEqual(await page.locator('[data-map-tool="plan"]').count(), 1);
   assert.strictEqual(await page.locator('[data-map-tool="save"]').count(), 1);
@@ -457,7 +457,7 @@ async function tigerLocalRoadLabelAndSnapAcceptance(browser) {
   const roadLabels = await page.locator('.rrgh-local-road-label').allTextContents();
   assert(roadLabels.some(text => /Cliffty School Rd/i.test(text)), 'Cliffty School Rd label should be visible: ' + JSON.stringify(roadLabels));
 
-  const planOpen = page.locator('.route-map-tools').getByRole('button', { name: 'Plan', exact: true });
+  const planOpen = page.locator('.route-map-tools').getByRole('button', { name: 'Tools', exact: true });
   await planOpen.click();
   const planPanel = page.locator('[data-map-sheet="plan"]');
   const build = planPanel.getByRole('button', { name: 'Build trail route', exact: true });
