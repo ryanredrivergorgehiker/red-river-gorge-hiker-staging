@@ -2327,12 +2327,15 @@ async function mobile(browser) {
   // A user-selected zoom is not Home and must survive both full-screen transitions.
   const normalMapForPreserve = await map.boundingBox();
   assert(normalMapForPreserve);
-  await page.mouse.dblclick(
-    normalMapForPreserve.x + normalMapForPreserve.width * 0.58,
-    normalMapForPreserve.y + normalMapForPreserve.height * 0.48
-  );
+  const preserveTap = {
+    x: normalMapForPreserve.x + normalMapForPreserve.width * 0.58,
+    y: normalMapForPreserve.y + normalMapForPreserve.height * 0.48
+  };
+  await page.touchscreen.tap(preserveTap.x, preserveTap.y);
+  await page.waitForTimeout(80);
+  await page.touchscreen.tap(preserveTap.x, preserveTap.y);
   await page.waitForTimeout(350);
-  assert.strictEqual(await map.getAttribute('data-home-state'), 'false', 'Manual map zoom must leave Home state');
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'false', 'Manual mobile double-tap zoom must leave Home state');
   const preserveCenterBefore = await map.getAttribute('data-map-center');
   const preserveZoomBefore = Number(await map.getAttribute('data-current-zoom'));
 
