@@ -2035,7 +2035,7 @@ async function mobile(browser) {
   assert(mobileBarBox.y >= mobileStatusBox.y + mobileStatusBox.height - 2, 'Search/Explore/Plan/Share should sit below the mobile instructions');
   assert(box.height >= 0.6 * 844, 'Mobile map should occupy most of the viewport; height=' + box.height);
 
-  // The normal mobile fullscreen control belongs inside the map at upper-left.
+  // The normal mobile fullscreen control belongs inside the map at upper-right.
   // In full screen, the normal three top utilities and four bottom actions overlay the map
   // without changing their button sizing, while the view/collapse/info cluster sits upper-right.
   const normalFullscreenEntry = page.locator('.route-map-mobile-fullscreen-entry [data-map-action="fullscreen"]');
@@ -2052,8 +2052,10 @@ async function mobile(browser) {
   assert(normalEntryBox && normalMapBox);
   assert(normalEntryBox.x >= normalMapBox.x && normalEntryBox.x + normalEntryBox.width <= normalMapBox.x + normalMapBox.width, 'Fullscreen control must be horizontally inside the normal map');
   assert(normalEntryBox.y >= normalMapBox.y && normalEntryBox.y + normalEntryBox.height <= normalMapBox.y + normalMapBox.height, 'Fullscreen control must be vertically inside the normal map');
-  assert(normalEntryBox.x - normalMapBox.x <= 16 && normalEntryBox.y - normalMapBox.y <= 16, 'Fullscreen control must sit in the map upper-left');
+  assert(normalMapBox.x + normalMapBox.width - (normalEntryBox.x + normalEntryBox.width) <= 16 && normalEntryBox.y - normalMapBox.y <= 16, 'Fullscreen control must sit in the map upper-right');
   assert.strictEqual(normalTopButtons.length, 3, 'Normal mobile top utility bar must contain My location, Home, Layers only');
+  assert(await page.locator('[data-map-mobile-status]').isVisible(), 'Normal mobile instructions must remain visible');
+  assert.strictEqual(await page.locator('[data-mobile-map-preset] option').count(), 4, 'User-facing Map View selector must expose only Hiking/Terrain/Aerial/Sunlight');
 
   await normalFullscreenEntry.click();
   await page.waitForFunction(
@@ -2089,6 +2091,7 @@ async function mobile(browser) {
   assert(fullMapBox && fullTopbarBox && viewBox && exitBox && infoBox && fullBarBox);
   assert(viewBox.x < exitBox.x, 'Map View selector must sit left of the full-screen collapse control');
   assert(infoBox.y > exitBox.y, 'Information control must sit below the full-screen collapse control');
+  assert(viewBox.y >= fullTopbarBox.y + fullTopbarBox.height - 1, 'Map View/collapse/info cluster must sit below the top utility row');
   assert(fullTopbarBox.x >= fullMapBox.x && fullTopbarBox.y >= fullMapBox.y, 'My location/Home/Layers must move inside the full-screen map');
   assert(fullTopbarBox.x + fullTopbarBox.width <= fullMapBox.x + fullMapBox.width + 1, 'Top utilities must remain inside the full-screen map width');
   assert(fullBarBox.x >= fullMapBox.x && fullBarBox.y >= fullMapBox.y, 'Search/Explore/Plan/Share must move inside the full-screen map');
@@ -2103,19 +2106,26 @@ async function mobile(browser) {
     assert(await page.locator('.route-map-mobile-bar').getByRole('button', { name: label, exact: true }).isVisible(), label + ' must remain visible inside full screen');
   }
 
+  // Layers opens below the top utility row and may cover the secondary cluster.
+  await mobileTopbar.locator('[data-sheet-open="layers"]').click();
+  const fullscreenLayerPanel = page.locator('.route-layer-panel');
+  assert(await fullscreenLayerPanel.isVisible(), 'Layers must open in full screen');
+  const fullscreenLayerBox = await fullscreenLayerPanel.boundingBox();
+  assert(fullscreenLayerBox);
+  assert(fullscreenLayerBox.y >= fullTopbarBox.y + fullTopbarBox.height - 1, 'Full-screen Layers panel must open below the top utility buttons');
+  await page.locator('.route-layer-panel > summary').click();
+  await page.waitForTimeout(80);
+
+  const preSunZoom = Number(await map.getAttribute('data-current-zoom'));
   await fullscreenView.selectOption('sunlight');
   await page.waitForFunction(
-    () => {
-      const map = document.querySelector('[data-rrgh-route-map]');
-      return Number(map?.getAttribute('data-current-zoom') || 0) >= 13
-        && map?.getAttribute('data-rrg-lidar-sun-load-state') === 'loaded';
-    },
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-rrg-lidar-sun-load-state') === 'loaded',
     { timeout: 15000 }
   );
   const fullscreenSunZoom = Number(await map.getAttribute('data-current-zoom'));
   const fullscreenSunSectors = Number(await map.getAttribute('data-rrg-lidar-sun-loaded-sectors'));
   const fullscreenSunImages = Number(await map.getAttribute('data-rrg-lidar-sun-image-count'));
-  assert(fullscreenSunZoom >= 13, 'Mobile full-screen Sunlight must protect memory by zooming to detail level');
+  assert(Math.abs(fullscreenSunZoom - preSunZoom) <= 0.01, 'Mobile full-screen Sunlight must render at the current zoom instead of forcing the user to zoom in');
   assert(fullscreenSunSectors >= 1 && fullscreenSunSectors <= 6, 'Mobile full-screen Sunlight must cap live sectors at 6; got ' + fullscreenSunSectors);
   assert(fullscreenSunImages >= 2 && fullscreenSunImages <= 12, 'Mobile full-screen Sunlight must cap decoded raster overlays; got ' + fullscreenSunImages);
 
@@ -2130,7 +2140,7 @@ async function mobile(browser) {
     { timeout: 5000 }
   );
   assert(await page.locator('[data-map-mobile-status]').isVisible(), 'Mobile instructions should return after leaving full screen');
-  record('Mobile full-screen controls and bounded Sunlight memory guard', 'PASS', {
+  record('Mobile full-screen controls, restored instructions and current-zoom Sunlight guard', 'PASS', {
     zoom: fullscreenSunZoom,
     sectors: fullscreenSunSectors,
     images: fullscreenSunImages
@@ -2176,7 +2186,7 @@ async function mobile(browser) {
   const scaleOffsetX = scaleBox.x - box.x;
   const scaleOffsetY = scaleBox.y - box.y;
   assert(scaleOffsetX >= 0 && scaleOffsetX <= 24, 'Mobile scale should stay aligned to the map left edge; x offset=' + scaleOffsetX);
-  assert(scaleOffsetY >= 34 && scaleOffsetY <= 72, 'Mobile scale should sit below the upper-left fullscreen control; y offset=' + scaleOffsetY);
+  assert(scaleOffsetY >= 0 && scaleOffsetY <= 24, 'Mobile scale should sit in the map upper-left corner; y offset=' + scaleOffsetY);
 
   const mobilePlanButton = page.locator('.route-map-mobile-bar').getByRole('button', { name: 'Plan', exact: true });
   await mobilePlanButton.click();
