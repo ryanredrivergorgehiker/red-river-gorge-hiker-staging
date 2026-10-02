@@ -2179,7 +2179,7 @@ async function mobile(browser) {
   assert(compactSourceText.includes('U.S. Census Bureau'), 'Compact source strip must include U.S. Census Bureau');
   await page.locator('.route-map-mobile-bar').getByRole('button', { name: 'Search', exact: true }).click();
   const searchHelp = await page.locator('.route-search-panel .route-map-sheet-help').innerText();
-  assert.strictEqual(searchHelp.trim(), 'Searches RRGH routes and landmarks, official trails, Forest Service roads and recreation sites, plus loaded community/informal trails.');
+  assert.strictEqual(searchHelp.trim(), 'Searches RRGH routes and landmarks, official trails, Forest Service roads and recreation sites, local amenities, plus loaded community/informal trails.');
   await page.locator('.route-search-panel [data-sheet-close]').click();
 
   await mobileTopbar.locator('[data-sheet-open="layers"]').click();
