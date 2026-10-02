@@ -187,9 +187,10 @@ async function routeLibrary(browser) {
   const page = await context.newPage();
   const response = await page.goto(MAIN + 'routes/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert(response && response.ok());
-  assert.strictEqual(await page.locator('[data-route-card]').count(), 1);
-  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '1 route');
+  assert.strictEqual(await page.locator('[data-route-card]').count(), 2);
+  assert.strictEqual((await page.locator('[data-route-count]').innerText()).trim(), '2 routes');
   assert.strictEqual(await page.getByRole('link', { name: 'Skybridge Arch', exact: true }).count(), 1);
+  assert.strictEqual(await page.getByRole('link', { name: 'Princess Arch', exact: true }).count(), 1);
 
   const pageText = await page.locator('body').innerText();
   assert(pageText.includes('Field-tested routes'));
@@ -309,7 +310,7 @@ async function routeArtifactsAndContent(browser) {
   const sitemapIndex = await fetchText(page, MAIN + 'sitemap-index.xml');
   assert(sitemapIndex.includes('sitemap-0.xml'));
   const sitemap = await fetchText(page, MAIN + 'sitemap-0.xml');
-  for (const route of ['/routes/', '/routes/skybridge-arch/', '/routes/map/', '/guides/kentucky-lidar/']) {
+  for (const route of ['/routes/', '/routes/skybridge-arch/', '/routes/princess-arch/', '/routes/map/', '/guides/kentucky-lidar/']) {
     assert(sitemap.includes(route), route);
   }
 
