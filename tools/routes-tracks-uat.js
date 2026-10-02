@@ -2025,6 +2025,35 @@ async function mobile(browser) {
   const mobileSunlightTeaser = await page.locator('[data-map-preset="sunlight"] [data-sunlight-preset-times]').innerText();
   assert(mobileSunlightTeaser.includes('Sunrise') && mobileSunlightTeaser.includes('Sunset'));
 
+  // Normal mobile Sunlight must use the same memory-safe adaptive rendering as full screen.
+  const normalMobileSunZoomBefore = Number(await map.getAttribute('data-current-zoom'));
+  await page.locator('[data-map-preset="sunlight"]').click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-rrg-lidar-sun-load-state') === 'loaded',
+    { timeout: 30000 }
+  );
+  const normalMobileSunZoomAfter = Number(await map.getAttribute('data-current-zoom'));
+  const normalMobileSunSectors = Number(await map.getAttribute('data-rrg-lidar-sun-loaded-sectors'));
+  const normalMobileSunImages = Number(await map.getAttribute('data-rrg-lidar-sun-image-count'));
+  const normalMobileSunHardFeatures = Number(await map.getAttribute('data-rrg-lidar-sun-hard-feature-count'));
+  const normalMobileSunImageSizes = await page.locator('.leaflet-lidarSun-pane img.leaflet-image-layer').evaluateAll(nodes =>
+    nodes.map(node => ({ width: node.naturalWidth, height: node.naturalHeight }))
+  );
+  assert(Math.abs(normalMobileSunZoomAfter - normalMobileSunZoomBefore) <= 0.01, 'Normal mobile Sunlight must render at current zoom');
+  assert.strictEqual(await map.getAttribute('data-rrg-lidar-sun-load-error'), null, 'Normal mobile Sunlight must load without error');
+  assert(normalMobileSunSectors >= 1, 'Normal mobile Sunlight must load visible sectors');
+  assert.strictEqual(normalMobileSunImages, normalMobileSunSectors * 2, 'Normal mobile Sunlight must retain exactly two adaptive rasters per loaded sector');
+  assert.strictEqual(normalMobileSunImageSizes.length, normalMobileSunImages, 'Normal mobile Sunlight image telemetry must match rendered overlays');
+  assert(normalMobileSunImageSizes.every(size => size.width > 0 && size.height > 0 && size.width <= 512 && size.height <= 512),
+    'Normal mobile Sunlight must downsample retained rasters to screen-scale dimensions; sizes=' + JSON.stringify(normalMobileSunImageSizes));
+  assert(normalMobileSunHardFeatures > 0, 'Normal mobile Sunlight must preserve accepted hard-rim geometry in the adaptive rasters');
+  await page.locator('[data-map-preset="hiking"]').click();
+  await page.waitForFunction(
+    () => Number(document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-rrg-lidar-sun-loaded-sectors') || '0') === 0,
+    { timeout: 5000 }
+  );
+  assert.strictEqual(Number(await map.getAttribute('data-rrg-lidar-sun-image-count')), 0, 'Leaving normal mobile Sunlight must release adaptive raster images');
+
   let box = await map.boundingBox();
   const topbarBox = await page.locator('.route-map-mobile-topbar').boundingBox();
   const mobileStatusBox = await page.locator('[data-map-mobile-status]').boundingBox();
@@ -2165,9 +2194,18 @@ async function mobile(browser) {
   const fullscreenSunZoom = Number(await map.getAttribute('data-current-zoom'));
   const fullscreenSunSectors = Number(await map.getAttribute('data-rrg-lidar-sun-loaded-sectors'));
   const fullscreenSunImages = Number(await map.getAttribute('data-rrg-lidar-sun-image-count'));
+  const fullscreenSunHardFeatures = Number(await map.getAttribute('data-rrg-lidar-sun-hard-feature-count'));
+  const fullscreenSunImageSizes = await page.locator('.leaflet-lidarSun-pane img.leaflet-image-layer').evaluateAll(nodes =>
+    nodes.map(node => ({ width: node.naturalWidth, height: node.naturalHeight }))
+  );
   assert(Math.abs(fullscreenSunZoom - preSunZoom) <= 0.01, 'Mobile full-screen Sunlight must render at the current zoom instead of forcing the user to zoom in');
-  assert(fullscreenSunSectors >= 1 && fullscreenSunSectors <= 6, 'Mobile full-screen Sunlight must cap live sectors at 6; got ' + fullscreenSunSectors);
-  assert(fullscreenSunImages >= 2 && fullscreenSunImages <= 12, 'Mobile full-screen Sunlight must cap decoded raster overlays; got ' + fullscreenSunImages);
+  assert.strictEqual(await map.getAttribute('data-rrg-lidar-sun-load-error'), null, 'Mobile full-screen Sunlight must load without error');
+  assert(fullscreenSunSectors >= 1, 'Mobile full-screen Sunlight must load all visible sectors needed at the current zoom');
+  assert.strictEqual(fullscreenSunImages, fullscreenSunSectors * 2, 'Mobile full-screen Sunlight must retain exactly two adaptive rasters per loaded sector');
+  assert.strictEqual(fullscreenSunImageSizes.length, fullscreenSunImages, 'Full-screen Sunlight image telemetry must match rendered overlays');
+  assert(fullscreenSunImageSizes.every(size => size.width > 0 && size.height > 0 && size.width <= 512 && size.height <= 512),
+    'Mobile full-screen Sunlight must retain screen-scale rasters instead of original 2000px-class sources; sizes=' + JSON.stringify(fullscreenSunImageSizes));
+  assert(fullscreenSunHardFeatures > 0, 'Mobile full-screen Sunlight must preserve accepted hard-rim geometry in the adaptive rasters');
 
   await fullscreenView.selectOption('hiking');
   await page.waitForTimeout(120);
@@ -2183,10 +2221,19 @@ async function mobile(browser) {
   await page.waitForTimeout(100);
   const postFullscreenScrollY = await page.evaluate(() => window.scrollY);
   assert(Math.abs(postFullscreenScrollY - preFullscreenScrollY) <= 4, 'Leaving full screen must return to the map page position; before=' + preFullscreenScrollY + ' after=' + postFullscreenScrollY);
-  record('Mobile full-screen controls, restored instructions, return position and current-zoom Sunlight guard', 'PASS', {
-    zoom: fullscreenSunZoom,
-    sectors: fullscreenSunSectors,
-    images: fullscreenSunImages
+  record('Mobile full-screen controls, restored instructions, return position and adaptive current-zoom Sunlight rendering', 'PASS', {
+    normalMobile: {
+      zoom: normalMobileSunZoomAfter,
+      sectors: normalMobileSunSectors,
+      images: normalMobileSunImages,
+      imageSizes: normalMobileSunImageSizes
+    },
+    fullscreen: {
+      zoom: fullscreenSunZoom,
+      sectors: fullscreenSunSectors,
+      images: fullscreenSunImages,
+      imageSizes: fullscreenSunImageSizes
+    }
   });
 
   await mobileTopbar.locator('[data-sheet-open="layers"]').click();
@@ -2235,7 +2282,31 @@ async function mobile(browser) {
   await mobilePlanButton.click();
   const mobilePlanPanel = page.locator('[data-map-sheet="plan"]');
   assert(await mobilePlanPanel.isVisible());
+  const mobileBearingButton = mobilePlanPanel.getByRole('button', { name: 'Bearing / slope', exact: true });
+  const mobileWatershedButton = mobilePlanPanel.getByRole('button', { name: 'Watershed', exact: true });
   const mobileBuildButton = mobilePlanPanel.getByRole('button', { name: 'Build trail route', exact: true });
+  const [mobileBearingBox, mobileWatershedBox, mobileBuildBox, mobileActionsBox, mobileActionButtonBoxes] = await Promise.all([
+    mobileBearingButton.boundingBox(),
+    mobileWatershedButton.boundingBox(),
+    mobileBuildButton.boundingBox(),
+    mobilePlanPanel.locator('.route-plan-actions').boundingBox(),
+    mobilePlanPanel.locator('.route-plan-actions button').evaluateAll(nodes => nodes.map(node => {
+      const r = node.getBoundingClientRect();
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+    }))
+  ]);
+  assert(mobileBearingBox && mobileWatershedBox && mobileBuildBox && mobileActionsBox);
+  assert(Math.abs(mobileBearingBox.y - mobileWatershedBox.y) <= 2, 'Bearing / slope and Watershed must share the same mobile Tools row');
+  assert(mobileBuildBox.y >= mobileBearingBox.y + mobileBearingBox.height - 1, 'Build trail route must sit below Bearing / slope and Watershed');
+  assert(Math.abs(mobileBuildBox.x - mobileBearingBox.x) <= 2, 'Build trail route must begin at the left edge of the two-column mobile grid');
+  assert(Math.abs((mobileBuildBox.x + mobileBuildBox.width) - (mobileWatershedBox.x + mobileWatershedBox.width)) <= 2,
+    'Build trail route must span the full two-column mobile Tools grid');
+  assert.strictEqual(mobileActionButtonBoxes.length, 4, 'Mobile Tools actions must contain Undo, Redo, Export GPX and Clear');
+  const actionGroupLeft = Math.min(...mobileActionButtonBoxes.map(item => item.left));
+  const actionGroupRight = Math.max(...mobileActionButtonBoxes.map(item => item.right));
+  const actionGroupCenter = (actionGroupLeft + actionGroupRight) / 2;
+  const actionRowCenter = mobileActionsBox.x + mobileActionsBox.width / 2;
+  assert(Math.abs(actionGroupCenter - actionRowCenter) <= 3, 'Undo / Redo / Export GPX / Clear must be centered as a group on mobile');
   await mobileBuildButton.click();
   assert.strictEqual(await mobilePlanPanel.getAttribute('data-minimized'), 'true', 'Mobile Build trail route should automatically minimize immediately after selection');
   const mobilePanPad = page.locator('[data-plan-pan-pad]');
