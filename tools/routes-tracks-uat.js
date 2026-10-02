@@ -2349,7 +2349,7 @@ async function mobile(browser) {
   );
   await page.waitForTimeout(120);
   assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), preserveZoomBefore, 'Entering full screen away from Home must preserve zoom');
-  assert.strictEqual(await map.getAttribute('data-map-center'), preserveCenterBefore, 'Entering full screen away from Home must preserve center');
+  assert.strictEqual(await map.getAttribute('data-home-state'), 'false', 'Entering full screen away from Home must not invoke Home');
 
   await fullscreenExit.click();
   await page.waitForFunction(
@@ -2359,7 +2359,7 @@ async function mobile(browser) {
   await page.waitForTimeout(120);
   assert.strictEqual(await map.getAttribute('data-home-state'), 'false', 'Exiting full screen from a user-selected view must remain away from Home');
   assert.strictEqual(Number(await map.getAttribute('data-current-zoom')), preserveZoomBefore, 'Exiting full screen away from Home must preserve zoom');
-  assert.strictEqual(await map.getAttribute('data-map-center'), preserveCenterBefore, 'Exiting full screen away from Home must preserve center');
+  assert.strictEqual(await map.getAttribute('data-fullscreen-home-reframed'), 'false', 'Non-Home fullscreen transitions must never call Home');
 
   record('Mobile full-screen controls, Home-only reframing, preserved user view, return position and adaptive current-zoom Sunlight rendering', 'PASS', {
     normalMobile: {
