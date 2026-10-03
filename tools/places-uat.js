@@ -143,14 +143,14 @@ async function counts(page){
     assert.strictEqual(await page.locator('.leaflet-trails-pane canvas').count()>=1,true,'Forest Service trails must render on load');
 
     await page.locator('.rrgh-place-marker-host[title="Red River Rockhouse"]').evaluate(el=>el.click());
-    const rockhousePopup=await page.locator('.leaflet-popup:visible .leaflet-popup-content').innerText();
+    const rockhousePopup=await page.locator('.leaflet-popup-content').last().innerText();
     assert(rockhousePopup.includes('RRGH Presence'));
     assert(rockhousePopup.includes('photography is displayed and available for purchase here'));
     assert(!/partner/i.test(rockhousePopup));
 
     await page.locator('.leaflet-popup-close-button').click();
     await page.locator('.rrgh-place-marker-host[title="Park N Save"]').evaluate(el=>el.click());
-    const parkPopup=page.locator('.leaflet-popup:visible .leaflet-popup-content');
+    const parkPopup=page.locator('.leaflet-popup-content').last();
     const parkText=await parkPopup.innerText();
     assert(parkText.includes('Hiking-logistics stop for required backcountry/overnight pass acquisition, fuel, and provisions.'));
     assert(!/canonical record|objective/i.test(parkText),'Park N Save public copy must not expose internal governance language');
