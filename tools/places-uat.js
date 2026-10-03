@@ -97,9 +97,12 @@ async function counts(page){
     assert.strictEqual(await presenceKey.locator('.route-layer-presence-example.rrgh-place-marker.is-around.is-presence').count(),1,'Legend must use the actual Around+RRGH Presence marker treatment');
     assert.strictEqual(await presenceKey.locator('.rrgh-place-presence-badge').innerText(),'RRGH');
     assert.strictEqual(await page.getByText('Around the Gorge and Hiker Services can classify the same place',{exact:false}).count(),0,'Local Amenities explanatory paragraph must be removed');
-    const amenityGrid=await page.locator('.route-layer-group-amenities .route-layer-toggle-row').first().evaluate(el=>getComputedStyle(el).gridTemplateColumns);
-    const presenceGrid=await presenceKey.evaluate(el=>getComputedStyle(el).gridTemplateColumns);
-    assert.strictEqual(presenceGrid,amenityGrid,'Presence key must align to the Around/Hiker control columns without special indentation');
+    assert.strictEqual(await presenceKey.locator('.route-layer-presence-spacer').count(),0,'RRGH Presence key must not contain an indentation spacer');
+    const checkboxBox=await page.locator('[data-map-layer="around-the-gorge"]').boundingBox();
+    const presenceIconBox=await presenceKey.locator('.route-layer-presence-icon-wrap').boundingBox();
+    assert(checkboxBox&&presenceIconBox,'Legend alignment controls must render');
+    assert(Math.abs(checkboxBox.x-presenceIconBox.x)<=3,'RRGH Presence icon must align to the left edge of the Local Amenities controls, not be indented');
+    assert.strictEqual(await page.locator('.route-layer-group-amenities .route-layer-source-note').count(),0,'Rejected explanatory paragraph must remain removed');
     await around.uncheck();
     await page.waitForFunction(()=>document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-visible-place-poi-count')==='10');
     assert.strictEqual(await page.locator('.rrgh-place-marker-host').count(),10);
