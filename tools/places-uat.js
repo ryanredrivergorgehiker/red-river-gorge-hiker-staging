@@ -210,10 +210,17 @@ async function counts(page){
     await page.locator('.leaflet-popup-close-button').click();
 
     // Repeated real UI zooming must not strand marker hit targets behind map overlays.
-    const zoomIn=page.locator('[data-map-action="zoom-in"]:visible').first();
-    const zoomOut=page.locator('[data-map-action="zoom-out"]:visible').first();
-    for(let i=0;i<5;i+=1){ await zoomIn.click(); await page.waitForTimeout(40); }
-    for(let i=0;i<5;i+=1){ await zoomOut.click(); await page.waitForTimeout(40); }
+    // Mobile intentionally hides the desktop +/- controls, so exercise Leaflet's
+    // actual double-click zoom interaction (Shift+double-click zooms out).
+    const mobileMap=page.locator('[data-rrgh-route-map]');
+    const mobileMapZoomBox=await mobileMap.boundingBox();
+    assert(mobileMapZoomBox,'Mobile map must render for repeated-zoom clickability UAT');
+    const zoomX=mobileMapZoomBox.x+mobileMapZoomBox.width/2;
+    const zoomY=mobileMapZoomBox.y+mobileMapZoomBox.height/2;
+    for(let i=0;i<5;i+=1){ await page.mouse.dblclick(zoomX,zoomY,{delay:20}); await page.waitForTimeout(60); }
+    await page.keyboard.down('Shift');
+    for(let i=0;i<5;i+=1){ await page.mouse.dblclick(zoomX,zoomY,{delay:20}); await page.waitForTimeout(60); }
+    await page.keyboard.up('Shift');
     const muirMarker=page.locator('.rrgh-place-marker-host[title="Muir Valley Nature Preserve"]');
     await muirMarker.click({timeout:5000});
     await page.locator('.rrgh-place-leaflet-popup').waitFor({state:'visible',timeout:5000});
