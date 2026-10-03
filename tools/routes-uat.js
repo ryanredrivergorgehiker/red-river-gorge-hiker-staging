@@ -3,6 +3,7 @@ const assert = require('assert');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const MAIN = 'https://redrivergorgehiker.com:8443/';
 const EVIDENCE = path.resolve('routes-uat-evidence');
@@ -740,23 +741,19 @@ async function liveLocalRoadSourceAudit() {
       outSR: '4326',
       f: 'geojson'
     }).toString();
-    let lastError;
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      try {
-        const response = await fetch(url, {
-          headers: { 'user-agent': 'RRGH-UAT/1.0' },
-          signal: AbortSignal.timeout(20000)
-        });
-        assert(response.ok, service + ' HTTP ' + response.status);
-        const data = await response.json();
-        assert(!data?.error, service + ': ' + JSON.stringify(data?.error));
-        return { url: url.toString(), data };
-      } catch (error) {
-        lastError = error;
-        if (attempt < 3) await new Promise(resolve => setTimeout(resolve, attempt * 1000));
-      }
-    }
-    throw lastError;
+    const body = execFileSync('curl', [
+      '--retry', '3',
+      '--retry-all-errors',
+      '--retry-delay', '2',
+      '--connect-timeout', '15',
+      '--max-time', '45',
+      '-fsS',
+      '-A', 'RRGH-UAT/1.0',
+      url.toString()
+    ], { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
+    const data = JSON.parse(body);
+    assert(!data?.error, service + ': ' + JSON.stringify(data?.error));
+    return { url: url.toString(), data };
   };
 
   const summarizeArcgis = (data, nameFields) => {
