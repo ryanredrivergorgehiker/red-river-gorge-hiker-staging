@@ -2099,7 +2099,14 @@ async function mobile(browser) {
   assert(normalMapBox.x + normalMapBox.width - (normalEntryBox.x + normalEntryBox.width) <= 16 && normalEntryBox.y - normalMapBox.y <= 16, 'Fullscreen control must sit in the map upper-right');
   assert.strictEqual(normalTopButtons.length, 3, 'Normal mobile top utility bar must contain My location, Home, Layers only');
   assert(await page.locator('[data-map-mobile-status]').isVisible(), 'Normal mobile instructions must remain visible');
-  assert.strictEqual(await page.locator('[data-mobile-map-preset] option').count(), 4, 'User-facing Map View selector must expose only Hiking/Terrain/Aerial/Sunlight');
+  const mobileViewOptions = await page.locator('[data-mobile-map-preset] option').evaluateAll(options => options.map(option => ({ value: option.value, disabled: option.disabled, text: option.textContent?.trim() || '' })));
+  assert.deepStrictEqual(
+    mobileViewOptions.map(option => option.value),
+    ['hiking', 'terrain', 'aerial', 'sunlight', 'custom'],
+    'Full-screen Map View selector must expose the four canonical views plus Custom state'
+  );
+  assert.strictEqual(mobileViewOptions[4]?.disabled, true, 'Custom Map View must be a display-only state, not a manually applied preset');
+  assert.strictEqual(mobileViewOptions[4]?.text, 'Custom view', 'Custom Map View state must be clearly labeled');
   const preFullscreenScrollY = await page.evaluate(() => window.scrollY);
   assert.strictEqual(await map.getAttribute('data-home-state'), 'true', 'Initial mobile overview must be recognized as Home before full-screen entry');
 
