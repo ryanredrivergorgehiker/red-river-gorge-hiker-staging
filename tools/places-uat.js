@@ -151,8 +151,19 @@ async function counts(page){
     await page.locator('.rrgh-place-marker-host[title="Red River Rockhouse"]').evaluate(el=>el.click());
     const rockhousePopup=await page.locator('.leaflet-popup-content').last().innerText();
     assert(rockhousePopup.includes('RRGH Presence'));
-    assert(rockhousePopup.includes('photography is displayed and available for purchase here'));
+    assert(rockhousePopup.includes('Red River Gorge Hiker photography is displayed and sold here.'));
+    assert(rockhousePopup.includes('RRGH receives proceeds from photograph sales at this location.'));
+    assert(rockhousePopup.includes('The business did not pay for inclusion on this map.'));
     assert(!/partner/i.test(rockhousePopup));
+
+    await page.locator('.leaflet-popup-close-button').click();
+    await page.locator('.rrgh-place-marker-host[title="Red River Gorge Earth Shop"]').evaluate(el=>el.click());
+    const earthShopPopup=await page.locator('.leaflet-popup-content').last().innerText();
+    assert(earthShopPopup.includes('RRGH Presence'));
+    assert(earthShopPopup.includes('Red River Gorge Hiker greeting cards are sold here.'));
+    assert(earthShopPopup.includes('RRGH receives proceeds from greeting-card sales at this location.'));
+    assert(earthShopPopup.includes('The business did not pay for inclusion on this map.'));
+    assert(!/partner/i.test(earthShopPopup));
 
     await page.locator('.leaflet-popup-close-button').click();
     await page.locator('.rrgh-place-marker-host[title="Park N Save"]').evaluate(el=>el.click());
