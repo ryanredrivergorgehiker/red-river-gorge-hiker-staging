@@ -38,7 +38,7 @@ jobs:
         run: |
           query='https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_PhysicalFeatures/MapServer/5/query?where=1%3D1&geometry=%7B%22xmin%22%3A-83.550%2C%22ymin%22%3A37.815%2C%22xmax%22%3A-83.532%2C%22ymax%22%3A37.829%2C%22spatialReference%22%3A%7B%22wkid%22%3A4326%7D%7D&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=OID%2CNAME%2CBASENAME&returnGeometry=true&returnZ=false&returnM=false&outSR=4326&resultRecordCount=25&f=geojson'
           echo '--- HEADERS WITH RRGH ORIGIN ---'
-          curl -fsS -D /tmp/local-road-headers.txt -H 'Origin: https://redrivergorgehiker.com' "$query" -o /tmp/local-roads.json
+          curl --retry 3 --retry-all-errors --retry-delay 2 --connect-timeout 15 --max-time 45 -fsS -D /tmp/local-road-headers.txt -H 'Origin: https://redrivergorgehiker.com' "$query" -o /tmp/local-roads.json
           cat /tmp/local-road-headers.txt
           echo '--- BODY PREFIX ---'
           head -c 1200 /tmp/local-roads.json || true
@@ -71,7 +71,7 @@ jobs:
         run: |
           mkdir -p routes-tracks-uat-evidence
           query='https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_TrailNFSPublishWithDataStatus_01/MapServer/0/query?where=1%3D1&geometry=-84.02%2C37.52%2C-83.18%2C38.15&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=trail_name%2Ctrail_no%2Ctrail_class%2Cattributesubset&returnGeometry=true&outSR=4326&f=geojson'
-          curl -fsS -D routes-tracks-uat-evidence/usfs-trails-live.headers.txt \
+          curl --retry 3 --retry-all-errors --retry-delay 2 --connect-timeout 15 --max-time 45 -fsS -D routes-tracks-uat-evidence/usfs-trails-live.headers.txt \
             -H 'Origin: https://redrivergorgehiker.com' \
             "$query" -o routes-tracks-uat-evidence/usfs-trails-live.geojson
           node - <<'NODE'
