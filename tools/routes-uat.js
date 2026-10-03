@@ -740,11 +740,23 @@ async function liveLocalRoadSourceAudit() {
       outSR: '4326',
       f: 'geojson'
     }).toString();
-    const response = await fetch(url, { headers: { 'user-agent': 'RRGH-UAT/1.0' } });
-    assert(response.ok, service + ' HTTP ' + response.status);
-    const data = await response.json();
-    assert(!data?.error, service + ': ' + JSON.stringify(data?.error));
-    return { url: url.toString(), data };
+    let lastError;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const response = await fetch(url, {
+          headers: { 'user-agent': 'RRGH-UAT/1.0' },
+          signal: AbortSignal.timeout(20000)
+        });
+        assert(response.ok, service + ' HTTP ' + response.status);
+        const data = await response.json();
+        assert(!data?.error, service + ': ' + JSON.stringify(data?.error));
+        return { url: url.toString(), data };
+      } catch (error) {
+        lastError = error;
+        if (attempt < 3) await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+      }
+    }
+    throw lastError;
   };
 
   const summarizeArcgis = (data, nameFields) => {
