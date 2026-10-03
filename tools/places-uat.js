@@ -158,7 +158,7 @@ async function counts(page){
     await page.locator('.rrgh-place-marker-host[title="Park N Save"]').evaluate(el=>el.click());
     const parkPopup=page.locator('.leaflet-popup-content').last();
     const parkText=await parkPopup.innerText();
-    assert(parkText.includes('Hiking-logistics stop for required backcountry/overnight pass acquisition, fuel, and provisions.'));
+    assert(parkText.includes('Convenience stop for backcountry/overnight passes, fuel, food, drinks, and basic provisions.'));
     assert(!/canonical record|objective/i.test(parkText),'Park N Save public copy must not expose internal governance language');
     const parkMaps=parkPopup.getByRole('link',{name:'Current info on Google Maps'});
     const parkAppleMaps=parkPopup.getByRole('link',{name:'Current info on Apple Maps'});
@@ -188,6 +188,49 @@ async function counts(page){
     assert.strictEqual(await page.locator('[data-map-layer="hiker-services"]').isChecked(),true);
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
     assert(overflow<=2,'Mobile Places map horizontal overflow: '+overflow);
+
+    const openSearchResult = async (label) => {
+      const searchOpen = page.locator('[data-sheet-open="search"]:visible').first();
+      await searchOpen.click();
+      const searchInput = page.locator('[data-map-search]');
+      await searchInput.fill(label);
+      const result = page.locator('.route-search-result').filter({has:page.locator('strong',{hasText:label})}).first();
+      await result.waitFor({state:'visible',timeout:5000});
+      await result.click();
+      await page.locator('.leaflet-popup').waitFor({state:'visible',timeout:5000});
+      await page.waitForTimeout(250);
+    };
+
+    await openSearchResult('Muir Valley Nature Preserve');
+    const muirPopupBox=await page.locator('.rrgh-place-leaflet-popup').boundingBox();
+    const mobileMapBox=await page.locator('[data-rrgh-route-map]').boundingBox();
+    assert(muirPopupBox&&mobileMapBox,'Mobile Muir Valley popup and map must render');
+    assert(muirPopupBox.width<=330,'Mobile Local Amenity popup should remain slim; width was '+muirPopupBox.width);
+    assert(muirPopupBox.width<=mobileMapBox.width-45,'Mobile Local Amenity popup must not span nearly the entire map width');
+    await page.locator('.leaflet-popup-close-button').click();
+
+    // Repeated real UI zooming must not strand marker hit targets behind map overlays.
+    const zoomIn=page.locator('[data-map-action="zoom-in"]:visible').first();
+    const zoomOut=page.locator('[data-map-action="zoom-out"]:visible').first();
+    for(let i=0;i<5;i+=1){ await zoomIn.click(); await page.waitForTimeout(40); }
+    for(let i=0;i<5;i+=1){ await zoomOut.click(); await page.waitForTimeout(40); }
+    const muirMarker=page.locator('.rrgh-place-marker-host[title="Muir Valley Nature Preserve"]');
+    await muirMarker.click({timeout:5000});
+    await page.locator('.rrgh-place-leaflet-popup').waitFor({state:'visible',timeout:5000});
+    assert((await page.locator('.rrgh-place-leaflet-popup').innerText()).includes('Privately managed nature preserve with extensive hiking and rock-climbing opportunities.'));
+    await page.locator('.leaflet-popup-close-button').click();
+
+    await openSearchResult('Dave’s Minute Mart');
+    const davePopup=page.locator('.rrgh-place-leaflet-popup');
+    const daveText=await davePopup.innerText();
+    assert(daveText.includes('Frenchburg-area resupply stop useful for longer trips and approaches from the west.'));
+    const daveBox=await davePopup.boundingBox();
+    const topbarBox=await page.locator('.route-map-mobile-topbar').boundingBox();
+    const bottomBarBox=await page.locator('.route-map-mobile-bar').boundingBox();
+    assert(daveBox&&topbarBox&&bottomBarBox,'Dave popup and mobile control bars must render');
+    assert(daveBox.y>=topbarBox.y+topbarBox.height-2,'Opened amenity popup must auto-pan below the mobile top controls');
+    assert(daveBox.y+daveBox.height<=bottomBarBox.y+2,'Opened amenity popup must auto-pan above the mobile bottom action bar');
+
     await snap(page,'mobile-local-amenities');
 
     const names=JSON.parse(await page.locator('[data-rrgh-route-map]').getAttribute('data-places'));
@@ -215,7 +258,7 @@ async function counts(page){
     assert(names.every(p=>p.googleMapsUrl?.startsWith('https://www.google.com/maps/search/?api=1&query=')),'Every Place must carry a current Google Maps link');
 
     fs.writeFileSync(path.join(EVIDENCE,'places-uat-results.json'),JSON.stringify({status:'PASS',counts:await counts(page)},null,2));
-    console.log('[PASS] Places-specific UAT: 30-place reconciled dataset, corrected coordinates, Google + Apple Maps links, co-located POIs, non-overlapping RRGH Presence key, normalized copy, mobile, and Forest Service trail load');
+    console.log('[PASS] Places-specific UAT: owner-updated descriptions, 30-place reconciled dataset, corrected coordinates, Google + Apple Maps links, repeated-zoom marker clickability, slim/auto-panned mobile amenity popups, co-located POIs, non-overlapping RRGH Presence key, and Forest Service trail load');
     await context.close();
   }catch(error){
     console.error('[FAIL] Places-specific UAT',error);
