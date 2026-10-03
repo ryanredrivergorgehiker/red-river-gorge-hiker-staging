@@ -100,8 +100,11 @@ async function counts(page){
     assert.strictEqual(await presenceKey.locator('.route-layer-presence-spacer').count(),0,'RRGH Presence key must not contain an indentation spacer');
     const checkboxBox=await page.locator('[data-map-layer="around-the-gorge"]').boundingBox();
     const presenceIconBox=await presenceKey.locator('.route-layer-presence-icon-wrap').boundingBox();
-    assert(checkboxBox&&presenceIconBox,'Legend alignment controls must render');
+    const presenceBadgeBox=await presenceKey.locator('.rrgh-place-presence-badge').boundingBox();
+    const presenceLabelBox=await presenceKey.locator('strong').boundingBox();
+    assert(checkboxBox&&presenceIconBox&&presenceBadgeBox&&presenceLabelBox,'Legend alignment controls must render');
     assert(Math.abs(checkboxBox.x-presenceIconBox.x)<=3,'RRGH Presence icon must align to the left edge of the Local Amenities controls, not be indented');
+    assert(presenceBadgeBox.x+presenceBadgeBox.width+3<=presenceLabelBox.x,'RRGH Presence badge/icon must not cover the RRGH Presence legend text');
     assert.strictEqual(await page.locator('.route-layer-group-amenities .route-layer-source-note').count(),0,'Rejected explanatory paragraph must remain removed');
     await around.uncheck();
     await page.waitForFunction(()=>document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-visible-place-poi-count')==='10');
@@ -158,8 +161,14 @@ async function counts(page){
     assert(parkText.includes('Hiking-logistics stop for required backcountry/overnight pass acquisition, fuel, and provisions.'));
     assert(!/canonical record|objective/i.test(parkText),'Park N Save public copy must not expose internal governance language');
     const parkMaps=parkPopup.getByRole('link',{name:'Current info on Google Maps'});
+    const parkAppleMaps=parkPopup.getByRole('link',{name:'Current info on Apple Maps'});
     assert.strictEqual(await parkMaps.count(),1);
+    assert.strictEqual(await parkAppleMaps.count(),1);
     assert((await parkMaps.getAttribute('href')).startsWith('https://www.google.com/maps/search/?api=1&query='));
+    assert((await parkAppleMaps.getAttribute('href')).startsWith('https://maps.apple.com/place?'));
+    assert.strictEqual(await parkMaps.getAttribute('target'),'_blank');
+    assert.strictEqual(await parkAppleMaps.getAttribute('target'),'_blank');
+    assert.strictEqual(await parkPopup.locator('.route-map-service-icon').count(),2,'Google Maps and Apple Maps links must each use the neutral map-pin icon');
     assert.strictEqual(await parkPopup.getByRole('link',{name:'Official site'}).count(),0);
     assert.strictEqual(await parkPopup.getByText('Check current source',{exact:true}).count(),0);
 
@@ -206,7 +215,7 @@ async function counts(page){
     assert(names.every(p=>p.googleMapsUrl?.startsWith('https://www.google.com/maps/search/?api=1&query=')),'Every Place must carry a current Google Maps link');
 
     fs.writeFileSync(path.join(EVIDENCE,'places-uat-results.json'),JSON.stringify({status:'PASS',counts:await counts(page)},null,2));
-    console.log('[PASS] Places-specific UAT: 30-place reconciled dataset, corrected coordinates, Google Maps links, co-located POIs, aligned RRGH Presence key, normalized copy, mobile, and Forest Service trail load');
+    console.log('[PASS] Places-specific UAT: 30-place reconciled dataset, corrected coordinates, Google + Apple Maps links, co-located POIs, non-overlapping RRGH Presence key, normalized copy, mobile, and Forest Service trail load');
     await context.close();
   }catch(error){
     console.error('[FAIL] Places-specific UAT',error);
