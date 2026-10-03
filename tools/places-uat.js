@@ -230,13 +230,19 @@ async function counts(page){
     await openSearchResult('Dave’s Minute Mart');
     const davePopup=page.locator('.rrgh-place-leaflet-popup');
     const daveText=await davePopup.innerText();
-    assert(daveText.includes('Frenchburg-area resupply stop useful for longer trips and approaches from the west.'));
+    assert(daveText.includes('Frenchburg-area grocery and provisions stop useful for longer trips and resupply.'));
     const daveBox=await davePopup.boundingBox();
     const topbarBox=await page.locator('.route-map-mobile-topbar').boundingBox();
     const bottomBarBox=await page.locator('.route-map-mobile-bar').boundingBox();
     assert(daveBox&&topbarBox&&bottomBarBox,'Dave popup and mobile control bars must render');
     assert(daveBox.y>=topbarBox.y+topbarBox.height-2,'Opened amenity popup must auto-pan below the mobile top controls');
     assert(daveBox.y+daveBox.height<=bottomBarBox.y+2,'Opened amenity popup must auto-pan above the mobile bottom action bar');
+
+    const mobileHome=page.locator('[data-map-action="home"]:visible').first();
+    await mobileHome.click();
+    await page.waitForTimeout(150);
+    assert.strictEqual(await page.locator('.leaflet-popup:visible').count(),0,'Home must clear any open map popup');
+    assert.strictEqual(await mobileMap.getAttribute('data-home-state'),'true','Home must restore semantic home state after clearing a popup');
 
     await snap(page,'mobile-local-amenities');
 
