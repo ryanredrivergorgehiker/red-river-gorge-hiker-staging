@@ -157,10 +157,10 @@ async function counts(page){
     const parkText=await parkPopup.innerText();
     assert(parkText.includes('Hiking-logistics stop for required backcountry/overnight pass acquisition, fuel, and provisions.'));
     assert(!/canonical record|objective/i.test(parkText),'Park N Save public copy must not expose internal governance language');
-    const parkMaps=parkPopup.getByRole('link',{name:'Open in Google Maps'});
+    const parkMaps=parkPopup.getByRole('link',{name:'Current info on Google Maps'});
     assert.strictEqual(await parkMaps.count(),1);
     assert((await parkMaps.getAttribute('href')).startsWith('https://www.google.com/maps/search/?api=1&query='));
-    assert.strictEqual(await parkPopup.getByRole('link',{name:'Official site'}).count(),1);
+    assert.strictEqual(await parkPopup.getByRole('link',{name:'Official site'}).count(),0);
     assert.strictEqual(await parkPopup.getByText('Check current source',{exact:true}).count(),0);
 
     for(const pair of [['Sandstone Arches Restaurant','Hemlock Lodge'],['The Gorge Underground','SUP Kentucky']]){
