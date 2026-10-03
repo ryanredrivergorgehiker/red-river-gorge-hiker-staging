@@ -71,12 +71,29 @@ async function counts(page){
     for(const name of ['Red River Rockhouse','Hungry Hiker Bar & Grill','Red River Gorge Earth Shop']){
       assert.strictEqual(await page.locator('.rrgh-place-marker-host[title="'+name+'"]').count(),1,name);
     }
+    assert.strictEqual(await page.locator('.rrgh-place-presence-badge').count(),3,'Exactly three RRGH Presence badges must render');
+    for(const name of ['Red River Rockhouse','Hungry Hiker Bar & Grill','Red River Gorge Earth Shop']){
+      const host=page.locator('.rrgh-place-marker-host[title="'+name+'"]');
+      assert.strictEqual(await host.locator('.rrgh-place-presence-badge').innerText(),'RRGH',name+' must carry the explicit RRGH badge');
+    }
+    const aroundOnly=page.locator('.rrgh-place-marker-host[title="Miguel’s Pizza"] .rrgh-place-marker');
+    const hikerOnly=page.locator('.rrgh-place-marker-host[title="Park N Save"] .rrgh-place-marker');
+    assert(await aroundOnly.evaluate(el=>el.classList.contains('is-around')&&!el.classList.contains('is-hiker')));
+    assert(await hikerOnly.evaluate(el=>el.classList.contains('is-hiker')&&!el.classList.contains('is-around')));
+    const aroundStyle=await aroundOnly.evaluate(el=>({radius:getComputedStyle(el).borderRadius,transform:getComputedStyle(el).transform}));
+    const hikerStyle=await hikerOnly.evaluate(el=>({radius:getComputedStyle(el).borderRadius,transform:getComputedStyle(el).transform}));
+    assert.notStrictEqual(aroundStyle.transform,'none','Around the Gorge marker must use its non-circular diamond transform');
+    assert.strictEqual(hikerStyle.radius,'4px','Hiker Services marker must remain a visibly square/rounded-square symbol');
+    assert.notStrictEqual(aroundStyle.radius,hikerStyle.radius,'Around the Gorge and Hiker Services must not share the same marker shape');
     for(const alias of ['Torrent Falls Climbing Adventure','Trails End Liquor Store','The Brick','Shell']){
       assert.strictEqual(await page.locator('.rrgh-place-marker-host[title="'+alias+'"]').count(),0,alias);
     }
 
     const layersSummary = page.locator('[data-map-sheet="layers"] > summary');
     await layersSummary.click();
+    assert.strictEqual(await page.getByText('RRGH Presence',{exact:true}).count(),1,'Layers legend must include one compact non-toggle RRGH Presence key');
+    const amenityGrid=await page.locator('.route-layer-group-amenities .route-layer-toggle-row').first().evaluate(el=>getComputedStyle(el).gridTemplateColumns);
+    assert(!amenityGrid.includes('36px'),'Local Amenities legend must not retain the old oversized swatch column');
     await around.uncheck();
     await page.waitForFunction(()=>document.querySelector('[data-rrgh-route-map]')?.getAttribute('data-visible-place-poi-count')==='10');
     assert.strictEqual(await page.locator('.rrgh-place-marker-host').count(),10);
@@ -141,6 +158,12 @@ async function counts(page){
     assert.strictEqual(names.filter(p=>p.aroundTheGorge&&p.hikerServices).length,4);
     assert.strictEqual(names.filter(p=>p.rrghPresence).length,3);
     assert.strictEqual(names.find(p=>p.placeId==='PLC-010').nearbyRouteContext,'Motherlode area');
+    const sky=names.find(p=>p.placeId==='PLC-004');
+    const go=names.find(p=>p.placeId==='PLC-024');
+    const park=names.find(p=>p.placeId==='PLC-025');
+    assert.deepStrictEqual([sky.latitude,sky.longitude],[37.7634,-83.6126],'Sky Bridge Station corrected coordinate');
+    assert.deepStrictEqual([go.latitude,go.longitude],[37.7982345,-83.7046152],'Go Time rechecked coordinate');
+    assert.deepStrictEqual([park.latitude,park.longitude],[37.7982107,-83.7026222],'Park N Save corrected coordinate');
 
     fs.writeFileSync(path.join(EVIDENCE,'places-uat-results.json'),JSON.stringify({status:'PASS',counts:await counts(page)},null,2));
     console.log('[PASS] Places-specific UAT: canonical counts, independent layers, preset defaults, single POIs, RRGH Presence, mobile, and Forest Service trail load');
