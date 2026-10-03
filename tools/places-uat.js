@@ -156,7 +156,7 @@ async function counts(page){
     assert(rockhousePopup.includes('The business did not pay for inclusion on this map.'));
     assert(!/partner/i.test(rockhousePopup));
 
-    await page.locator('.leaflet-popup-close-button:visible').click();
+    await page.locator('.leaflet-popup-close-button').last().click();
     await page.locator('.rrgh-place-marker-host[title="Red River Gorge Earth Shop"]').evaluate(el=>el.click());
     const earthShopPopup=await page.locator('.leaflet-popup-content').last().innerText();
     assert(earthShopPopup.includes('RRGH Presence'));
@@ -165,7 +165,7 @@ async function counts(page){
     assert(earthShopPopup.includes('The business did not pay for inclusion on this map.'));
     assert(!/partner/i.test(earthShopPopup));
 
-    await page.locator('.leaflet-popup-close-button:visible').click();
+    await page.locator('.leaflet-popup-close-button').last().click();
     await page.locator('.rrgh-place-marker-host[title="Park N Save"]').evaluate(el=>el.click());
     const parkPopup=page.locator('.leaflet-popup-content').last();
     const parkText=await parkPopup.innerText();
@@ -218,7 +218,7 @@ async function counts(page){
     assert(muirPopupBox&&mobileMapBox,'Mobile Muir Valley popup and map must render');
     assert(muirPopupBox.width<=330,'Mobile Local Amenity popup should remain slim; width was '+muirPopupBox.width);
     assert(muirPopupBox.width<=mobileMapBox.width-45,'Mobile Local Amenity popup must not span nearly the entire map width');
-    await page.locator('.leaflet-popup-close-button:visible').click();
+    await page.locator('.leaflet-popup-close-button').last().click();
 
     // Repeated real UI zooming must not strand marker hit targets behind map overlays.
     // Mobile intentionally hides the desktop +/- controls, so exercise Leaflet's
@@ -236,7 +236,7 @@ async function counts(page){
     await muirMarker.click({timeout:5000});
     await page.locator('.rrgh-place-leaflet-popup').waitFor({state:'visible',timeout:5000});
     assert((await page.locator('.rrgh-place-leaflet-popup').innerText()).includes('Privately managed nature preserve with extensive hiking and rock-climbing opportunities.'));
-    await page.locator('.leaflet-popup-close-button:visible').click();
+    await page.locator('.leaflet-popup-close-button').last().click();
 
     await openSearchResult('Dave’s Minute Mart');
     const davePopup=page.locator('.rrgh-place-leaflet-popup');
