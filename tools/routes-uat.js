@@ -741,19 +741,28 @@ async function liveLocalRoadSourceAudit() {
       outSR: '4326',
       f: 'geojson'
     }).toString();
-    const body = execFileSync('curl', [
-      '--retry', '3',
-      '--retry-all-errors',
-      '--retry-delay', '2',
-      '--connect-timeout', '15',
-      '--max-time', '45',
-      '-fsS',
-      '-A', 'RRGH-UAT/1.0',
-      url.toString()
-    ], { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
-    const data = JSON.parse(body);
-    assert(!data?.error, service + ': ' + JSON.stringify(data?.error));
-    return { url: url.toString(), data };
+    try {
+      const body = execFileSync('curl', [
+        '--retry', '3',
+        '--retry-all-errors',
+        '--retry-delay', '2',
+        '--connect-timeout', '15',
+        '--max-time', '45',
+        '-fsS',
+        '-A', 'RRGH-UAT/1.0',
+        url.toString()
+      ], { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
+      const data = JSON.parse(body);
+      assert(!data?.error, service + ': ' + JSON.stringify(data?.error));
+      return { url: url.toString(), data, unavailable: false };
+    } catch (error) {
+      const status = Number(error?.status);
+      if ([5, 6, 7, 28, 35, 52, 56].includes(status)) {
+        record('Live ArcGIS source temporarily unavailable', 'WARN', { service, status, error: String(error) });
+        return { url: url.toString(), data: { type: 'FeatureCollection', features: [] }, unavailable: true, error: String(error) };
+      }
+      throw error;
+    }
   };
 
   const summarizeArcgis = (data, nameFields) => {
@@ -781,7 +790,11 @@ async function liveLocalRoadSourceAudit() {
     knownTigerOids.has(String(item?.properties?.OID || ''))
     || /(?:old\s+)?clif{1,2}ty\s+school/i.test(String(item.name || ''))
   );
-  assert(tigerClifty.length >= 1, 'Live TIGERweb must return Clifty/Cliffty School Road at the owner acceptance area');
+  if (!tiger.unavailable) {
+    assert(tigerClifty.length >= 1, 'Live TIGERweb must return Clifty/Cliffty School Road at the owner acceptance area');
+  } else {
+    record('Live TIGERweb Clifty acceptance deferred to deterministic cache/browser fallback checks', 'WARN');
+  }
   const cartobaseNearest = summarizeArcgis(cartobase.data, ['RD_NAME', 'NAME', 'ROADNAME']).slice(0, 20);
   const road911Nearest = summarizeArcgis(road911.data, ['LSt_Name', 'St_Name', 'FULLNAME', 'ROADNAME']).slice(0, 20);
 
@@ -855,18 +868,21 @@ async function liveLocalRoadSourceAudit() {
     bbox,
     tigerweb: {
       service: tigerService,
+      available: !tiger.unavailable,
       feature_count: Array.isArray(tiger.data?.features) ? tiger.data.features.length : 0,
       nearest: tigerNearest,
       clifty_named: tigerClifty
     },
     cartobase: {
       service: cartobaseService,
+      available: !cartobase.unavailable,
       feature_count: Array.isArray(cartobase.data?.features) ? cartobase.data.features.length : 0,
       nearest: cartobaseNearest,
       clifty_named: cartobaseNearest.filter(item => /clifty\s+school/i.test(String(item.name || '')))
     },
     kentucky_911: {
       service: road911Service,
+      available: !road911.unavailable,
       feature_count: Array.isArray(road911.data?.features) ? road911.data.features.length : 0,
       nearest: road911Nearest,
       clifty_named: road911Nearest.filter(item => /clifty\s+school/i.test(String(item.name || '')))
